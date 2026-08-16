@@ -22,7 +22,7 @@ Read the problem statement, architecture records, product criteria, established 
 
 ## Expected output
 
-Produce the agreed typed graph state, router, explicit nodes and conditional edges, tool adapters, prompts, structured output validation, safety/fallback behavior, checkpoints if approved, and unit/integration tests. Document graph and prompt decisions that affect behavior.
+Produce the agreed typed graph state, router, explicit nodes and conditional edges, tool adapters, prompts, structured output validation, safety/fallback behavior, checkpoints if approved, and unit/integration tests in architecture-approved locations. Place graph/prompt decision records and handoff documentation under `agent_docs/`.
 
 ## Boundaries
 

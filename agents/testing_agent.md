@@ -22,7 +22,7 @@ Read the problem statement, acceptance criteria, architecture/contracts, all imp
 
 ## Expected output
 
-Produce/update the agreed test plan, unit/integration/end-to-end tests, deterministic fixtures/mocks, safety and negative cases, traceability to acceptance criteria, concise defect reports, and verified test results. Keep external model/LLM/vector dependencies controlled in tests where appropriate.
+Produce unit/integration/end-to-end tests, deterministic fixtures/mocks, and safety/negative cases in architecture-approved test locations. Place test plans, acceptance traceability, defect reports, verified results, and other new testing documentation under `agent_docs/`. Keep external model/LLM/vector dependencies controlled in tests where appropriate.
 
 ## Boundaries
 

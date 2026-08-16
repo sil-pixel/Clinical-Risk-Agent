@@ -22,7 +22,7 @@ Read the problem statement, product acceptance criteria, architecture/UI decisio
 
 ## Expected output
 
-Produce the agreed Streamlit pages/components, API client integration, session-state handling, questionnaire controls, accessible result/evidence visualizations, UI tests where supported, and setup/configuration updates.
+Produce the agreed Streamlit pages/components, API client integration, session-state handling, questionnaire controls, accessible result/evidence visualizations, and UI tests in architecture-approved locations. Place new setup/configuration documentation and handoffs under `agent_docs/`; update existing canonical documents in place only when assigned.
 
 ## Boundaries
 

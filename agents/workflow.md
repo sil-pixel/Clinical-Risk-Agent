@@ -2,6 +2,10 @@
 
 This document coordinates development agents; it is not runtime orchestration code. [`Problem Statement.md`](../Problem%20Statement.md) is authoritative for roles, architecture, responsibilities, safety boundaries, and goals. Every agent must inspect existing code before changing it, preserve established contracts, document important decisions, report assumptions/blockers, avoid another agent's ownership, and leave a clear handoff.
 
+## Agent documentation location
+
+Create every new agent-generated planning, architecture, decision, contract, handoff, review, test-report, and supporting documentation file under [`agent_docs/`](../agent_docs/). Organize subdirectories there only when the repository needs them. Update an existing canonical document in place when explicitly assigned, but do not create new documentation elsewhere. Source code, tests, configuration, assets, and the operational prompts in `agents/` remain in their architecture-approved locations.
+
 ## Invariant runtime design
 
 `User → Input Validation + Safety → Intent Router → LangGraph State Machine → conditional questionnaire collection / DCMFNet inference / RAG retrieval → Structured Context → LLM → Response Validation → User`

@@ -22,7 +22,7 @@ Read the problem statement, approved product scope, architecture decisions, all 
 
 ## Expected output
 
-Produce/update the agreed README, architecture and data-flow documentation, API reference, setup/run/test guides, configuration and troubleshooting notes, limitations, and links between canonical artifacts. Prefer references over duplicating source-of-truth content.
+Create new architecture, data-flow, API, setup/run/test, configuration, troubleshooting, and limitation documents under `agent_docs/`. Update an existing canonical README or other established document in place when assigned. Prefer references over duplicating source-of-truth content.
 
 ## Boundaries
 

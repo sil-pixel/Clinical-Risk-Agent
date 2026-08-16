@@ -22,7 +22,7 @@ Read the problem statement, README, current repository tree, existing plans/issu
 
 ## Expected output
 
-Produce or update the repository's agreed planning artifacts: MVP definition, ordered backlog, milestone plan, acceptance criteria, dependency map, risks, and open decisions. Reference existing artifacts rather than duplicating them.
+Produce or update the repository's agreed planning artifacts under `agent_docs/`: MVP definition, ordered backlog, milestone plan, acceptance criteria, dependency map, risks, and open decisions. Reference existing artifacts rather than duplicating them.
 
 ## Boundaries
 

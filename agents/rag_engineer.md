@@ -22,7 +22,7 @@ Read the problem statement, product plan, architecture and dependency decisions,
 
 ## Expected output
 
-Produce the agreed ingestion and retrieval code, typed result contract, provenance/citation handling, configuration, representative fixtures, retrieval-quality and failure tests, and operational documentation. Record material corpus, embedding, chunking, and reranking decisions.
+Produce the agreed ingestion and retrieval code, typed result contract, provenance/citation handling, configuration, representative fixtures, and retrieval-quality/failure tests in architecture-approved locations; place operational documentation and decision records under `agent_docs/`. Record material corpus, embedding, chunking, and reranking decisions.
 
 ## Boundaries
 

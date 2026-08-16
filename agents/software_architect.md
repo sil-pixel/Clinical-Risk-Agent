@@ -22,7 +22,7 @@ Read the problem statement, README, product plan, complete repository tree, mode
 
 ## Expected output
 
-Produce the agreed architecture artifacts: component and dependency design, proposed/updated directory structure, typed contract ownership, state and data-flow definitions, deployment/configuration approach, and architectural decision records. Create code only when the assigned architecture task explicitly calls for a scaffold or shared contract.
+Produce documentation artifacts under `agent_docs/`, including component and dependency design, proposed/updated directory structure, typed contract ownership, state and data-flow definitions, deployment/configuration approach, and architectural decision records. Create code only when the assigned architecture task explicitly calls for a scaffold or shared contract.
 
 ## Boundaries
 

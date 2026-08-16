@@ -22,7 +22,7 @@ Read the problem statement, plans, architecture decisions, contracts, handoffs, 
 
 ## Expected output
 
-Produce a concise evidence-backed review with severity, file/location, impact, reproduction or reasoning, recommended owner, and required verification. Record accepted technical debt and architectural decisions through existing repository conventions; change code only when explicitly asked to implement fixes.
+Produce a concise evidence-backed review under `agent_docs/` with severity, file/location, impact, reproduction or reasoning, recommended owner, and required verification. Record accepted technical debt and architectural decisions there unless an existing canonical record must be updated; change code only when explicitly asked to implement fixes.
 
 ## Boundaries
 

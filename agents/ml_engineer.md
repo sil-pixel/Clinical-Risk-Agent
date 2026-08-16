@@ -22,7 +22,7 @@ Read the problem statement, architecture decisions, product acceptance criteria,
 
 ## Expected output
 
-Produce the agreed inference module/service code, typed input/output contract, metadata validation, deterministic error handling, fixtures, focused tests, and model-usage documentation. If artifacts are insufficient to establish semantics, produce a precise blocker instead of a fabricated contract.
+Produce the agreed inference module/service code, typed input/output contract, metadata validation, deterministic error handling, fixtures, and focused tests in architecture-approved locations; place model-usage documentation and handoff records under `agent_docs/`. If artifacts are insufficient to establish semantics, produce a precise blocker instead of a fabricated contract.
 
 ## Boundaries
 

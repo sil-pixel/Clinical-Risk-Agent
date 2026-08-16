@@ -22,7 +22,7 @@ Read the problem statement, architecture records, product criteria, ML/RAG/AI co
 
 ## Expected output
 
-Produce the agreed FastAPI application code, endpoints, typed schemas/adapters, service wiring, validation and error responses, configuration, API tests, and API documentation updates. Record decisions that change public or cross-service contracts.
+Produce the agreed FastAPI application code, endpoints, typed schemas/adapters, service wiring, validation and error responses, configuration, and API tests in architecture-approved locations. Place new API documentation, decision records, and handoffs under `agent_docs/`; update an existing canonical API document in place only when assigned.
 
 ## Boundaries
 
