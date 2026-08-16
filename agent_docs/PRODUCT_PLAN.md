@@ -1,6 +1,6 @@
 # Clinical Risk AI Agent — MVP Product Plan
 
-Status: Approved by product owner on 2026-08-16; amended the same day to add the approved AI Architect role and workflow stage
+Status: Approved by product owner on 2026-08-16; amended the same day to add the AI Architect stage and define the two DCMFNet symptom risk probabilities
 
 Source of truth: [`Problem Statement.md`](../Problem%20Statement.md)
 
@@ -8,7 +8,7 @@ Development workflow: [`agents/workflow.md`](../agents/workflow.md)
 
 ## Product outcome
 
-Deliver a locally runnable research prototype in which a user can complete the required structured data collection, receive an unmodified deterministic DCMFNet research risk result, and receive a plain-language explanation grounded in traceable scientific literature. The system must demonstrate the explicit stateful architecture in the problem statement rather than behave as an unconstrained chatbot.
+Deliver a locally runnable research prototype in which a user can complete the required structured data collection, receive DCMFNet's separate, unmodified positive- and negative-symptom research risk probabilities, and receive a plain-language explanation grounded in traceable scientific literature. The system must demonstrate the explicit stateful architecture in the problem statement rather than behave as an unconstrained chatbot.
 
 Success means a new contributor can clone, configure, run, test, and inspect the complete workflow, including its safety boundaries and failure behavior.
 
@@ -16,7 +16,7 @@ Success means a new contributor can clone, configure, run, test, and inspect the
 
 The MVP serves a portfolio evaluator, developer/researcher, or informed demonstration user. It is not a clinical product.
 
-1. **Complete a research risk assessment:** request an assessment, supply missing required information over one or more turns, receive a DCMFNet-produced result only after validation, and see uncertainty and research-only limitations.
+1. **Complete a research risk assessment:** request an assessment, supply missing required information over one or more turns, receive separate DCMFNet-produced positive- and negative-symptom risk probabilities only after validation, and see uncertainty and research-only limitations.
 2. **Explain an existing result:** ask why a result may be elevated or reduced, retrieve relevant scientific evidence, and receive an explanation that keeps model output distinct from literature-backed contextual claims.
 3. **Ask an educational/scientific question:** receive an evidence-grounded answer with traceable citations, or a clear statement that adequate evidence was not retrieved.
 4. **Make a general or unsupported request:** receive an appropriate conversational response or safe refusal without invoking irrelevant inference/retrieval steps.
@@ -131,10 +131,10 @@ Work may overlap only where contracts are not being guessed. In particular:
 
 | Risk | Impact | Required mitigation / owner |
 | --- | --- | --- |
-| The metadata declares 105 features across 11 named groups while `model_config.num_modalities` is 9. | Incorrect loading or feature routing could invalidate inference. | ML Engineer must explain and test the artifact/model relationship before publishing the contract. |
+| Resolved: 105 features across 11 groups represent one anchor, nine fusion modalities, and one independent modality. | Incorrect loading or feature routing could invalidate inference. | Verified against the Thesis implementation and protected by golden/runtime tests; preserve the published ML contract. |
 | Required inputs include PRS and batch/PC features that may not be user-answerable questionnaire fields. | The promised questionnaire-only journey may be infeasible or misleading. | ML Engineer identifies true runtime requirements; Product Manager then revises journey/scope if inputs cannot be derived legitimately. No invented defaults. |
-| Two artifacts target positive and negative normalized outcomes, while the problem statement describes a singular research risk probability. | Result semantics and UI could be ambiguous. | ML Engineer documents outputs; Architect defines representation; Product Manager approves user-facing terminology only after evidence is available. |
-| No model class/loading implementation or dependency manifest is present. | Artifacts may not load in the repository as-is. | ML Engineer reports exact missing code/dependency blocker; Architect owns dependency placement. |
+| The two symptom probabilities could be combined or confused in presentation. | A combined value would change the model meaning and could mislead users. | Display positive- and negative-symptom probabilities separately, retain their target identity and limitations, and prohibit the LLM/UI from recalculating or combining them. |
+| Resolved: model class, preprocessing, safe loader, dependency manifest, and golden tests are now present. | Runtime regressions could invalidate inference. | Testing Agent retains artifact hashes and golden cases as release gates. |
 | No scientific corpus or source policy is present. | RAG cannot meet citation and grounding criteria. | AI Architect designs a traceable, legally usable source policy within product constraints; RAG Engineer validates and implements it. |
 | LLM or embedding provider is not selected. | Local reproducibility, cost, privacy, and tests remain uncertain. | AI Architect defines provider criteria, abstraction/configuration, and safe local/test fallbacks; Product Manager confirms material cost/privacy constraints. |
 | Sensitive questionnaire content may leak through logs, traces, prompts, or persisted state. | Privacy and trust failure even in a prototype. | Architect defines minimization and state/logging policy; Backend, AI, Frontend, Testing, and Reviewer enforce it. |
@@ -151,9 +151,9 @@ Work may overlap only where contracts are not being guessed. In particular:
 
 ### Decisions required before implementation can be called complete
 
-1. **Model feasibility:** Can the supplied artifacts be loaded with repository-available or recoverable DCMFNet code, and what do both outputs mean?
+1. **Resolved — model feasibility:** Both artifacts load through the verified Thesis-derived runtime and return separate positive- and negative-symptom research risk probabilities for normalized symptom-severity targets.
 2. **Input feasibility:** Which of the 105 inputs are directly collected, derived, supplied as research context, or unavailable? No default may be invented merely to complete the form.
-3. **User-facing result language:** After model semantics are verified, what non-clinical terminology accurately describes the output(s)?
+3. **Resolved — user-facing result language:** Present separate positive-symptom and negative-symptom research risk probabilities, never a combined probability; retain research-only, synthetic-data, and non-diagnostic limitations.
 4. **Scientific source policy:** Which literature sources/corpus and licensing/update rules satisfy traceability and local demonstration needs?
 5. **Provider constraints:** Which LLM and embedding configurations balance reproducibility, cost, privacy, and portfolio usability?
 6. **State lifetime:** Is assessment state memory-only for the MVP, and what explicit reset/expiry behavior is required?

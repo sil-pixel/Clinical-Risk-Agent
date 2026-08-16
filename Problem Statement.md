@@ -99,14 +99,19 @@ Instead, the LLM should orchestrate tools and communicate their outputs naturall
 
 DCMFNet is a deep learning model trained independently from this repository.
 
-It accepts structured questionnaire features and produces a research risk probability.
+It accepts structured questionnaire features and produces two separate research risk probabilities:
+
+- a positive-symptom risk probability (`SCZ18_Pos_Norm`) for positive symptoms of schizophrenia, including psychotic and manic symptoms
+- a negative-symptom risk probability (`SCZ18_Neg_Norm`) for negative symptoms of schizophrenia, including depressive symptoms
+
+The probabilities remain separate. They must not be combined, recalculated, or modified by the LLM.
 
 The Clinical Risk AI Agent treats DCMFNet as a black-box inference service.
 
 Responsibilities of DCMFNet:
 
 - deterministic inference
-- probability estimation
+- separate positive- and negative-symptom probability estimation
 - risk prediction
 
 Responsibilities of the AI Agent:

@@ -209,10 +209,10 @@ The initial preferred local adapter is a persistent local vector store with meta
 - Load models once during backend startup or first guarded use; use evaluation mode and inference/no-gradient execution.
 - Validate metadata structure and artifact compatibility before readiness succeeds.
 - Keep raw feature vectors and questionnaire values out of logs.
-- Do not infer labels, thresholds, calibration, positive/negative target relationships, or a combined score from names alone.
+- Preserve the separate positive- and negative-symptom research risk probabilities, their normalized target labels, and raw outputs; do not add thresholds, calibration, risk bands, or a combined probability.
 - Publish an ML-owned contract before questionnaire, graph, API, or UI code binds to feature fields or results.
 
-Repository inspection found 105 features in 11 metadata groups for both artifacts, while each `model_config.num_modalities` is 9. The negative model also uses a scalar `num_layers`, while the positive model uses a nine-element list. These may be valid constructor conventions, but only the ML Engineer may resolve them through the actual DCMFNet implementation and artifact tests.
+ML verification against the user-designated Thesis implementation resolved the artifact structure: the 11 groups are one anchor, nine iteratively fused modalities, and one independent modality. Scalar versus list-valued layer configuration is supported by the verified constructor. The target-specific CPU inference adapter, preprocessing, immutable results, and golden tests are implemented under `src/clinical_risk_agent/`. End-user questionnaire semantics remain blocked because the machine schema does not define safe collection wording, encodings, ranges, or provenance for all inputs.
 
 ## API and process boundaries
 
@@ -266,4 +266,4 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 
 ## Architecture exit gate
 
-ARCH-01 and ARCH-02 are complete when implementation agents accept these locations, dependencies, ownership rules, state/data policy, and contract statuses. The ML Engineer is next and must resolve blocked inference contracts before downstream consumers bind to model fields. The AI Architect then produces the detailed AI and RAG design before RAG and AI implementation.
+ARCH-01 and ARCH-02 are complete. The ML Engineer has published verified inference contracts and a separate questionnaire-feasibility blocker. The AI Architect is next and must consume the exact ML result semantics while designing the detailed AI and RAG architecture before RAG and AI implementation.

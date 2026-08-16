@@ -44,13 +44,15 @@ Owner: Software Architect
 
 **Consequences:** Invalid generated output is rejected; the validator may retry under a bounded policy or return a deterministic safe response, never silently repair evidence or scores.
 
-## ADR-006 — Block downstream model schemas until executable verification
+## ADR-006 — Require executable verification before downstream model schemas
 
 **Decision:** ML-owned questionnaire and inference payloads remain blocked until the supplied artifacts are loaded and their semantics verified.
 
 **Why:** Metadata contains 11 feature groups/105 features despite `num_modalities: 9`, includes non-questionnaire-looking PRS and batch/PC inputs, and supplies positive/negative targets without a documented user-facing relationship.
 
-**Consequences:** AI, Backend, and Frontend agents cannot invent fields, defaults, risk bands, a combined score, or factor attribution. A model-feasibility failure returns to Product Manager.
+**Verification update (2026-08-16):** The user-designated Thesis implementation and report established the model construction, preprocessing, targets, and golden outputs. `InferenceInputSchema` and `InferenceResult` are now implemented. The product owner defines the outputs as separate positive- and negative-symptom research risk probabilities. `QuestionnaireRequirements` remains blocked because user-facing collection semantics and legitimate sources for PRS and batch/principal-component values are not established.
+
+**Consequences:** AI and Backend may integrate the exact internal inference contract with synthetic fixtures. AI, Backend, and Frontend agents still cannot invent questionnaire fields/defaults, risk bands, a combined probability, or factor attribution. Product Manager approval is required for the user-facing input journey.
 
 ## ADR-007 — Keep scientific knowledge and citation identity external to prompts
 
@@ -88,8 +90,8 @@ Owner: Software Architect
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Streamlit, vector-store, embedding, and LLM package versions.
 - Concrete scientific corpus/source policy and retrieval adapter.
-- DCMFNet model class, preprocessing, input feasibility, and output meaning.
-- Final questionnaire presentation and user-facing risk terminology.
+- DCMFNet input feasibility and provenance.
+- Final questionnaire presentation.
 - Exact inactivity TTL, request/state size bounds, and approved urgent-response content.
 
 Deferred items remain owned by the roles and gates identified in the product plan and interface registry; deferral is not permission for downstream agents to guess.

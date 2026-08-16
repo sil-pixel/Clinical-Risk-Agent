@@ -1,6 +1,6 @@
 # Interface Contract Registry
 
-Status: Architecture baseline; payloads marked **blocked** must not be implemented by downstream consumers
+Status: Architecture baseline with verified ML inference contracts; payloads marked **blocked** must not be implemented by downstream consumers
 
 Owner: Software Architect for boundary consistency; component owners finalize their payloads
 
@@ -20,10 +20,12 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | --- | --- | --- | --- |
 | `SafetyDecision` | Safety → workflow/API | AI Architect (design), AI Engineer (implementation) | Architecture-defined categories; wording/escalation policy remains open |
 | `IntentDecision` | Router → LangGraph | AI Architect (design), AI Engineer (implementation) | Approved intent enum; confidence/fallback details finalized in AI architecture |
-| `QuestionnaireRequirements` | ML/questionnaire → graph/UI | ML Engineer | **Blocked** on artifact/input feasibility |
+| `ArtifactInspection` | DCMFNet artifact validator → readiness/tests | ML Engineer | **Implemented:** integrity/readiness facts |
+| `InferenceInputSchema` | DCMFNet adapter → graph/backend/tools | ML Engineer | **Implemented:** exact machine feature groups/order; not user-facing questionnaire copy |
+| `QuestionnaireRequirements` | ML/questionnaire → graph/UI | ML Engineer | **Blocked** on collection feasibility, encodings, ranges, wording, and provenance |
 | `QuestionnaireValidationResult` | Questionnaire validator → graph | ML Engineer | **Blocked** on requirements contract |
-| `InferenceRequest` | Graph → DCMFNet port | ML Engineer | **Blocked** on model loader and feature semantics |
-| `InferenceResult` | DCMFNet port → graph/context/API | ML Engineer | **Blocked** on positive/negative output semantics |
+| `InferenceRequest` | Graph → DCMFNet port | ML Engineer | **Implemented internally:** selected target plus records containing all 105 exact numeric feature keys |
+| `InferenceResult` | DCMFNet port → graph/context/API | ML Engineer | **Implemented:** immutable, separate positive- or negative-symptom research risk probability and artifact identity |
 | `RetrievalQuery` | Graph → RAG port | AI Architect (design), RAG Engineer (implementation) | Minimum boundary below; AI/RAG architecture and corpus policy required |
 | `EvidenceResult` | RAG port → graph/context/API | AI Architect (design), RAG Engineer (implementation) | Minimum provenance boundary below; final fields pending corpus selection |
 | `StructuredExplanationContext` | Context builder → LLM port | AI Architect (design), AI Engineer (implementation) | Must compose immutable validated results; finalized after ML/RAG contracts |
@@ -56,18 +58,17 @@ The exact spelling is the canonical machine representation. Adding an intent req
 
 It must not contain a diagnosis. The AI Architect specifies the policy categories and the AI Engineer implements/tests them; neither may allow a probabilistic model to be the sole gate for deterministic validation.
 
-## ML-owned contracts — blocked
+## ML-owned contracts
 
-Before publishing `QuestionnaireRequirements`, `InferenceRequest`, or `InferenceResult`, the ML Engineer must establish from executable evidence:
+The canonical contracts are implemented under `src/clinical_risk_agent/contracts/` and the runtime under `src/clinical_risk_agent/inference/`. The implementation is based on the user-designated Thesis source at revision `2f6d96db481873fce8a3ba35f29d6e4ee5359dd9` and is covered by cross-runtime golden fixtures.
 
-- safe loading procedure and required DCMFNet code/runtime
-- artifact identity/checksum and metadata compatibility
-- feature identifiers, order, grouping, types, valid values, preprocessing, missing-value rules, and which values are genuinely user-collectible
-- the meaning and relationship of `SCZ18_Pos_Norm` and `SCZ18_Neg_Norm`
-- output transform, range, units/meaning, calibration limitations, and whether “probability” is technically supported
-- deterministic runtime settings and error conditions
+Each target-specific call requires all 105 unique feature keys in the exact exported schema. Unknown or missing keys, non-numeric values, and infinite values fail closed. NaN values are replaced with exported training medians; values are then standardized with exported training means and scales. CPU inference is the only verified device mode.
 
-Downstream agents may depend on a generic inference port returning an opaque validated result, but they must not create concrete questionnaire fields, defaults, target labels, combined scores, thresholds, risk bands, factor attribution, or explanations until this contract is unblocked.
+The result contains the exact artifact target—`SCZ18_Pos_Norm` or `SCZ18_Neg_Norm`—and raw predictions named `normalized_symptom_severity`, plus artifact version, checkpoint SHA-256, and fixed limitations. The product definition identifies the positive target as risk probability for positive schizophrenia symptoms, including psychotic and manic symptoms, and the negative target as risk probability for negative schizophrenia symptoms, including depressive symptoms. These research probabilities are not clinically calibrated, diagnoses, screening results, causal effects, thresholds, or a combined score. Consumers must preserve numeric and identity fields exactly, keep the two probabilities separate, and never apply an undocumented output transform.
+
+`QuestionnaireRequirements` and `QuestionnaireValidationResult` remain blocked. Machine feature metadata does not define safe end-user wording, units, categorical encodings, valid ranges, or legitimate sources for PRS and batch/principal-component inputs. No consumer may convert identifiers into questions, impute values merely because a user cannot supply them, or claim conversational answers satisfy the inference contract.
+
+See [`ML_ARTIFACT_AUDIT.md`](ML_ARTIFACT_AUDIT.md) and [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md) for evidence, hashes, golden values, and the required product decisions.
 
 ## Minimum retrieval boundary
 

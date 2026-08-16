@@ -1,6 +1,6 @@
 # Software Architect Handoff
 
-Status: Ready for ML Engineer, then AI Architect
+Status: ML Engineer handoff completed; ready for AI Architect
 
 Architecture scope: ARCH-01 and ARCH-02 initial baseline
 
@@ -22,6 +22,8 @@ Architecture scope: ARCH-01 and ARCH-02 initial baseline
 - New agent-generated documentation under `agent_docs/`.
 
 ## ML Engineer input
+
+Completion update (2026-08-16): the user supplied the sibling Thesis repository as authoritative evidence. The ML Engineer verified and ported model construction and preprocessing, published inference contracts, and added golden tests. See [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md). The questionnaire feasibility and user-facing output terminology items remain open Product Manager decisions.
 
 Inspect both repository-supplied `.pt` files and their metadata. Treat serialized artifacts as untrusted and do not use an unsafe loading mode merely to discover content. Obtain or identify the actual DCMFNet implementation/runtime before constructing the models.
 
