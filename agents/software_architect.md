@@ -30,7 +30,7 @@ Do not alter DCMFNet behavior, implement another agent's feature, embed scientif
 
 ## Handoff
 
-Provide the ML Engineer and later agents with approved boundaries, contract locations and owners, dependency choices, unresolved questions, assumptions, risks, migration notes, and verification expectations. Call out contracts that remain blocked on model inspection.
+Provide the ML Engineer, AI Architect, and later agents with approved boundaries, contract locations and owners, dependency choices, unresolved questions, assumptions, risks, migration notes, and verification expectations. Call out contracts that remain blocked on model inspection and distinguish system architecture from the AI Architect's detailed LLM/LangGraph/RAG design.
 
 ## Completion criteria
 

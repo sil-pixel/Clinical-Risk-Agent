@@ -1,6 +1,6 @@
 # Development Agent Workflow
 
-This document coordinates development agents; it is not runtime orchestration code. [`Problem Statement.md`](../Problem%20Statement.md) is authoritative for roles, architecture, responsibilities, safety boundaries, and goals. Every agent must inspect existing code before changing it, preserve established contracts, document important decisions, report assumptions/blockers, avoid another agent's ownership, and leave a clear handoff.
+This document coordinates development agents; it is not runtime orchestration code. [`Problem Statement.md`](../Problem%20Statement.md), including the product-owner-approved AI Architect role, is authoritative for roles, architecture, responsibilities, safety boundaries, and goals. Every agent must inspect existing code before changing it, preserve established contracts, document important decisions, report assumptions/blockers, avoid another agent's ownership, and leave a clear handoff.
 
 ## Agent documentation location
 
@@ -26,7 +26,8 @@ Skills describe the capabilities needed to perform an existing role; they do not
 | Product Manager | MVP planning, prioritization, acceptance criteria, dependencies, healthcare AI product safety |
 | Software Architect | Python architecture, contracts, component boundaries, security/privacy, technical decisions |
 | ML Engineer | PyTorch inference, artifact/schema validation, preprocessing, reproducibility, model metadata |
-| RAG Engineer | Scientific ingestion, embeddings, vector/hybrid retrieval, reranking, provenance, evaluation |
+| AI Architect | LLM/LangGraph and RAG architecture, grounding, safety, provider strategy, evaluation design |
+| RAG Engineer | Scientific ingestion, embeddings, vector/hybrid retrieval, reranking, provenance, evaluation implementation |
 | AI Engineer | LangChain/LangGraph, tool calling, typed state, prompts, grounded generation, LLM safety |
 | Backend Engineer | FastAPI/Pydantic, API integration, validation, resilience, observability, service testing |
 | Frontend Engineer | Streamlit, accessible questionnaire UX, API integration, state, safe visualization |
@@ -48,7 +49,7 @@ Skills describe the capabilities needed to perform an existing role; they do not
 - **Receives:** Product plan and current repository/artifact inventory.
 - **Produces:** Repository/component design, service boundaries, contract ownership, dependency decisions, data/state flow, decision records.
 - **Exit gate:** Component responsibilities and locations are approved; unresolved model semantics are explicitly deferred to ML rather than guessed.
-- **Possible return:** ML, RAG, AI, Backend, Reviewer, or Testing may return interface or boundary problems.
+- **Possible return:** ML, AI Architect, RAG, AI, Backend, Reviewer, or Testing may return interface or boundary problems.
 
 ### 3. ML Engineer
 
@@ -57,49 +58,56 @@ Skills describe the capabilities needed to perform an existing role; they do not
 - **Exit gate:** Inputs, ordering/preprocessing, output semantics, errors, and model version are evidence-based and testable—or a precise artifact blocker is recorded.
 - **Possible return:** AI/Backend integration failures, Testing defects, or Reviewer correctness findings return here.
 
-### 4. RAG Engineer
+### 4. AI Architect
 
-- **Receives:** Architecture boundaries, source/corpus policy, acceptance criteria, dependency decisions.
+- **Receives:** Approved product/system architecture, verified ML contract and limitations, repository inventory, and available corpus/source constraints.
+- **Produces:** AI and RAG architecture, graph/tool/context design, source and provenance policy, retrieval pipeline design, provider criteria, safety/validation strategy, evaluation gates, and RAG/AI implementation handoffs.
+- **Exit gate:** RAG and LLM/LangGraph designs are explicit; deterministic/model-assisted/prohibited decisions are identified; retrieval and AI quality gates are measurable; blocked ML/source dependencies remain visible.
+- **Possible return:** RAG or AI implementation feasibility issues, Testing quality gaps, and Reviewer AI-boundary findings return here. Shared system/API changes return to the Software Architect.
+
+### 5. RAG Engineer
+
+- **Receives:** Software architecture boundaries plus the AI Architect's approved RAG source, pipeline, provenance, contract, provider, and evaluation design.
 - **Produces:** Ingestion/retrieval pipeline, provenance-preserving result contract, configuration, quality/failure tests, retrieval handoff.
 - **Exit gate:** Results are structured and traceable to real sources; citation and no-evidence behavior are defined.
-- **Possible return:** AI integration failures, retrieval-quality gaps from Testing, or provenance findings from Reviewer return here.
+- **Possible return:** Design/feasibility issues return to the AI Architect; shared interface issues return to the Software Architect; implementation defects and retrieval-quality gaps return here.
 
-### 5. AI Engineer
+### 6. AI Engineer
 
-- **Receives:** Approved architecture plus stable ML and RAG tool contracts.
+- **Receives:** Approved Software and AI architecture plus stable ML and implemented RAG tool contracts.
 - **Produces:** Intent router, typed LangGraph state/nodes/edges, questionnaire/tool orchestration, prompts, structured response validation, workflow tests.
 - **Exit gate:** Supported intents and state transitions are explicit; missing data, tool failure, unsafe requests, and evidence requirements are covered; the LLM cannot alter scores or invent citations.
-- **Possible return:** Backend integration, graph failures from Testing, or responsibility-boundary findings from Reviewer return here. Contract defects go to ML/RAG/Architect rather than being patched locally.
+- **Possible return:** Backend integration, graph failures from Testing, or implementation findings from Reviewer return here. AI design defects go to the AI Architect; ML/RAG/shared contract defects go to their owner and the Software Architect rather than being patched locally.
 
-### 6. Backend Engineer
+### 7. Backend Engineer
 
 - **Receives:** Stable graph, inference, and retrieval contracts plus architecture/API constraints.
 - **Produces:** FastAPI schemas/endpoints, service integration, validation, configuration, errors/health behavior, API tests and handoff.
 - **Exit gate:** Integrated APIs preserve contract ownership and safety boundaries and are stable for frontend use.
 - **Possible return:** Frontend contract issues, API failures from Testing, or boundary/security findings from Reviewer return here.
 
-### 7. Frontend Engineer
+### 8. Frontend Engineer
 
 - **Receives:** Stable backend contracts, product journeys, safety/display requirements.
 - **Produces:** Streamlit questionnaire/chat/result/evidence experience, API client, session/error states, UI checks and handoff.
 - **Exit gate:** Core journeys work with real APIs; displayed scores/evidence are unmodified; limitations are clear; no backend workflow logic is duplicated.
-- **Possible return:** UI defects from Testing/Reviewer return here; API contract defects return to Backend and, if foundational, Architect.
+- **Possible return:** UI defects from Testing/Reviewer return here; API contract defects return to Backend and, if foundational, the Software Architect.
 
-### 8. Testing Agent
+### 9. Testing Agent
 
 - **Receives:** Acceptance criteria, contracts, implementations, agent test handoffs, runnable configuration.
 - **Produces:** Risk-based unit/integration/end-to-end and safety tests, reproducible defect reports, rerun evidence, gap/residual-risk summary.
 - **Exit gate:** Critical workflows and safety invariants pass, or failures are assigned and tracked; fixes are rerun by Testing.
-- **Possible return:** Route failures to the owning agent—for example, LangGraph transition failure → AI Engineer → Testing rerun; inference mismatch → ML Engineer; citation provenance failure → RAG Engineer; endpoint failure → Backend; UI journey failure → Frontend.
+- **Possible return:** Route failures to the owning agent—for example, LangGraph implementation failure → AI Engineer; AI/RAG design flaw → AI Architect; inference mismatch → ML Engineer; retrieval implementation failure → RAG Engineer; endpoint failure → Backend; UI journey failure → Frontend; then Testing reruns.
 
-### 9. Reviewer
+### 10. Reviewer
 
 - **Receives:** Complete changes, architecture/contracts, acceptance traceability, test evidence, known limitations.
 - **Produces:** Prioritized code/architecture/safety review, technical-debt record, recheck results, documentation handoff.
 - **Exit gate:** Blocking findings are fixed and rechecked or explicitly accepted by the proper owner; residual risks are visible.
-- **Possible return:** API boundary issue → Software Architect and/or Backend Engineer → Reviewer recheck. Scope issues return to Product Manager; test gaps return to Testing; component defects return to their owner.
+- **Possible return:** API/system boundary issues → Software Architect and/or Backend Engineer; AI/RAG architecture issues → AI Architect; scope issues → Product Manager; test gaps → Testing; component defects → their implementation owner; then Reviewer rechecks.
 
-### 10. Documentation Agent
+### 11. Documentation Agent
 
 - **Receives:** Reviewer-approved behavior, final contracts/decisions, verified setup/run/test commands, limitations.
 - **Produces:** Accurate README, architecture, API, setup, test, configuration, and troubleshooting documentation.
@@ -109,7 +117,7 @@ Skills describe the capabilities needed to perform an existing role; they do not
 ## Iteration protocol
 
 1. The discovering agent records a reproducible finding, affected acceptance criterion/contract, severity, and proposed owner.
-2. The owning agent inspects the current implementation and makes the smallest in-scope correction; cross-contract changes require Architect review and notification to all consumers.
+2. The owning agent inspects the current implementation and makes the smallest in-scope correction; cross-system contract changes require Software Architect review, while AI/RAG design changes require AI Architect review and notification to affected consumers.
 3. Testing reruns the narrow failing check and relevant regression suite.
 4. Reviewer rechecks material architecture, safety, or public-contract changes.
 5. Documentation updates only after behavior and contracts are verified.
@@ -118,4 +126,4 @@ No agent should mask an upstream contract problem with a private duplicate schem
 
 ## Current repository dependency note
 
-At initial inspection, the repository contains the problem statement, a minimal README, and DCMFNet `.pt` plus metadata artifacts, but no established application directory structure, dependency manifest, API/schema contracts, corpus, or implementation tests. Therefore Product Manager and Software Architect outputs are prerequisites; the ML Engineer must verify the artifact contract before AI or Backend code assumes it; and RAG requires an explicit scientific source/corpus policy before ingestion can be considered complete.
+At initial inspection, the repository contains the problem statement, a minimal README, and DCMFNet `.pt` plus metadata artifacts, but no application implementation, dependency manifest, scientific corpus, or tests. Product Manager and Software Architect outputs are prerequisites; the ML Engineer must verify the artifact contract before downstream code assumes it; the AI Architect must design the RAG and LLM/LangGraph architecture before RAG or AI implementation; and corpus/source eligibility must be approved before ingestion can be considered complete.

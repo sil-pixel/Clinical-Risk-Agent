@@ -18,16 +18,16 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 | Contract | Producer → consumers | Owner | Status / gate |
 | --- | --- | --- | --- |
-| `SafetyDecision` | Safety → workflow/API | AI Engineer | Architecture-defined categories; wording/escalation policy remains open |
-| `IntentDecision` | Router → LangGraph | AI Engineer | Approved intent enum; confidence/fallback details finalized during AI implementation |
+| `SafetyDecision` | Safety → workflow/API | AI Architect (design), AI Engineer (implementation) | Architecture-defined categories; wording/escalation policy remains open |
+| `IntentDecision` | Router → LangGraph | AI Architect (design), AI Engineer (implementation) | Approved intent enum; confidence/fallback details finalized in AI architecture |
 | `QuestionnaireRequirements` | ML/questionnaire → graph/UI | ML Engineer | **Blocked** on artifact/input feasibility |
 | `QuestionnaireValidationResult` | Questionnaire validator → graph | ML Engineer | **Blocked** on requirements contract |
 | `InferenceRequest` | Graph → DCMFNet port | ML Engineer | **Blocked** on model loader and feature semantics |
 | `InferenceResult` | DCMFNet port → graph/context/API | ML Engineer | **Blocked** on positive/negative output semantics |
-| `RetrievalQuery` | Graph → RAG port | RAG Engineer | Minimum boundary below; corpus policy required |
-| `EvidenceResult` | RAG port → graph/context/API | RAG Engineer | Minimum provenance boundary below; final fields pending corpus selection |
-| `StructuredExplanationContext` | Context builder → LLM port | AI Engineer | Must compose immutable validated results; finalized after ML/RAG contracts |
-| `ValidatedAssistantResponse` | Response validator → API/UI | AI Engineer | Envelope below; content blocks finalized with Backend/Frontend |
+| `RetrievalQuery` | Graph → RAG port | AI Architect (design), RAG Engineer (implementation) | Minimum boundary below; AI/RAG architecture and corpus policy required |
+| `EvidenceResult` | RAG port → graph/context/API | AI Architect (design), RAG Engineer (implementation) | Minimum provenance boundary below; final fields pending corpus selection |
+| `StructuredExplanationContext` | Context builder → LLM port | AI Architect (design), AI Engineer (implementation) | Must compose immutable validated results; finalized after ML/RAG contracts |
+| `ValidatedAssistantResponse` | Response validator → API/UI | AI Architect (design), AI Engineer (implementation) | Envelope below; content blocks finalized with Backend/Frontend |
 | Public session transport | FastAPI ↔ Streamlit | Backend Engineer | Architecture baseline below; finalized only after workflow contracts stabilize |
 | `ServiceError` | All components → API/tests | Software Architect / Backend Engineer | Minimum taxonomy approved |
 
@@ -54,7 +54,7 @@ The exact spelling is the canonical machine representation. Adding an intent req
 - policy/ruleset version
 - limitations or escalation configuration status
 
-It must not contain a diagnosis. The AI Engineer may refine categories with tests but may not allow a probabilistic model to be the sole gate for deterministic validation.
+It must not contain a diagnosis. The AI Architect specifies the policy categories and the AI Engineer implements/tests them; neither may allow a probabilistic model to be the sole gate for deterministic validation.
 
 ## ML-owned contracts — blocked
 
@@ -71,7 +71,7 @@ Downstream agents may depend on a generic inference port returning an opaque val
 
 ## Minimum retrieval boundary
 
-`RetrievalQuery` contains normalized user information needed for semantic search, requested result limit, and optional filters supported by the approved corpus. It must not include the full questionnaire or model feature vector. The RAG Engineer owns final query fields.
+`RetrievalQuery` contains normalized user information needed for semantic search, requested result limit, and optional filters supported by the approved corpus. It must not include the full questionnaire or model feature vector. The AI Architect designs semantic fields and the RAG Engineer validates and implements them.
 
 Each evidence result must distinguish:
 

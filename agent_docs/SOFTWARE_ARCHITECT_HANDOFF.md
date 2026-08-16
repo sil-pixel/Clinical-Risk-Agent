@@ -1,6 +1,6 @@
 # Software Architect Handoff
 
-Status: Ready for ML Engineer
+Status: Ready for ML Engineer, then AI Architect
 
 Architecture scope: ARCH-01 and ARCH-02 initial baseline
 
@@ -15,6 +15,7 @@ Architecture scope: ARCH-01 and ARCH-02 initial baseline
 
 - Modular monolith: FastAPI backend plus API-only Streamlit frontend.
 - Explicit LangGraph workflow with injected ML, RAG, and LLM ports.
+- AI Architect design ownership for the detailed LLM/LangGraph and RAG architecture; RAG and AI Engineers retain implementation ownership.
 - One canonical shared contract package; no private duplicate score/citation/questionnaire schemas.
 - In-memory, bounded, expiring MVP session state; no durable sensitive questionnaire store.
 - Structured validation before and after the LLM; immutable model and evidence results.
@@ -59,4 +60,4 @@ These are blockers to concrete inference and questionnaire contracts, not permis
 
 If the model implementation, training-time transforms, input provenance, or output semantics cannot be recovered, stop and document the exact missing evidence. Return model/input feasibility to the Product Manager and artifact/runtime design to the Software Architect. AI, Backend, and Frontend work must not bind to ML payloads until the registry marks them unblocked.
 
-RAG work may define its scientific source policy independently, but the documented sequential workflow proceeds to the ML Engineer now.
+After ML publishes verified contracts or a precise blocker, hand off to the AI Architect to design the LLM/LangGraph and RAG architecture. The RAG Engineer then implements the approved retrieval design, followed by AI Engineer implementation. Shared system/API changes return here for review.

@@ -26,7 +26,7 @@ Owner: Software Architect
 
 **Why:** Provider selection is unresolved, external calls require deterministic test doubles, and model/RAG contracts must stabilize independently of orchestration.
 
-**Consequences:** Provider SDK objects cannot appear in domain contracts. Concrete dependencies are wired only at the composition root.
+**Consequences:** Provider SDK objects cannot appear in domain contracts. The AI Architect defines AI/RAG provider criteria and boundaries; implementation engineers provide feasibility evidence and adapters. Concrete dependencies are wired only at the composition root.
 
 ## ADR-004 — Keep MVP conversational state ephemeral
 
@@ -58,7 +58,7 @@ Owner: Software Architect
 
 **Why:** This supports provenance, updateability, evaluation, and the prohibition on fabricated citations.
 
-**Consequences:** Unsupported or out-of-corpus questions produce a limitation unless retrieval returns suitable evidence. Citation identifiers must be validated against the current retrieval result.
+**Consequences:** The AI Architect designs the source/provenance and citation flow; the RAG Engineer implements it. Unsupported or out-of-corpus questions produce a limitation unless retrieval returns suitable evidence. Citation identifiers must be validated against the current retrieval result.
 
 ## ADR-008 — Use one canonical contract package
 

@@ -356,6 +356,21 @@ Responsible for:
 
 ---
 
+## AI Architect Agent
+
+Responsible for:
+
+- LLM and LangGraph architecture
+- RAG architecture
+- prompt and structured context design
+- AI safety and grounding architecture
+- LLM, embedding, and reranking provider/model selection criteria
+- AI and retrieval evaluation strategy
+
+The AI Architect designs the AI and RAG subsystems. The AI Engineer and RAG Engineer implement those designs within the Software Architect's system boundaries.
+
+---
+
 ## Backend Engineer Agent
 
 Responsible for:
@@ -457,19 +472,21 @@ It should define a recommended sequence similar to:
       ↓
 3. ML Engineer
       ↓
-4. RAG Engineer
+4. AI Architect
       ↓
-5. AI Engineer
+5. RAG Engineer
       ↓
-6. Backend Engineer
+6. AI Engineer
       ↓
-7. Frontend Engineer
+7. Backend Engineer
       ↓
-8. Testing Agent
+8. Frontend Engineer
       ↓
-9. Reviewer
+9. Testing Agent
       ↓
-10. Documentation Agent
+10. Reviewer
+      ↓
+11. Documentation Agent
 ```
 
 Adjust the exact order if the repository or dependencies discovered during inspection justify it.
@@ -516,9 +533,11 @@ The Software Architect should then define repository structure, interfaces, serv
 
 The ML Engineer should establish the contract for the exported DCMFNet model before the rest of the system assumes its input/output interface.
 
-The RAG Engineer should define the scientific retrieval contract.
+The AI Architect should then design the LLM, LangGraph, and RAG architecture, including scientific source policy, retrieval/provenance flow, grounding, safety, provider criteria, and evaluation gates.
 
-The AI Engineer should then build the intent-routing and LangGraph workflow around those established tool contracts.
+The RAG Engineer should implement and validate the approved scientific retrieval architecture and contract.
+
+The AI Engineer should then implement the intent-routing and LangGraph workflow around the approved AI architecture and established tool contracts.
 
 The Backend Engineer should expose and integrate the required APIs and services.
 

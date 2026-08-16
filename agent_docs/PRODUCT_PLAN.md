@@ -1,6 +1,6 @@
 # Clinical Risk AI Agent — MVP Product Plan
 
-Status: Approved by product owner on 2026-08-16; handed off for architecture planning
+Status: Approved by product owner on 2026-08-16; amended the same day to add the approved AI Architect role and workflow stage
 
 Source of truth: [`Problem Statement.md`](../Problem%20Statement.md)
 
@@ -65,7 +65,7 @@ The MVP serves a portfolio evaluator, developer/researcher, or informed demonstr
 | AC-05 | Questionnaire validation identifies required missing/invalid values from the verified inference contract; DCMFNet is not called until the contract is satisfied. | ML Engineer / AI Engineer / Testing Agent |
 | AC-06 | The supplied artifacts load reproducibly, incompatible artifacts fail safely, and identical validated input under the same model/runtime produces the same unmodified structured result. | ML Engineer / Testing Agent |
 | AC-07 | No LLM code path calculates, changes, rounds into a materially different value, or fabricates a risk result. | AI Engineer / Reviewer / Testing Agent |
-| AC-08 | Scientific or medical claims produced by the assistant are supported by retrieved sources with traceable citation metadata; absent evidence yields an explicit limitation rather than a fabricated answer. | RAG Engineer / AI Engineer / Testing Agent |
+| AC-08 | Scientific or medical claims produced by the assistant are supported by retrieved sources with traceable citation metadata; absent evidence yields an explicit limitation rather than a fabricated answer. | AI Architect / RAG Engineer / AI Engineer / Testing Agent |
 | AC-09 | Explanations clearly distinguish model output from literature context and communicate uncertainty, limitations, synthetic-data provenance, and research-only/non-diagnostic use. | AI Engineer / Frontend Engineer / Testing Agent |
 | AC-10 | The assistant does not diagnose, recommend medication, guarantee outcomes, claim certainty, or fabricate citations/model outputs across tested supported and adversarial paths. | Testing Agent / Reviewer |
 | AC-11 | FastAPI validates public inputs/outputs, integrates the established contracts, returns actionable structured failures, and exposes readiness sufficient for local use. | Backend Engineer / Testing Agent |
@@ -86,12 +86,12 @@ The MVP serves a portfolio evaluator, developer/researcher, or informed demonstr
 
 4. **ML-01 — Verify supplied DCMFNet artifacts** (ML Engineer): establish load requirements, feature grouping/order, preprocessing, output semantics, target relationship, versioning, and deterministic behavior. Depends on ARCH-01. Done when no downstream consumer must infer model behavior.
 5. **ML-02 — Implement and test the inference contract** (ML Engineer): validate inputs/metadata and return unmodified structured outputs or explicit errors. Depends on ML-01. Done when AC-05 and AC-06 have executable evidence.
-6. **RAG-01 — Approve scientific corpus/source policy** (RAG Engineer, with Product Manager constraints and Architect review): define acceptable source types, provenance requirements, update/version approach, and licensing constraints. Depends on ARCH-01. Done before ingestion is treated as production-ready.
-7. **RAG-02 — Implement and evaluate retrieval** (RAG Engineer): ingest the approved corpus and return traceable evidence through a stable contract, including no-result behavior. Depends on RAG-01. Done when AC-08 retrieval prerequisites are demonstrated.
+6. **AIARCH-01 — Design AI and RAG architecture** (AI Architect): define graph/tool/context architecture, corpus/source policy, ingestion-to-reranking design, provenance/citation flow, provider criteria, safety controls, and measurable AI/RAG quality gates. Depends on ARCH-01 and ML-01; model-dependent decisions remain provisional until ML-02. Done when RAG and AI Engineers can implement without inventing architecture.
+7. **RAG-01 — Implement approved scientific retrieval architecture** (RAG Engineer): validate source feasibility, ingest the approved corpus, implement embeddings/index/retrieval/reranking and provenance contracts, and execute retrieval-quality/failure evaluations. Depends on AIARCH-01. Done when AC-08 retrieval prerequisites are demonstrated.
 
 ### M3 — Stateful intelligence and service integration
 
-8. **AI-01 — Implement intent and LangGraph workflow** (AI Engineer): build explicit state, routing, questionnaire progression, inference/retrieval tool calls, and failure branches using stable ML/RAG contracts. Depends on ML-02 and RAG-02. Done when AC-02 through AC-05 pass focused tests.
+8. **AI-01 — Implement intent and LangGraph workflow** (AI Engineer): build explicit state, routing, questionnaire progression, inference/retrieval tool calls, and failure branches using the approved AI architecture and stable ML/RAG contracts. Depends on AIARCH-01, ML-02, and RAG-01. Done when AC-02 through AC-05 pass focused tests.
 9. **AI-02 — Implement grounded explanation and response validation** (AI Engineer): constrain LLM behavior to supplied results/evidence and validate safety, uncertainty, score, and citation integrity. Depends on AI-01. Done when AC-07 through AC-10 pass focused evaluations.
 10. **BE-01 — Expose and integrate application APIs** (Backend Engineer): implement FastAPI validation, service wiring, session/state integration, errors, and readiness using established contracts. Depends on AI-02. Done when AC-11 passes integration tests.
 
@@ -108,12 +108,12 @@ The MVP serves a portfolio evaluator, developer/researcher, or informed demonstr
 
 ## Dependency map
 
-`PM scope → architecture → {verified DCMFNet contract + approved RAG contract} → AI workflow → backend API → frontend → system testing → review → documentation`
+`PM scope → software architecture → verified DCMFNet contract → AI Architect design → RAG implementation → AI implementation → backend API → frontend → system testing → review → documentation`
 
 Work may overlap only where contracts are not being guessed. In particular:
 
-- ML artifact verification and RAG source-policy work may proceed in parallel after architecture establishes their boundaries.
-- AI implementation waits for stable ML and RAG contracts.
+- The AI Architect may begin provider-independent RAG/AI design after software architecture, but model-dependent workflow and explanation decisions wait for the verified ML contract.
+- RAG implementation follows the approved AI Architect design; AI implementation waits for stable ML and implemented RAG contracts.
 - Frontend implementation waits for a stable backend contract; exploratory wireframes may not become an alternative source of application logic.
 - Testing begins at every component, while the dedicated cross-system stage follows a functioning integrated path.
 - Material fixes return to their owner, then Testing reruns and Reviewer rechecks as specified in the shared workflow.
@@ -135,8 +135,8 @@ Work may overlap only where contracts are not being guessed. In particular:
 | Required inputs include PRS and batch/PC features that may not be user-answerable questionnaire fields. | The promised questionnaire-only journey may be infeasible or misleading. | ML Engineer identifies true runtime requirements; Product Manager then revises journey/scope if inputs cannot be derived legitimately. No invented defaults. |
 | Two artifacts target positive and negative normalized outcomes, while the problem statement describes a singular research risk probability. | Result semantics and UI could be ambiguous. | ML Engineer documents outputs; Architect defines representation; Product Manager approves user-facing terminology only after evidence is available. |
 | No model class/loading implementation or dependency manifest is present. | Artifacts may not load in the repository as-is. | ML Engineer reports exact missing code/dependency blocker; Architect owns dependency placement. |
-| No scientific corpus or source policy is present. | RAG cannot meet citation and grounding criteria. | RAG Engineer proposes a traceable, legally usable corpus policy for approval before ingestion. |
-| LLM or embedding provider is not selected. | Local reproducibility, cost, privacy, and tests remain uncertain. | Architect documents provider abstraction/configuration and safe local/test fallbacks; Product Manager confirms any cost/privacy constraint. |
+| No scientific corpus or source policy is present. | RAG cannot meet citation and grounding criteria. | AI Architect designs a traceable, legally usable source policy within product constraints; RAG Engineer validates and implements it. |
+| LLM or embedding provider is not selected. | Local reproducibility, cost, privacy, and tests remain uncertain. | AI Architect defines provider criteria, abstraction/configuration, and safe local/test fallbacks; Product Manager confirms material cost/privacy constraints. |
 | Sensitive questionnaire content may leak through logs, traces, prompts, or persisted state. | Privacy and trust failure even in a prototype. | Architect defines minimization and state/logging policy; Backend, AI, Frontend, Testing, and Reviewer enforce it. |
 | Retrieved association evidence may be phrased as individual causation. | Misleading medical communication. | AI prompts/validation and reviewer tests must distinguish population evidence, model association, and individual prediction. |
 
@@ -147,7 +147,7 @@ Work may overlap only where contracts are not being guessed. In particular:
 - The MVP is local-first and single-user for demonstration; production multi-user deployment is out of scope.
 - The supplied artifacts remain unchanged and use only synthetic training data as stated in the problem statement.
 - Structured internal contracts and deterministic mocks/fakes are acceptable for automated tests involving external LLM, embedding, or literature services.
-- Exact technology/provider choices remain with the Architect and responsible engineer, constrained by local reproducibility and safety.
+- Exact AI/RAG technology and provider choices follow AI Architect criteria and responsible-engineer feasibility evidence, constrained by Software Architect boundaries, local reproducibility, and safety.
 
 ### Decisions required before implementation can be called complete
 

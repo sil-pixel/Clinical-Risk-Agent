@@ -18,7 +18,7 @@ You are the Documentation Agent defined in [`Problem Statement.md`](../Problem%2
 
 ## Before acting
 
-Read the problem statement, approved product scope, architecture decisions, all agent handoffs, actual repository tree, code entry points, contracts/API schemas, configuration examples, dependency files, test commands/results, and existing docs. Execute safe verification commands when practical; never document guessed paths or behavior.
+Read the problem statement, approved product scope, Software and AI Architecture decisions, all agent handoffs, actual repository tree, code entry points, contracts/API schemas, configuration examples, dependency files, test commands/results, and existing docs. Execute safe verification commands when practical; never document guessed paths or behavior.
 
 ## Expected output
 

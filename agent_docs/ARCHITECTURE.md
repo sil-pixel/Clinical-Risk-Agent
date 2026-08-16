@@ -52,15 +52,15 @@ External LLM or embedding services, if selected, are infrastructure dependencies
 
 | Component | Owns | Must not own | Development owner |
 | --- | --- | --- | --- |
-| Input validation and safety | Request shape/size checks, normalization, unsafe/unsupported policy result, urgent-content response routing | Intent, questionnaire completeness, diagnosis | AI Engineer with Backend integration |
-| Intent Router | Classification into the approved intent set, confidence/fallback signal | Missing-field checks or next graph node | AI Engineer |
-| LangGraph workflow | State transitions and selection of the next explicit step | Model computation, retrieval internals, hidden autonomous branches | AI Engineer |
+| Input validation and safety | Request shape/size checks, normalization, unsafe/unsupported policy result, urgent-content response routing | Intent, questionnaire completeness, diagnosis | AI Architect designs; AI Engineer implements; Backend integrates |
+| Intent Router | Classification into the approved intent set, confidence/fallback signal | Missing-field checks or next graph node | AI Architect designs; AI Engineer implements |
+| LangGraph workflow | State transitions and selection of the next explicit step | Model computation, retrieval internals, hidden autonomous branches | AI Architect designs; AI Engineer implements |
 | Questionnaire validator | Required/valid/missing feature determination from the verified ML contract | Risk calculation or conversational intent | ML Engineer owns requirements; AI Engineer integrates |
 | DCMFNet adapter | Artifact validation/loading, preprocessing, deterministic inference, model result | Explanations, citations, diagnosis, thresholds not present in verified artifacts | ML Engineer |
-| RAG subsystem | Corpus ingestion, embeddings, retrieval/reranking, source provenance | Risk score or unsupported citation generation | RAG Engineer |
-| Structured context builder | Assembly of validated tool outputs for explanation | Creation or alteration of tool results | AI Engineer |
-| LLM explanation adapter | Natural-language explanation of supplied structured context | Score calculation/change, evidence invention, workflow control | AI Engineer |
-| Response validator | Schema, score-integrity, citation-integrity, required limitation and safety checks | Recalculation or silent repair of invalid risk/evidence | AI Engineer |
+| RAG subsystem | Corpus ingestion, embeddings, retrieval/reranking, source provenance | Risk score or unsupported citation generation | AI Architect designs; RAG Engineer implements |
+| Structured context builder | Assembly of validated tool outputs for explanation | Creation or alteration of tool results | AI Architect designs; AI Engineer implements |
+| LLM explanation adapter | Natural-language explanation of supplied structured context | Score calculation/change, evidence invention, workflow control | AI Architect designs; AI Engineer implements |
+| Response validator | Schema, score-integrity, citation-integrity, required limitation and safety checks | Recalculation or silent repair of invalid risk/evidence | AI Architect designs; AI Engineer implements |
 | FastAPI boundary | Transport validation, dependency wiring, session access, error mapping, readiness | Domain/workflow decisions inside route handlers | Backend Engineer |
 | Streamlit UI | Input collection and rendering of API state/results | Authoritative validation, routing, inference, evidence creation | Frontend Engineer |
 
@@ -125,7 +125,7 @@ Rules:
 
 ## State model and lifecycle
 
-The canonical workflow state is typed and contains only fields required to select the next node or construct a validated response. It should include these categories, with exact code types finalized by the AI Engineer against established contracts:
+The canonical workflow state is typed and contains only fields required to select the next node or construct a validated response. The AI Architect designs its topology/categories; exact code types are finalized by the AI Engineer against established contracts:
 
 - Opaque session identifier and state/schema version.
 - Validated conversation turns needed for current context.
@@ -194,14 +194,14 @@ The response validator does not rewrite a bad score or invent a replacement cita
 
 ## RAG architecture constraints
 
-- The RAG Engineer owns the corpus/source policy and final retrieval payload.
+- The AI Architect owns the RAG architecture, source/corpus policy design, provenance semantics, pipeline stages, provider-selection criteria, and evaluation gates. The RAG Engineer validates feasibility, implements the approved design, tunes it from measured evidence, and proposes architectural changes when necessary.
 - Each indexed chunk must retain a stable document/source ID and enough metadata to produce a traceable citation.
 - Index artifacts are derived, reproducible data and must not be committed unless the RAG Engineer documents size/licensing/reproducibility reasons.
 - Retrieval reports corpus/index version and distinguishes no result from infrastructure failure.
 - The LLM may summarize retrieved evidence but may cite only identifiers present in the retrieval result.
 - A provider-neutral retrieval port permits a local vector store for MVP and replacement later.
 
-The initial preferred local adapter is a persistent local vector store with metadata filtering and deterministic test doubles. The RAG Engineer should select the concrete store after evaluating corpus size, metadata needs, license, and reproducibility; architecture does not pre-approve a vendor-specific result schema.
+The initial preferred local adapter is a persistent local vector store with metadata filtering and deterministic test doubles. The AI Architect defines selection criteria and the RAG Engineer supplies measured feasibility evidence before the concrete store is approved; architecture does not pre-approve a vendor-specific result schema.
 
 ## DCMFNet architecture constraints
 
@@ -266,4 +266,4 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 
 ## Architecture exit gate
 
-ARCH-01 and ARCH-02 are complete when implementation agents accept these locations, dependencies, ownership rules, state/data policy, and contract statuses. The ML Engineer is next and must resolve the blocked inference contracts before AI/backend/frontend consumers bind to model fields. RAG source-policy work can begin in parallel only if the workflow is explicitly parallelized; otherwise follow the documented sequence.
+ARCH-01 and ARCH-02 are complete when implementation agents accept these locations, dependencies, ownership rules, state/data policy, and contract statuses. The ML Engineer is next and must resolve blocked inference contracts before downstream consumers bind to model fields. The AI Architect then produces the detailed AI and RAG design before RAG and AI implementation.
