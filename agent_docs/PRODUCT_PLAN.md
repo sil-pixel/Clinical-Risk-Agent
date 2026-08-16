@@ -1,7 +1,9 @@
 # Clinical Risk AI Agent — MVP Product Plan
 
-Status: Product Manager handoff for architecture planning  
-Source of truth: [`Problem Statement.md`](../Problem%20Statement.md)  
+Status: Approved by product owner on 2026-08-16; handed off for architecture planning
+
+Source of truth: [`Problem Statement.md`](../Problem%20Statement.md)
+
 Development workflow: [`agents/workflow.md`](../agents/workflow.md)
 
 ## Product outcome
