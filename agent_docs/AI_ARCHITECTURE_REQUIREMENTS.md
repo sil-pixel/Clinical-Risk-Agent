@@ -1,0 +1,106 @@
+# AI Architecture Product Requirements
+
+Status: Product-owner input in progress
+
+Owner: Product Manager; consumed by AI Architect
+
+Date started: 2026-08-16
+
+Source of truth: [`Problem Statement.md`](../Problem%20Statement.md)
+
+This document records approved product decisions that constrain the AI, RAG, LangGraph, safety, context, LLM, and response-validation architecture. Pending topics remain open and are not permission for implementation agents to guess.
+
+Working design proposal: [`PROPOSED_AI_ARCHITECTURE.md`](PROPOSED_AI_ARCHITECTURE.md). The proposal is non-binding until the pending decisions below are resolved and the AI Architect publishes an approved design.
+
+## 1. Intended users, product stages, and purpose — approved
+
+- The current project is an AI engineering portfolio and research demonstration for invited testers such as friends, developers, evaluators, and researchers.
+- Prototype testers are not treated as patients, and the prototype does not participate in diagnosis, treatment, triage, or care.
+- Testers must not use DCMFNet outputs for health or care decisions.
+- Every probability experience must communicate uncertainty, research-only limitations, synthetic-data provenance, and that the result is not sufficient by itself for health or care decisions.
+- India is the first planned regulatory market.
+- The first hospital product is clinician-only and supports silent research validation. It is never patient-facing, and its outputs do not influence care during the silent-validation stage.
+
+### Architecture consequences
+
+- Safety and response validation must enforce the research-only and non-diagnostic framing.
+- The LLM and UI must not provide instructions that treat a probability as the sole basis for action.
+- Prototype language must be understandable without weakening scientific limitations; technical provenance and exact target identity remain inspectable.
+- The initial deployment optimizes for a safely hosted, inspectable demonstration while preserving interfaces needed for a later governed hospital research mode.
+- `prototype_demo` and future `hospital_silent_research` are explicit, fail-closed deployment modes. Mode identity must be included in state, result provenance, telemetry, and tests.
+- Generic genetic defaults and prototype display mappings are permitted only in `prototype_demo`. They are invalid by default in `hospital_silent_research`.
+- Scaling comes from typed ports, replaceable providers/state stores, stateless boundaries, and versioned contracts rather than premature service decomposition.
+
+## 2. Assessment input journey — approved for portfolio MVP
+
+- The assessment experience uses a manual questionnaire for fields that have approved user-facing wording, encodings, ranges, and units.
+- The system must visibly report completion and validation errors and must not invoke DCMFNet until every required machine input has an approved provenance.
+- A family-history question may be collected only if its purpose and storage are approved, but it must not be converted into or used to increase a PRS value. Family history is not one of the exported model's 105 input fields.
+- Nationality, country of origin, ethnicity, race, or self-reported descent must not be converted into genetic principal components. The exported fields are batch-by-PC interaction terms (`batch_1_x_PC1`, `batch_2_x_PC1`, `batch_1_x_PC2`, and `batch_2_x_PC2`) that require the compatible genomic preprocessing and batch context.
+- Random genetic values must not be presented as measurements belonging to the user or used to produce a personalized probability.
+
+### Approved generic genetic profile
+
+- The portfolio MVP uses a versioned generic genetic profile for inputs that cannot be collected manually.
+- Each of the 16 PRS fields uses its exported training median from the active artifact schema.
+- Each of the four batch-by-PC interaction fields uses its exported training median; the current verified schemas define all four medians as `0.0`.
+- The positive and negative artifact schemas currently contain identical generic values. Runtime code must still read them from the selected artifact rather than duplicate them as handwritten constants.
+- The profile identifier is `generic_genetic_profile_v1` and its provenance must be included in the validated assessment context.
+- Generic values are deterministic and independent of family history, nationality, country of origin, ethnicity, race, or descent.
+- The UI and LLM must disclose that genetic inputs were not measured from the user and that the output is a questionnaire-based simulated research estimate using generic genetic assumptions.
+- The generic profile must never be described as the user's PRS, genetic ancestry, genomic result, or personalized genetic risk.
+
+### Deferred research-data mode
+
+A future mode may accept the 16 PRS values and four batch-by-PC interaction values from a compatible, validated upstream genomic pipeline with provenance. It is outside the current portfolio MVP and must not be implied by the manual questionnaire.
+
+### Scientific and fairness rationale
+
+- A PRS is calculated from genetic variants and has ancestry-dependent validity; family history cannot substitute for the exported PRS vector. See the [National Human Genome Research Institute overview](https://www.genome.gov/Health/Genomics-and-Medicine/Polygenic-risk-scores).
+- Genetic principal components are computed from genotype/relationship data and used as population-stratification covariates. See the [PLINK PCA documentation](https://www.cog-genomics.org/plink2/strat).
+- Nationality and other social population labels are not interchangeable with genetic ancestry. Population descriptors require explicit scientific justification and transparent use. See the [National Academies guidance](https://nap.nationalacademies.org/resource/26902/interactive/).
+
+## 3. Model-result presentation — approved
+
+- Show the positive-symptom and negative-symptom research risk probabilities separately.
+- Present each result as a percentage.
+- Retain the exact raw DCMFNet value internally as an immutable value with target and artifact identity.
+- Percentage formatting is deterministic application logic, never an LLM calculation.
+- Do not reject a raw value merely because it exceeds the nominal probability range.
+- A high out-of-range value is displayed as `99.9% at risk`; the exact raw value remains available internally for integrity checks and observability.
+- A raw value below `0.0` is displayed as `No risk could be seen`; the exact negative raw value remains available internally for integrity checks and observability.
+- Do not introduce low/moderate/high risk bands until scientifically validated thresholds are approved.
+- Every result requires an explanation and disclaimer.
+
+### Required explanation
+
+- Identify whether the value is the positive-symptom or negative-symptom probability and explain that category in plain language.
+- Keep the model probability distinct from scientific literature retrieved to contextualize it.
+- Explain uncertainty and avoid causal claims or unsupported statements about which answers produced the result.
+- Disclose use of `generic_genetic_profile_v1` and state that PRS/PCA-related values were not measured from the user.
+
+### Required disclaimer
+
+- Research and portfolio demonstration only.
+- Model trained on fully synthetic data and not clinically validated for individual use.
+- Not a diagnosis, screening result, medical advice, or replacement for qualified professional judgment.
+- The user must not act on the probability alone.
+- Generic genetic assumptions mean the result is not a personalized genetic-risk estimate.
+
+### Presentation architecture consequences
+
+- The inference result remains raw and immutable. A deterministic result presenter creates the display percentage and display qualifier.
+- Structured Context carries both the exact raw value and validated display representation; the LLM may repeat but not derive or change either.
+- Response validation verifies target identity, exact raw-value preservation, deterministic display mapping, separate presentation, disclaimer presence, and absence of unapproved risk bands.
+- Logs must not contain raw questionnaire inputs. Whether raw probabilities may appear in ordinary logs remains subject to the observability/privacy decision.
+
+## Pending product decisions
+
+4. Supported conversational and RAG scope
+5. Scientific-source policy
+6. Evidence and explanation behavior
+7. Safety and escalation policy
+8. Privacy and data lifecycle
+9. LLM and deployment constraints
+10. Workflow failure behavior
+11. Quality targets

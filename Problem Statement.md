@@ -15,6 +15,10 @@ The project serves as an **AI engineering portfolio project** and research proto
 
 It is **not** intended to diagnose schizophrenia, provide medical advice, or replace clinicians.
 
+The current prototype is intended for portfolio evaluation and informal testing by invited users such as friends, developers, and researchers. It is a public-facing demonstration, not a patient product, and no user should act on a DCMFNet output. Results must be accompanied by uncertainty and limitations and must not replace qualified professional judgment.
+
+The longer-term startup direction is an India-first, clinician-only hospital product for silent research validation. It will never be patient-facing. During silent validation, outputs must not influence diagnosis, treatment, triage, or other care decisions. Hospital research mode requires separate clinical, regulatory, privacy, security, data-provenance, and model-validation approval and must not inherit demonstration-only assumptions automatically.
+
 The deployed DCMFNet model is trained on a **fully synthetic dataset** designed to reproduce the structure of the research problem without using confidential participant data.
 
 ---
@@ -23,7 +27,7 @@ The deployed DCMFNet model is trained on a **fully synthetic dataset** designed 
 
 Build an AI system capable of:
 
-1. Collecting structured mental health questionnaire responses.
+1. Collecting structured mental health questionnaire responses through a manual questionnaire for fields with approved user-facing definitions.
 2. Determining which information is still required.
 3. Calling a trained DCMFNet model to estimate a research risk score.
 4. Retrieving scientific evidence relevant to the user's questions or prediction.
@@ -105,6 +109,12 @@ It accepts structured questionnaire features and produces two separate research 
 - a negative-symptom risk probability (`SCZ18_Neg_Norm`) for negative symptoms of schizophrenia, including depressive symptoms
 
 The probabilities remain separate. They must not be combined, recalculated, or modified by the LLM.
+
+Present both probabilities separately as percentages while retaining their exact raw model values internally. Percentage formatting is deterministic application logic, not an LLM responsibility. Do not introduce qualitative risk bands without scientifically validated thresholds. A high out-of-range raw output is not rejected and is displayed as `99.9% at risk`; a raw output below `0.0` is displayed as `No risk could be seen`. In both cases, the exact raw value remains preserved internally. Every result includes a plain-language explanation and the approved research-only disclaimer.
+
+For the portfolio MVP's manual questionnaire, PRS and batch-by-genetic-PC interaction inputs that cannot be measured from the user use a versioned generic profile populated from the selected artifact's exported training medians. The system must disclose that these genetic inputs are generic and unmeasured, must not describe the result as personalized genetic risk, and must never derive these values from family history, nationality, ethnicity, race, or descent.
+
+The generic genetic profile and the prototype's out-of-range display mappings are demonstration-only behavior. A future hospital research mode must reject them unless separately justified and approved through its research protocol, model contract, and regulatory process. The two modes must be distinguishable in configuration, state, results, telemetry, and tests so demonstration behavior cannot enter hospital workflows accidentally.
 
 The Clinical Risk AI Agent treats DCMFNet as a black-box inference service.
 

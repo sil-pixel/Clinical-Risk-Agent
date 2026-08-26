@@ -20,6 +20,7 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | --- | --- | --- | --- |
 | `SafetyDecision` | Safety → workflow/API | AI Architect (design), AI Engineer (implementation) | Architecture-defined categories; wording/escalation policy remains open |
 | `IntentDecision` | Router → LangGraph | AI Architect (design), AI Engineer (implementation) | Approved intent enum; confidence/fallback details finalized in AI architecture |
+| `DeploymentMode` | Composition root → all workflow/results/telemetry | Software Architect | **Architecture-approved:** `prototype_demo`; `hospital_silent_research` reserved and unavailable until separately gated |
 | `ArtifactInspection` | DCMFNet artifact validator → readiness/tests | ML Engineer | **Implemented:** integrity/readiness facts |
 | `InferenceInputSchema` | DCMFNet adapter → graph/backend/tools | ML Engineer | **Implemented:** exact machine feature groups/order; not user-facing questionnaire copy |
 | `QuestionnaireRequirements` | ML/questionnaire → graph/UI | ML Engineer | **Blocked** on collection feasibility, encodings, ranges, wording, and provenance |
@@ -64,9 +65,11 @@ The canonical contracts are implemented under `src/clinical_risk_agent/contracts
 
 Each target-specific call requires all 105 unique feature keys in the exact exported schema. Unknown or missing keys, non-numeric values, and infinite values fail closed. NaN values are replaced with exported training medians; values are then standardized with exported training means and scales. CPU inference is the only verified device mode.
 
-The result contains the exact artifact target—`SCZ18_Pos_Norm` or `SCZ18_Neg_Norm`—and raw predictions named `normalized_symptom_severity`, plus artifact version, checkpoint SHA-256, and fixed limitations. The product definition identifies the positive target as risk probability for positive schizophrenia symptoms, including psychotic and manic symptoms, and the negative target as risk probability for negative schizophrenia symptoms, including depressive symptoms. These research probabilities are not clinically calibrated, diagnoses, screening results, causal effects, thresholds, or a combined score. Consumers must preserve numeric and identity fields exactly, keep the two probabilities separate, and never apply an undocumented output transform.
+The result contains the exact artifact target—`SCZ18_Pos_Norm` or `SCZ18_Neg_Norm`—and raw predictions named `normalized_symptom_severity`, plus artifact version, checkpoint SHA-256, and fixed limitations. The product definition identifies the positive target as risk probability for positive schizophrenia symptoms, including psychotic and manic symptoms, and the negative target as risk probability for negative schizophrenia symptoms, including depressive symptoms. These research probabilities are not clinically validated, diagnoses, screening results, causal effects, thresholds, or a combined score. Consumers must preserve numeric and identity fields exactly and keep the two probabilities separate.
 
-`QuestionnaireRequirements` and `QuestionnaireValidationResult` remain blocked. Machine feature metadata does not define safe end-user wording, units, categorical encodings, valid ranges, or legitimate sources for PRS and batch/principal-component inputs. No consumer may convert identifiers into questions, impute values merely because a user cannot supply them, or claim conversational answers satisfy the inference contract.
+A deterministic presenter—not the LLM—produces a validated percentage representation. High out-of-range raw values are not rejected and display as `99.9% at risk`; raw values below `0.0` display as `No risk could be seen`. Exact raw values remain unchanged internally. No qualitative risk band is permitted. Downstream components must consume the validated representation rather than implement private formatting rules.
+
+`QuestionnaireRequirements` and `QuestionnaireValidationResult` remain blocked only on approved user-facing wording, units, categorical encodings, and valid ranges for manually collected fields. The portfolio MVP resolves unavailable genetic inputs through `generic_genetic_profile_v1`: read the selected artifact's exported medians for all PRS and batch-by-PC fields, attach the generic-profile provenance, and disclose that these are unmeasured assumptions. This exception applies only to those named genetic groups. No consumer may derive them from family history or population descriptors, present them as the user's genomic values, or invent defaults for any other field.
 
 See [`ML_ARTIFACT_AUDIT.md`](ML_ARTIFACT_AUDIT.md) and [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md) for evidence, hashes, golden values, and the required product decisions.
 
@@ -114,6 +117,7 @@ The submit-turn request must be a discriminated union separating free text from 
 The response envelope must include:
 
 - API/schema version and correlation ID
+- deployment mode
 - session ID
 - workflow status/response kind
 - safe assistant message or structured display blocks

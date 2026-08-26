@@ -1,6 +1,6 @@
 # DCMFNet Artifact and Runtime Audit
 
-Status: Deterministic inference verified; end-user questionnaire feasibility remains blocked
+Status: Deterministic inference verified; generic genetic-input policy approved; manual field definitions pending
 
 Owner: ML Engineer
 
@@ -36,7 +36,7 @@ Each artifact returns one raw final-linear-layer value named `normalized_symptom
 | `dcmfnet_pos` | `SCZ18_Pos_Norm` | Positive-symptom risk probability, including risk of psychotic and manic symptoms |
 | `dcmfnet_neg` | `SCZ18_Neg_Norm` | Negative-symptom risk probability, including risk of depressive symptoms |
 
-The runtime does not apply sigmoid, clamp values to `[0, 1]`, create thresholds or risk bands, combine the two probabilities, or calculate feature attribution. The probabilities are raw research outputs; they are not clinically calibrated, diagnoses, screening results, or evidence of causality. Any value outside the probability domain must fail response validation rather than be silently transformed.
+The inference runtime does not apply sigmoid, clamp values to `[0, 1]`, create thresholds or risk bands, combine the two probabilities, or calculate feature attribution. The probabilities are raw research outputs; they are not clinically validated, diagnoses, screening results, or evidence of causality. The deterministic presentation layer—not the model or LLM—shows a high out-of-range value as `99.9% at risk` and a below-zero value as `No risk could be seen`, while preserving the exact raw value internally.
 
 The current exported checkpoints were trained on fully synthetic data. The thesis report provides scientific background and limitations for the research, but it does not turn these particular exports into clinically validated individual-risk models.
 
@@ -81,11 +81,11 @@ PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py' -v
 
 Result: 13 tests passed.
 
-## Remaining blocker: user-facing collection
+## Remaining questionnaire work
 
-Executable inference is unblocked, but a safe questionnaire is not. Metadata proves the machine feature keys and preprocessing; it does not establish that all 105 values are appropriate or possible for an end user to supply. In particular, PRS and batch/principal-component fields require upstream genetic or cohort-processing provenance, and coded clinical/research variables need approved wording, units, encodings, valid ranges, and collection rules.
+Executable inference is unblocked, but the complete public questionnaire contract still needs approved wording, units, encodings, valid ranges, and collection rules for manually answered clinical/research variables.
 
-No agent may convert machine feature names into questions, silently substitute population means/medians for unavailable measurements, or claim that a conversational diet history is sufficient for these models. Product scope must decide whether the application accepts a validated structured research record, integrates an approved upstream data pipeline, or replaces the questionnaire journey with a demonstration-only fixture flow.
+For the portfolio MVP, the Product Manager approved `generic_genetic_profile_v1`: the runtime reads the selected artifact's exported training medians for the 16 PRS and four batch-by-PC inputs. These generic assumptions must be disclosed and must not be presented as measured or personalized genomic values. They are never adjusted from family history, nationality, ethnicity, race, or descent. No other unavailable measurement receives an invented default, and a conversational diet history is not sufficient for these models.
 
 ## Resolved product definition
 

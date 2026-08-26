@@ -1,6 +1,6 @@
 # Clinical Risk AI Agent — MVP Product Plan
 
-Status: Approved by product owner on 2026-08-16; amended the same day to add the AI Architect stage and define the two DCMFNet symptom risk probabilities
+Status: Approved by product owner on 2026-08-16; amended through 2026-08-26 to define the AI architecture inputs and startup evolution path
 
 Source of truth: [`Problem Statement.md`](../Problem%20Statement.md)
 
@@ -8,13 +8,15 @@ Development workflow: [`agents/workflow.md`](../agents/workflow.md)
 
 ## Product outcome
 
-Deliver a locally runnable research prototype in which a user can complete the required structured data collection, receive DCMFNet's separate, unmodified positive- and negative-symptom research risk probabilities, and receive a plain-language explanation grounded in traceable scientific literature. The system must demonstrate the explicit stateful architecture in the problem statement rather than behave as an unconstrained chatbot.
+Deliver a locally runnable and safely hostable research demonstration in which invited testers can complete structured data collection, receive DCMFNet's separate research outputs under explicit prototype limitations, and receive a plain-language explanation grounded in traceable scientific literature. The system must demonstrate the explicit stateful architecture in the problem statement rather than behave as an unconstrained chatbot, while retaining typed boundaries that can support a later India-first hospital research product without reusing unsafe demonstration assumptions.
 
 Success means a new contributor can clone, configure, run, test, and inspect the complete workflow, including its safety boundaries and failure behavior.
 
 ## Users and primary journeys
 
-The MVP serves a portfolio evaluator, developer/researcher, or informed demonstration user. It is not a clinical product.
+The MVP is an AI engineering portfolio and research demonstration for invited testers such as friends, developers, evaluators, and researchers. Testers are not treated as patients, the application does not participate in their care, and no result may be used for a health decision.
+
+The planned startup product is separate: an India-first, clinician-only platform for hospital silent research validation. It will not face patients, and its outputs will not influence care during the silent-validation stage.
 
 1. **Complete a research risk assessment:** request an assessment, supply missing required information over one or more turns, receive separate DCMFNet-produced positive- and negative-symptom risk probabilities only after validation, and see uncertainty and research-only limitations.
 2. **Explain an existing result:** ask why a result may be elevated or reduced, retrieve relevant scientific evidence, and receive an explanation that keeps model output distinct from literature-backed contextual claims.
@@ -28,7 +30,7 @@ The MVP serves a portfolio evaluator, developer/researcher, or informed demonstr
 
 - Input validation and safety handling before intent routing.
 - The intent categories defined in the problem statement, with deterministic post-classification workflow handling.
-- Stateful questionnaire collection that reports missing required data and never calls inference prematurely.
+- A manual, stateful questionnaire for fields with approved user-facing semantics that reports missing required data and never calls inference prematurely.
 - Reproducible loading and deterministic inference for the supplied DCMFNet artifacts, with validated model metadata and structured outputs.
 - Scientific document ingestion and semantic retrieval with source provenance and citation metadata.
 - LangGraph orchestration that preserves the ownership split among routing, questionnaire validation, inference, retrieval, and explanation.
@@ -53,6 +55,7 @@ The MVP serves a portfolio evaluator, developer/researcher, or informed demonstr
 - LLM-generated risk computation, score adjustment, model-output substitution, evidence, or citations.
 - A general autonomous agent that creates new workflow branches outside the explicit LangGraph design.
 - Multi-user production hosting, organization administration, billing, or a production electronic-health-record integration.
+- Any reuse of generic PRS/PCA values, prototype out-of-range display mappings, or synthetic-model claims in hospital research mode without a separately approved protocol and validated contract.
 
 ## Product acceptance criteria
 
@@ -64,15 +67,17 @@ The MVP serves a portfolio evaluator, developer/researcher, or informed demonstr
 | AC-04 | LangGraph uses explicit state and conditional transitions to collect missing data, call tools, and determine when explanation can occur. | AI Engineer / Testing Agent |
 | AC-05 | Questionnaire validation identifies required missing/invalid values from the verified inference contract; DCMFNet is not called until the contract is satisfied. | ML Engineer / AI Engineer / Testing Agent |
 | AC-06 | The supplied artifacts load reproducibly, incompatible artifacts fail safely, and identical validated input under the same model/runtime produces the same unmodified structured result. | ML Engineer / Testing Agent |
-| AC-07 | No LLM code path calculates, changes, rounds into a materially different value, or fabricates a risk result. | AI Engineer / Reviewer / Testing Agent |
+| AC-07 | No LLM code path calculates, changes, formats, or fabricates a risk result. The deterministic presenter converts raw values to approved percentages while preserving the exact immutable raw result. | AI Engineer / Reviewer / Testing Agent |
 | AC-08 | Scientific or medical claims produced by the assistant are supported by retrieved sources with traceable citation metadata; absent evidence yields an explicit limitation rather than a fabricated answer. | AI Architect / RAG Engineer / AI Engineer / Testing Agent |
 | AC-09 | Explanations clearly distinguish model output from literature context and communicate uncertainty, limitations, synthetic-data provenance, and research-only/non-diagnostic use. | AI Engineer / Frontend Engineer / Testing Agent |
 | AC-10 | The assistant does not diagnose, recommend medication, guarantee outcomes, claim certainty, or fabricate citations/model outputs across tested supported and adversarial paths. | Testing Agent / Reviewer |
 | AC-11 | FastAPI validates public inputs/outputs, integrates the established contracts, returns actionable structured failures, and exposes readiness sufficient for local use. | Backend Engineer / Testing Agent |
-| AC-12 | The UI displays server-provided risk and evidence without altering their meaning and provides clear missing-data, loading, no-evidence, and service-failure states. | Frontend Engineer / Testing Agent |
+| AC-12 | The UI displays the two server-provided probabilities separately using the validated percentage representation, required explanation, and disclaimer; it provides clear missing-data, loading, no-evidence, and service-failure states. | Frontend Engineer / Testing Agent |
 | AC-13 | Automated tests cover unit, contract, integration, end-to-end, failure, and safety-critical paths and can run from documented local commands. | Testing Agent / Reviewer |
 | AC-14 | A clean checkout can be installed and run locally using documented prerequisites, configuration, ingestion/setup, application, and test commands. | Documentation Agent / Testing Agent |
 | AC-15 | Important architecture and contract decisions, assumptions, limitations, and unresolved risks are discoverable in repository documentation. | Software Architect / Reviewer / Documentation Agent |
+| AC-16 | Every prototype result states that the system is a research demonstration, not a patient product, and that the output must not be used for a health or care decision. | AI Engineer / Frontend Engineer / Testing Agent |
+| AC-17 | Deployment mode is explicit and fail-closed; prototype-only generic inputs and display behavior cannot execute under any future hospital-research configuration. | Software Architect / Backend Engineer / Testing Agent / Reviewer |
 
 ## Milestones and ordered backlog
 
@@ -121,6 +126,9 @@ Work may overlap only where contracts are not being guessed. In particular:
 ## Safety and data requirements
 
 - Every user-facing risk result must be labeled as research-only, uncertain, non-diagnostic, and based on a synthetic-data-trained model.
+- Every probability presentation must state that users should not act on the probability alone and that it does not replace qualified professional judgment.
+- Preserve exact raw model values internally. Percentage conversion, the approved `99.9% at risk` high out-of-range representation, and the `No risk could be seen` below-zero representation are deterministic presentation logic; the LLM never performs them.
+- Do not display low/moderate/high bands until scientifically validated thresholds are approved.
 - Scientific claims require retrieved evidence; retrieval failure must be visible.
 - The model result remains authoritative for the numeric risk output. Explanations and visualizations must not transform its meaning.
 - The MVP should minimize collection, persistence, and logging of sensitive questionnaire data. Durable storage is not an assumed requirement; the Architect must document state lifetime and any persistence decision before implementation.
@@ -132,7 +140,7 @@ Work may overlap only where contracts are not being guessed. In particular:
 | Risk | Impact | Required mitigation / owner |
 | --- | --- | --- |
 | Resolved: 105 features across 11 groups represent one anchor, nine fusion modalities, and one independent modality. | Incorrect loading or feature routing could invalidate inference. | Verified against the Thesis implementation and protected by golden/runtime tests; preserve the published ML contract. |
-| Required inputs include PRS and batch/PC features that may not be user-answerable questionnaire fields. | The promised questionnaire-only journey may be infeasible or misleading. | ML Engineer identifies true runtime requirements; Product Manager then revises journey/scope if inputs cannot be derived legitimately. No invented defaults. |
+| The portfolio questionnaire cannot measure 16 PRS fields or four batch-by-genetic-PC interaction fields. | Hiding generic inputs could make the result appear more personalized than it is. | Resolved for MVP with `generic_genetic_profile_v1`: use artifact-provided training medians, disclose the generic assumptions in every result, and never derive values from family history or population descriptors. |
 | The two symptom probabilities could be combined or confused in presentation. | A combined value would change the model meaning and could mislead users. | Display positive- and negative-symptom probabilities separately, retain their target identity and limitations, and prohibit the LLM/UI from recalculating or combining them. |
 | Resolved: model class, preprocessing, safe loader, dependency manifest, and golden tests are now present. | Runtime regressions could invalidate inference. | Testing Agent retains artifact hashes and golden cases as release gates. |
 | No scientific corpus or source policy is present. | RAG cannot meet citation and grounding criteria. | AI Architect designs a traceable, legally usable source policy within product constraints; RAG Engineer validates and implements it. |
@@ -144,7 +152,9 @@ Work may overlap only where contracts are not being guessed. In particular:
 
 ### Working assumptions for architecture planning
 
-- The MVP is local-first and single-user for demonstration; production multi-user deployment is out of scope.
+- The MVP is local-first but must be safely hostable for a small set of concurrent invited testers using anonymous, expiring sessions and no assumed durable health-data record.
+- Scale is preserved through typed ports, configuration, stateless service design where practical, and replaceable state/provider adapters—not premature microservices.
+- India is the first planned regulatory market. The first hospital product is clinician-only silent research validation and is never patient-facing.
 - The supplied artifacts remain unchanged and use only synthetic training data as stated in the problem statement.
 - Structured internal contracts and deterministic mocks/fakes are acceptable for automated tests involving external LLM, embedding, or literature services.
 - Exact AI/RAG technology and provider choices follow AI Architect criteria and responsible-engineer feasibility evidence, constrained by Software Architect boundaries, local reproducibility, and safety.
@@ -152,12 +162,13 @@ Work may overlap only where contracts are not being guessed. In particular:
 ### Decisions required before implementation can be called complete
 
 1. **Resolved — model feasibility:** Both artifacts load through the verified Thesis-derived runtime and return separate positive- and negative-symptom research risk probabilities for normalized symptom-severity targets.
-2. **Input feasibility:** Which of the 105 inputs are directly collected, derived, supplied as research context, or unavailable? No default may be invented merely to complete the form.
-3. **Resolved — user-facing result language:** Present separate positive-symptom and negative-symptom research risk probabilities, never a combined probability; retain research-only, synthetic-data, and non-diagnostic limitations.
+2. **Resolved for portfolio MVP — input journey:** Use a manual questionnaire for fields with approved user-facing semantics and `generic_genetic_profile_v1` for unavailable PRS and batch-by-PC inputs. Generic values come from the selected artifact's training medians, are disclosed as unmeasured assumptions, and are never derived from family history or a population descriptor. Verified genomic input is deferred.
+3. **Resolved — result presentation:** Present separate positive- and negative-symptom percentages, preserve exact raw values internally, show high out-of-range output as `99.9% at risk`, show below-zero output as `No risk could be seen`, require explanation/disclaimer, and use no risk bands.
 4. **Scientific source policy:** Which literature sources/corpus and licensing/update rules satisfy traceability and local demonstration needs?
 5. **Provider constraints:** Which LLM and embedding configurations balance reproducibility, cost, privacy, and portfolio usability?
 6. **State lifetime:** Is assessment state memory-only for the MVP, and what explicit reset/expiry behavior is required?
 7. **Safety escalation language:** What approved response should accompany potentially urgent user statements while preserving the prototype's non-clinical role?
+8. **Public prototype operations:** What invitation/access control, session TTL, concurrency, hosting, and deletion behavior are required for friends and testers?
 
 ## Software Architect handoff
 

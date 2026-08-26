@@ -30,11 +30,13 @@ Owner: Software Architect
 
 ## ADR-004 — Keep MVP conversational state ephemeral
 
-**Decision:** Use bounded backend in-memory state with opaque session IDs, inactivity expiry, explicit reset, and no durable questionnaire database.
+**Decision:** Use opaque session IDs, inactivity expiry, explicit reset, and no durable questionnaire database. Local development uses bounded in-memory state; the hosted prototype uses an anonymous, shared, expiring adapter behind the same state port.
 
-**Why:** The MVP is local/single-user and questionnaire content is sensitive. Persistence has no approved product requirement.
+**Why:** Questionnaire content is sensitive, while invited concurrent testers and multiple application instances require consistent ephemeral session state. Durable health-record persistence has no approved prototype requirement.
 
-**Consequences:** Restart loses sessions and the API/UI must represent expiry clearly. Durable state requires a privacy review, retention policy, threat model, and new ADR.
+**Consequences:** The API/UI represents expiry clearly, and prototype sessions are intentionally temporary. Concrete hosted-store technology, TTL, capacity, and deletion behavior remain pending privacy/operations decisions. Durable state requires a privacy review, retention policy, threat model, and new ADR.
+
+This does not authorize durable health records.
 
 ## ADR-005 — Validate both sides of the LLM boundary
 
@@ -50,9 +52,9 @@ Owner: Software Architect
 
 **Why:** Metadata contains 11 feature groups/105 features despite `num_modalities: 9`, includes non-questionnaire-looking PRS and batch/PC inputs, and supplies positive/negative targets without a documented user-facing relationship.
 
-**Verification update (2026-08-16):** The user-designated Thesis implementation and report established the model construction, preprocessing, targets, and golden outputs. `InferenceInputSchema` and `InferenceResult` are now implemented. The product owner defines the outputs as separate positive- and negative-symptom research risk probabilities. `QuestionnaireRequirements` remains blocked because user-facing collection semantics and legitimate sources for PRS and batch/principal-component values are not established.
+**Verification update (2026-08-16):** The user-designated Thesis implementation and report established the model construction, preprocessing, targets, and golden outputs. `InferenceInputSchema` and `InferenceResult` are now implemented. The product owner defines the outputs as separate positive- and negative-symptom research risk probabilities and approved `generic_genetic_profile_v1`, using artifact medians for PRS and batch-by-PC inputs in the portfolio MVP. `QuestionnaireRequirements` remains blocked only on reviewed user-facing definitions for manually collected fields.
 
-**Consequences:** AI and Backend may integrate the exact internal inference contract with synthetic fixtures. AI, Backend, and Frontend agents still cannot invent questionnaire fields/defaults, risk bands, a combined probability, or factor attribution. Product Manager approval is required for the user-facing input journey.
+**Consequences:** AI and Backend may integrate the exact internal inference contract and generic-profile provenance. Agents cannot invent other questionnaire defaults, derive genetic values from family history or population descriptors, add risk bands or a combined probability, or claim factor attribution.
 
 ## ADR-007 — Keep scientific knowledge and citation identity external to prompts
 
@@ -85,6 +87,14 @@ Owner: Software Architect
 **Why:** The product owner explicitly established this repository convention.
 
 **Consequences:** Existing canonical documents may be updated in place when assigned; code, tests, configuration, assets, and operational prompts retain their approved locations.
+
+## ADR-011 — Separate prototype and hospital research modes
+
+**Decision:** Define `prototype_demo` and future `hospital_silent_research` as explicit, non-interchangeable deployment modes carried through configuration, workflow state, results, telemetry, and tests.
+
+**Why:** The Product Manager approved a public-facing research demonstration now and an India-first, clinician-only hospital silent-validation product later. Prototype-only generic genetic assumptions, synthetic weights, and display behavior must not leak into hospital research workflows.
+
+**Consequences:** Composition fails closed when a mode requests an unapproved adapter or policy. `generic_genetic_profile_v1` and prototype out-of-range presentation are valid only in `prototype_demo`. Hospital mode remains unimplemented until its regulatory, ethics, privacy, clinical-evidence, security, and data contracts are approved. Clinical decision support is not implied by hospital silent validation.
 
 ## Deferred decisions
 

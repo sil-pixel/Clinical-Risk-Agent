@@ -14,6 +14,7 @@ Related: [`INTERFACE_CONTRACTS.md`](INTERFACE_CONTRACTS.md), [`ARCHITECTURE_DECI
 - Keep risk inference, validation, routing, and graph transitions explicit and testable.
 - Treat DCMFNet, retrieval, and LLM providers as replaceable adapters behind typed ports.
 - Run locally with minimal operational complexity while retaining production-quality module boundaries.
+- Keep the modular-monolith prototype safely hostable for invited concurrent testers, with state, identity, audit, inference, retrieval, and LLM adapters replaceable behind typed ports.
 - Minimize exposure and persistence of mental-health questionnaire content.
 - Fail closed: missing data, unavailable tools, invalid citations, or invalid model outputs produce structured failures, never plausible substitutes.
 
@@ -212,9 +213,11 @@ The initial preferred local adapter is a persistent local vector store with meta
 - Preserve the separate positive- and negative-symptom research risk probabilities, their normalized target labels, and raw outputs; do not add thresholds, calibration, risk bands, or a combined probability.
 - Publish an ML-owned contract before questionnaire, graph, API, or UI code binds to feature fields or results.
 
-ML verification against the user-designated Thesis implementation resolved the artifact structure: the 11 groups are one anchor, nine iteratively fused modalities, and one independent modality. Scalar versus list-valued layer configuration is supported by the verified constructor. The target-specific CPU inference adapter, preprocessing, immutable results, and golden tests are implemented under `src/clinical_risk_agent/`. End-user questionnaire semantics remain blocked because the machine schema does not define safe collection wording, encodings, ranges, or provenance for all inputs.
+ML verification against the user-designated Thesis implementation resolved the artifact structure: the 11 groups are one anchor, nine iteratively fused modalities, and one independent modality. Scalar versus list-valued layer configuration is supported by the verified constructor. The target-specific CPU inference adapter, preprocessing, immutable results, and golden tests are implemented under `src/clinical_risk_agent/`. For the portfolio MVP, `generic_genetic_profile_v1` supplies PRS and batch-by-PC fields from the selected artifact's training medians with explicit unmeasured/generic provenance. End-user questionnaire semantics remain blocked only until reviewed wording, encodings, units, and ranges exist for the manually collected fields.
 
 ## API and process boundaries
+
+Product-direction update (2026-08-26): the current application is `prototype_demo`; a future India-first `hospital_silent_research` mode is clinician-only, never patient-facing, and cannot affect care. The mode boundary must be explicit and fail-closed. Generic genetic inputs and prototype out-of-range display rules are not valid in hospital mode by default. Detailed shared-boundary changes require a Software Architect ADR before hospital implementation.
 
 The public API is versioned under `/v1`. The approved resource shape is session-oriented because workflow state spans turns:
 
@@ -266,4 +269,4 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 
 ## Architecture exit gate
 
-ARCH-01 and ARCH-02 are complete. The ML Engineer has published verified inference contracts and a separate questionnaire-feasibility blocker. The AI Architect is next and must consume the exact ML result semantics while designing the detailed AI and RAG architecture before RAG and AI implementation.
+ARCH-01 and ARCH-02 are complete. The ML Engineer has published verified inference contracts, and the Product Manager has approved the generic genetic-input policy. The AI Architect is next and must preserve its provenance and the exact ML result semantics while designing the detailed AI and RAG architecture before RAG and AI implementation. Reviewed definitions for manually collected questionnaire fields remain a downstream contract dependency.

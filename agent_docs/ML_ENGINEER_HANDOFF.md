@@ -1,6 +1,6 @@
 # ML Engineer Handoff
 
-Status: Deterministic inference ready for AI architecture; questionnaire input journey requires a decision
+Status: Deterministic inference ready for AI architecture; generic genetic-input policy approved
 
 Date: 2026-08-16
 
@@ -36,17 +36,11 @@ DCMFNet may now be designed as a deterministic tool with one predictor instance 
 
 `SCZ18_Pos_Norm` is the positive-symptom research risk probability, including risk of psychotic and manic symptoms. `SCZ18_Neg_Norm` is the negative-symptom research risk probability, including risk of depressive symptoms. The Structured Context must preserve these values and identities verbatim. The LLM may explain approved terminology and limitations but must not calculate, round destructively, clamp, threshold, combine, relabel, or modify the values. It must not call either model for a diabetes/diet question; that path belongs to scientific evidence retrieval and safe general education.
 
-Design explicit workflow outcomes for `questionnaire_contract_unavailable`, invalid structured records, artifact load failure, and inference failure. Do not design conversational collection of PRS or principal-component values.
+Design explicit workflow outcomes for `questionnaire_contract_unavailable`, invalid structured records, artifact load failure, and inference failure. Do not design conversational collection of PRS or principal-component values. For the portfolio MVP, the context builder uses `generic_genetic_profile_v1`, populated from the selected artifact's medians for those groups, and carries its unmeasured/generic provenance through response validation.
 
-## Product Manager return item
+## Remaining questionnaire work
 
-Choose a feasible input journey:
-
-1. validated structured research-record import,
-2. an approved upstream feature-generation integration, or
-3. a clearly labeled synthetic demonstration flow.
-
-Until that decision is documented, AI/Backend work may integrate the inference port internally and test with synthetic fixtures, but Frontend work must not present a production-like personal assessment questionnaire or clinical-risk result.
+The Product Manager approved a manual questionnaire plus generic artifact-median PRS and batch-by-PC values for the portfolio MVP. The questionnaire owner must still define and review user-facing wording, units, encodings, and valid ranges for the remaining manually collected fields before the public questionnaire contract is complete. The UI must describe results as questionnaire-based simulated research estimates using generic, unmeasured genetic assumptions—not personalized genetic probabilities.
 
 ## Verification and completion evidence
 
@@ -59,4 +53,4 @@ NaN behavior matches training-fitted median imputation
 No output transform, combined probability, or questionnaire semantics were invented
 ```
 
-Next workflow owner: AI Architect, with the input-journey decision above kept as an explicit blocker for user-facing assessment behavior.
+Next workflow owner: AI Architect. Exact manual field definitions remain a questionnaire-contract dependency, not a blocker to the AI/RAG architecture design.
