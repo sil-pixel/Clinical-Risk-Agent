@@ -249,6 +249,16 @@ Grounded Explanation
 
 Scientific knowledge should remain external to the model rather than embedded inside prompts.
 
+## Supported conversational scope
+
+The assistant uses approved scientific RAG for general mental health, genetics and environmental risk factors, diet and lifestyle, diabetes and physical health, and scientific context for existing model results.
+
+Medication and treatment information is limited to general evidence summaries related to schizophrenia or other mental-health disorders. The assistant must not provide individualized prescribing, dosage, treatment selection, or medication-change instructions and must direct the user to an appropriate qualified professional. Medication questions should direct users to a psychiatrist or other prescribing doctor; psychological-support questions may also direct users to a psychologist or suitable mental-health professional.
+
+Unrelated general medical questions are out of scope. The assistant provides at most a one- or two-line high-level response and directs the user to an appropriate doctor or healthcare professional. It does not invoke DCMFNet or the full RAG workflow for these questions.
+
+DCMFNet may be invoked only for an explicit request to calculate positive/psychotic-symptom risk or negative/depressive-symptom risk, after `risk_assessment` routing, safety handling, and complete deterministic questionnaire validation. Discussion or education about psychosis, depression, schizophrenia, genetics, diet, lifestyle, diabetes, medication, treatment, or other health topics never authorizes inference by itself. Explaining an existing result uses the stored immutable result and RAG without rerunning DCMFNet unless a new assessment is explicitly requested.
+
 ---
 
 # Tool Calling

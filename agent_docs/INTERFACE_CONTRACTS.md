@@ -47,6 +47,10 @@ The router output uses the roles already named in the problem statement:
 
 The exact spelling is the canonical machine representation. Adding an intent requires Product Manager approval and an architecture/workflow/test update. Questionnaire completeness is never an intent.
 
+`risk_assessment` alone does not authorize inference. The graph may invoke DCMFNet only when the user explicitly requests positive/psychotic-symptom or negative/depressive-symptom risk calculation, safety permits processing, and deterministic questionnaire validation reports complete valid input. Scientific or educational discussion of those symptoms routes to RAG without inference. `explain_my_risk` consumes a stored immutable result and does not rerun the model unless a new assessment is explicitly requested.
+
+General mental health, genetics/environmental factors, diet/lifestyle/diabetes/physical health, and mental-health-related general medication/treatment education may use RAG under the approved source policy. Unrelated general medical questions use the minimal out-of-scope response contract and do not invoke full RAG or DCMFNet.
+
 ## Minimum safety decision
 
 `SafetyDecision` must include:

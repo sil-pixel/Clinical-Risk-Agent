@@ -121,7 +121,15 @@ classify query scope and recency need
 
 ### Education/conversation subgraph
 
-Medical or scientific claims use RAG. Non-medical conversation may use direct generation under the response policy. Diet/diabetes questions do not invoke DCMFNet; they use approved scientific retrieval or return an explicit scope/evidence limitation.
+General mental health, genetics/environmental risk factors, and diet/lifestyle/diabetes/physical-health education use approved scientific RAG. Diet, diabetes, lifestyle, and physical-health questions never invoke DCMFNet.
+
+Medication or treatment questions use RAG only for a general summary related to schizophrenia or another mental-health disorder. Responses never give individualized selection, prescribing, dosage, or medication-change instructions and direct the user to a psychiatrist, appropriate doctor, psychologist, or other qualified mental-health professional according to the question.
+
+Unrelated general medical questions take a minimal out-of-scope path: at most one or two high-level lines plus direction to an appropriate healthcare professional. They do not invoke DCMFNet or the full RAG workflow. Non-medical conversation may use direct generation under the response policy.
+
+### DCMFNet authorization gate
+
+Only the LangGraph assessment subgraph can invoke DCMFNet, and only after an explicit request to calculate positive/psychotic-symptom or negative/depressive-symptom risk, an approved `risk_assessment` intent, successful safety handling, and complete deterministic questionnaire validation. Educational discussion of the same symptoms does not authorize inference. Risk explanation uses the stored immutable result and RAG without rerunning the model unless the user explicitly requests a new assessment.
 
 ### Unsupported or urgent-content subgraph
 
@@ -283,15 +291,14 @@ These can be reconsidered only with evidence that they improve an approved requi
 
 The following answers are required before this proposal becomes the approved AI architecture:
 
-1. Supported conversational and RAG scope
-2. Approved scientific-source and corpus policy
-3. Evidence, citation, conflict, and explanation behavior
-4. Safety categories, escalation behavior, and approved urgent wording
-5. Privacy, session lifetime, external-provider, and logging policy
-6. LLM/embedding deployment, cost, latency, offline, and language constraints
-7. User-visible failure behavior and retry budgets
-8. Measurable quality and performance thresholds
-9. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
-10. Hosted-prototype access control, session TTL, concurrency target, deletion behavior, and operating budget
+1. Approved scientific-source and corpus policy
+2. Evidence, citation, conflict, and explanation behavior
+3. Safety categories, escalation behavior, and approved urgent wording
+4. Privacy, session lifetime, external-provider, and logging policy
+5. LLM/embedding deployment, cost, latency, offline, and language constraints
+6. User-visible failure behavior and retry budgets
+7. Measurable quality and performance thresholds
+8. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
+9. Hosted-prototype access control, session TTL, concurrency target, deletion behavior, and operating budget
 
 Approval requires reconciling these decisions into this document, the interface registry, the AI/RAG decision record, and implementation handoffs for the RAG Engineer, AI Engineer, and Testing Agent.

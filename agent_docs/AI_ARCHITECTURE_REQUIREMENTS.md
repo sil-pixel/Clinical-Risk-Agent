@@ -94,9 +94,49 @@ A future mode may accept the 16 PRS values and four batch-by-PC interaction valu
 - Response validation verifies target identity, exact raw-value preservation, deterministic display mapping, separate presentation, disclaimer presence, and absence of unapproved risk bands.
 - Logs must not contain raw questionnaire inputs. Whether raw probabilities may appear in ordinary logs remains subject to the observability/privacy decision.
 
+## 4. Supported conversational and RAG scope — approved
+
+### Supported through scientific RAG
+
+- General mental-health education and scientific questions.
+- Genetics and environmental risk factors, with appropriate limitations and no genetic determinism or causal overstatement.
+- Diet, lifestyle, diabetes, and physical-health questions as general evidence-based education.
+- Scientific context for an existing positive- or negative-symptom model result.
+
+These answers require approved evidence and citation provenance. A diet, diabetes, lifestyle, or physical-health question never invokes DCMFNet.
+
+### Medication and treatment information — narrowly supported
+
+- Only provide a general evidence summary when the question is related to schizophrenia or another mental-health disorder.
+- Do not provide individualized treatment selection, prescribing, dosage, medication-start/stop/change instructions, or claims that a treatment is appropriate for the user.
+- Tell the user to contact an appropriate qualified professional for details. Medication questions should direct the user to a psychiatrist or other prescribing doctor; psychological-support questions may also direct the user to a psychologist or suitable mental-health professional.
+
+### General medical questions — out of scope
+
+- For unrelated general medical questions, provide at most a one- or two-line high-level response.
+- State that the topic is outside this assistant's scope and direct the user to an appropriate doctor or healthcare professional.
+- Do not invoke DCMFNet. Do not run the full scientific RAG workflow unless a later safety policy explicitly requires approved informational resources.
+
+### Exclusive DCMFNet invocation policy
+
+DCMFNet may run only when all of the following are true:
+
+1. The approved intent is `risk_assessment`.
+2. The user explicitly requests calculation of positive/psychotic-symptom risk or negative/depressive-symptom risk.
+3. The questionnaire validator reports a complete, valid model input under the active deployment mode.
+4. Input validation and safety allow normal processing.
+
+Discussing psychosis, depression, schizophrenia, symptoms, causes, research, diet, genetics, environment, medication, treatment, or other health topics does not itself authorize inference. Explaining a stored result uses the immutable prior result plus RAG and does not rerun DCMFNet unless the user explicitly requests a new assessment.
+
+### Router and graph consequences
+
+- The Intent Router identifies assessment, explanation, scientific/education, general conversation, and unsupported/unsafe intent; it does not call tools.
+- LangGraph enforces the DCMFNet gate and selects the approved RAG, minimal out-of-scope, or safety path.
+- Tool authorization is deterministic after validated intent and state. The LLM cannot invoke DCMFNet directly.
+- Tests must prove that non-assessment prompts—including adversarial diet, diabetes, medication, and general-medical prompts—cannot reach inference.
+
 ## Pending product decisions
 
-4. Supported conversational and RAG scope
 5. Scientific-source policy
 6. Evidence and explanation behavior
 7. Safety and escalation policy

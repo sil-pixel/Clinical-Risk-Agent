@@ -21,8 +21,9 @@ The planned startup product is separate: an India-first, clinician-only platform
 1. **Complete a research risk assessment:** request an assessment, supply missing required information over one or more turns, receive separate DCMFNet-produced positive- and negative-symptom risk probabilities only after validation, and see uncertainty and research-only limitations.
 2. **Explain an existing result:** ask why a result may be elevated or reduced, retrieve relevant scientific evidence, and receive an explanation that keeps model output distinct from literature-backed contextual claims.
 3. **Ask an educational/scientific question:** receive an evidence-grounded answer with traceable citations, or a clear statement that adequate evidence was not retrieved.
-4. **Make a general or unsupported request:** receive an appropriate conversational response or safe refusal without invoking irrelevant inference/retrieval steps.
-5. **Recover from incomplete or failed operations:** understand what information is missing or which service failed without fabricated fallback results.
+4. **Ask within the approved health scope:** use RAG for general mental health, genetics/environmental factors, diet/lifestyle/diabetes/physical health, and narrowly scoped mental-health medication/treatment education; unrelated medical questions receive a minimal referral response.
+5. **Make a general or unsupported request:** receive an appropriate conversational response or safe refusal without invoking irrelevant inference/retrieval steps.
+6. **Recover from incomplete or failed operations:** understand what information is missing or which service failed without fabricated fallback results.
 
 ## MVP scope
 
@@ -33,6 +34,7 @@ The planned startup product is separate: an India-first, clinician-only platform
 - A manual, stateful questionnaire for fields with approved user-facing semantics that reports missing required data and never calls inference prematurely.
 - Reproducible loading and deterministic inference for the supplied DCMFNet artifacts, with validated model metadata and structured outputs.
 - Scientific document ingestion and semantic retrieval with source provenance and citation metadata.
+- Deterministic scope and tool authorization ensuring DCMFNet runs only for explicit positive/psychotic- or negative/depressive-symptom risk assessments and never for educational, diet, diabetes, medication, treatment, or general-medical questions.
 - LangGraph orchestration that preserves the ownership split among routing, questionnaire validation, inference, retrieval, and explanation.
 - An LLM explanation layer constrained to supplied structured model results and retrieved evidence.
 - Response validation enforcing non-diagnostic language, uncertainty, research-only limitations, score integrity, and citation integrity.
@@ -78,6 +80,8 @@ The planned startup product is separate: an India-first, clinician-only platform
 | AC-15 | Important architecture and contract decisions, assumptions, limitations, and unresolved risks are discoverable in repository documentation. | Software Architect / Reviewer / Documentation Agent |
 | AC-16 | Every prototype result states that the system is a research demonstration, not a patient product, and that the output must not be used for a health or care decision. | AI Engineer / Frontend Engineer / Testing Agent |
 | AC-17 | Deployment mode is explicit and fail-closed; prototype-only generic inputs and display behavior cannot execute under any future hospital-research configuration. | Software Architect / Backend Engineer / Testing Agent / Reviewer |
+| AC-18 | DCMFNet is unreachable from every non-assessment path; only an explicit positive/psychotic- or negative/depressive-symptom risk request with complete validated input can invoke it. | AI Engineer / Testing Agent / Reviewer |
+| AC-19 | Medication/treatment answers remain general, mental-health-related, evidence-grounded, and referral-oriented; unrelated medical questions receive only the approved minimal out-of-scope response. | AI Engineer / RAG Engineer / Testing Agent / Reviewer |
 
 ## Milestones and ordered backlog
 
