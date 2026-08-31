@@ -96,10 +96,18 @@ This does not authorize durable health records.
 
 **Consequences:** Composition fails closed when a mode requests an unapproved adapter or policy. `generic_genetic_profile_v1` and prototype out-of-range presentation are valid only in `prototype_demo`. Hospital mode remains unimplemented until its regulatory, ethics, privacy, clinical-evidence, security, and data contracts are approved. Clinical decision support is not implied by hospital silent validation.
 
+## ADR-012 — Restrict scientific evidence and continuously monitor retractions
+
+**Decision:** Scientific RAG admits only eligible peer-reviewed or PubMed-indexed literature, DOI/PMID-bearing authoritative health-organization publications, and DOI/PMID-bearing clinical guidelines from the rolling prior 20 years. It hard-excludes preprints, theses/dissertations, curated local PDFs, general websites, retracted papers, and evidence failing a versioned quality appraisal. Incremental ingestion runs fortnightly; an independent retraction monitor checks the active corpus weekly.
+
+**Why:** Scientific answers require reproducible provenance and ongoing validity. Ingestion-time retraction checks alone cannot detect a later retraction, while authority domains and local files alone do not establish publication identity or quality.
+
+**Consequences:** DOI or PMID, publication date, source class, quality state, evidence tier, and current retraction state are mandatory eligibility metadata. Relevant evidence is metadata-reranked as clinical guidelines, systematic reviews/meta-analyses, RCTs, observational studies, then expert opinion, with recency and quality applied within tiers. Material conflicts produce a controversy response representing both sides without selecting a conclusion. A weekly monitor deactivates newly retracted or stale-unverified records, invalidates affected chunks/caches, versions the corpus, and records an audit trail. Citations can refer only to eligible evidence retrieved for the current answer.
+
 ## Deferred decisions
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Streamlit, vector-store, embedding, and LLM package versions.
-- Concrete scientific corpus/source policy and retrieval adapter.
+- Concrete retrieval adapter and quality-appraisal instruments; the scientific source/corpus eligibility policy is approved in ADR-012.
 - DCMFNet input feasibility and provenance.
 - Final questionnaire presentation.
 - Exact inactivity TTL, request/state size bounds, and approved urgent-response content.

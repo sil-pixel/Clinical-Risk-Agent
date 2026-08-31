@@ -87,9 +87,11 @@ Each evidence result must distinguish:
 - no sufficiently relevant evidence
 - unavailable/failed retrieval
 
-Each evidence item must preserve a stable internal source/document ID, title, source authorship when available, publication/source name, publication date when available, stable locator such as DOI/PMID/approved URL when available, the retrieved excerpt/chunk, and retrieval/reranking scores whose semantics are documented. Corpus and index versions are required at result level.
+Each evidence item must preserve a stable internal source/document ID, title, source authorship when available, publication/source name, required DOI or PMID, publication date, the retrieved excerpt/chunk, source type, study design/evidence-hierarchy tier, peer-review/indexing status, issuing authority when applicable, quality-appraisal result and rubric version, retraction/correction state and verification time, and retrieval/reranking scores whose relevance, hierarchy, recency, and quality semantics are documented. Corpus and index versions are required at result level.
 
-Missing bibliographic fields remain explicitly absent; they are never generated. Citation display is derived only from returned source metadata.
+Missing optional bibliographic fields remain explicitly absent; they are never generated. Missing DOI/PMID, publication date, eligibility, quality, or current retraction-verification metadata makes an item ineligible for return. Citation display is derived only from eligible source metadata in the current retrieval result.
+
+The result status must additionally distinguish `conflicting_evidence` when materially opposed eligible evidence is retrieved. In that state, results retain representative evidence for each supported position and expose the metadata needed to state the controversy without selecting a conclusion.
 
 ## Structured explanation context
 

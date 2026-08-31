@@ -12,7 +12,7 @@ Sources: [`Problem Statement.md`](../Problem%20Statement.md), [`AI_ARCHITECTURE_
 
 Build a portfolio-grade, research-only AI system that can be safely hosted for invited prototype testers and demonstrates hybrid routing, explicit LangGraph orchestration, adaptive scientific RAG, local and live literature search, structured generation, deterministic validation, and measurable evaluation. Preserve replaceable boundaries for a future India-first, clinician-only hospital silent-validation product. The system remains a bounded workflow rather than an autonomous multi-agent swarm.
 
-This proposal preserves the approved runtime sequence and responsibility boundaries. It does not finalize pending product choices for conversational scope, scientific sources, safety language, privacy, providers, failure UX, or quality thresholds.
+This proposal preserves the approved runtime sequence and responsibility boundaries. It incorporates the approved conversational scope and scientific-source policy; it does not finalize pending product choices for safety language, privacy, providers, failure UX, or quality thresholds.
 
 ## Product-mode boundary
 
@@ -24,6 +24,8 @@ The architecture defines two non-interchangeable modes:
 Every request, graph state, inference result, audit event, and evaluation fixture carries its deployment mode. Composition fails closed when a mode requests an unapproved adapter, profile, presenter, prompt, source, or persistence policy. The hospital mode is an interface constraint for now, not an implemented or regulated product claim.
 
 ## Proposed topology
+
+![Clinical Risk AI Agent query flow](images/clinical-risk-ai-query-flow.png)
 
 ```text
 User
@@ -140,24 +142,31 @@ Deterministic safety policy may terminate or redirect normal processing before i
 ### Ingestion
 
 ```text
-approved source
-→ license/source eligibility check
+approved bibliographic discovery adapter
+→ 20-year, source-class, DOI/PMID, and license eligibility check
 → parse and normalize
 → DOI/PMID and metadata reconciliation
-→ deduplicate and detect version/correction/retraction state
+→ exclude preprints, theses, local PDFs, general websites, and failed quality appraisals
+→ deduplicate and verify version/correction/retraction state
 → section-aware parent/child chunking
 → dense and sparse representation
 → versioned Qdrant index
 → ingestion audit report
 ```
 
+Eligible material is limited to peer-reviewed journal articles, PubMed-indexed literature, DOI/PMID-bearing publications from WHO, NIH, NHS, CDC or comparable authorities, and DOI/PMID-bearing clinical guidelines. Every source must fall inside the rolling 20-year window and have a resolvable DOI or PMID. Preprints, theses/dissertations, curated local PDFs, general websites, retracted material, and studies that fail the versioned design-appropriate quality appraisal are hard-excluded before indexing. Authority domain or a locally available file is not an eligibility signal.
+
+Incremental ingestion runs fortnightly and publishes a new corpus/index version plus an audit report for additions, changes, exclusions, and deduplication decisions. Separately, a weekly retraction-monitoring job checks active DOI/PMID records through PubMed retraction/correction metadata and/or Retraction Watch. It deactivates newly retracted records, removes their chunks from active retrieval, invalidates related caches, publishes a new corpus version, and retains an auditable tombstone. Records with retraction verification older than seven days become ineligible for new answers until rechecked; job failures alert operators rather than recording a successful check.
+
 Use child passages for precise retrieval and larger parent sections for generation context. Prefer scientific section boundaries—abstract, methods, results, discussion, limitations, and recommendations—over blind fixed-character chunks.
 
-Every chunk retains document ID, chunk ID, parent ID, title, authors, DOI/PMID when available, source/journal, publication date, section, stable locator, source type, corpus version, and ingestion version. Missing metadata stays missing and is never inferred by the LLM.
+Every chunk retains document ID, chunk ID, parent ID, title, authors, required DOI/PMID, source/journal, publication date, section, stable locator, source type, study design/evidence tier, peer-review or indexing status, issuing authority when applicable, quality result and rubric version, retraction/correction state and last-check time, corpus version, and ingestion version. Missing required eligibility metadata makes the record ineligible and is never inferred by the LLM.
 
 ### Retrieval
 
-Run dense semantic and sparse lexical retrieval in parallel, merge candidates using Reciprocal Rank Fusion, and rerank the fused candidates with a biomedical cross-encoder or late-interaction model. Apply metadata/source filters before returning evidence.
+Run dense semantic and sparse lexical retrieval in parallel, merge candidates using Reciprocal Rank Fusion, and rerank the fused candidates with a biomedical cross-encoder or late-interaction model. Apply source eligibility and minimum semantic relevance as hard gates before returning evidence.
+
+Metadata reranking prioritizes relevant candidates in this order: clinical guidelines; systematic reviews/meta-analyses; randomized controlled trials; observational studies; expert opinion. Within a tier, newer evidence ranks ahead of older evidence and stronger quality-appraisal results break remaining ties. The result records hierarchy, recency, quality, model relevance, and final reranking contributions. Hierarchy and recency never rescue an irrelevant or otherwise ineligible source.
 
 Qdrant is the proposed local search engine because it supports dense and sparse vectors, hybrid fusion, metadata payloads, and reranking-oriented multivectors. Its documented pipeline combines dense and BM25-style sparse retrieval before reranking: [Qdrant hybrid search and reranking](https://qdrant.tech/documentation/tutorials-basics/reranking-hybrid-search/).
 
@@ -170,11 +179,11 @@ Proposed adapters:
 - Local approved Qdrant corpus for reproducible, low-latency retrieval.
 - PubMed through NCBI E-utilities for live scientific discovery and recent literature.
 - Crossref for DOI and bibliographic metadata reconciliation.
-- PMC or another approved open-access path for eligible full text.
+- PMC or another approved open-access path for eligible DOI/PMID-bearing full text; locally curated PDFs are prohibited.
 
 NCBI documents the supported PubMed E-utilities interface in its [E-utilities guide](https://www.ncbi.nlm.nih.gov/books/NBK25497/). Crossref exposes publication, DOI, licensing, correction, and other scholarly metadata through its [REST API](https://www.crossref.org/documentation/retrieve-metadata/rest-api/).
 
-The search policy returns one of `local_only`, `local_then_live`, `live_required`, or `unsupported`. It must be deterministic after typed scope/recency facts. Arbitrary general-web pages are not interchangeable with approved scientific evidence.
+The search policy returns one of `local_only`, `local_then_live`, `live_required`, or `unsupported`. It must be deterministic after typed scope/recency facts. Live results pass the same source-class, 20-year, DOI/PMID, quality, and retraction gates as the local corpus. Arbitrary general-web pages are not interchangeable with approved scientific evidence.
 
 ### Evidence gate
 
@@ -188,6 +197,8 @@ An evidence result distinguishes:
 - invalid or incomplete source metadata
 
 One controlled query rewrite and one live-search escalation are proposed defaults. Final limits require product latency/cost decisions. Failure never produces fabricated evidence or a substitute citation.
+
+For `conflicting evidence`, preserve representative eligible sources for each materially supported position. The generated answer must label the controversy, summarize and cite both sides, state relevant hierarchy/recency/quality limitations, and must not choose or imply a winning conclusion. For every status, citation IDs may be created only from evidence returned by that retrieval operation.
 
 ## Structured Context
 
@@ -291,14 +302,13 @@ These can be reconsidered only with evidence that they improve an approved requi
 
 The following answers are required before this proposal becomes the approved AI architecture:
 
-1. Approved scientific-source and corpus policy
-2. Evidence, citation, conflict, and explanation behavior
-3. Safety categories, escalation behavior, and approved urgent wording
-4. Privacy, session lifetime, external-provider, and logging policy
-5. LLM/embedding deployment, cost, latency, offline, and language constraints
-6. User-visible failure behavior and retry budgets
-7. Measurable quality and performance thresholds
-8. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
-9. Hosted-prototype access control, session TTL, concurrency target, deletion behavior, and operating budget
+1. Evidence, citation, and explanation behavior beyond the approved retrieval-only citation and conflict rules
+2. Safety categories, escalation behavior, and approved urgent wording
+3. Privacy, session lifetime, external-provider, and logging policy
+4. LLM/embedding deployment, cost, latency, offline, and language constraints
+5. User-visible failure behavior and retry budgets
+6. Measurable quality and performance thresholds
+7. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
+8. Hosted-prototype access control, session TTL, concurrency target, deletion behavior, and operating budget
 
 Approval requires reconciling these decisions into this document, the interface registry, the AI/RAG decision record, and implementation handoffs for the RAG Engineer, AI Engineer, and Testing Agent.

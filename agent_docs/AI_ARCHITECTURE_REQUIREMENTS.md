@@ -135,10 +135,59 @@ Discussing psychosis, depression, schizophrenia, symptoms, causes, research, die
 - Tool authorization is deterministic after validated intent and state. The LLM cannot invoke DCMFNet directly.
 - Tests must prove that non-assessment prompts—including adversarial diet, diabetes, medication, and general-medical prompts—cannot reach inference.
 
+## 5. Scientific-source policy — approved
+
+### Eligible sources
+
+A source is eligible only when it was published within the rolling 20-year window measured on the ingestion or live-search date, has a resolvable DOI or PMID, passes the quality and retraction gates below, and belongs to at least one of these classes:
+
+- a peer-reviewed journal article;
+- PubMed-indexed literature, excluding disallowed publication types;
+- a publication from WHO, NIH, NHS, CDC, or a comparable authoritative health body; or
+- a clinical guideline issued or endorsed by a recognized professional or public-health authority.
+
+Authority status does not make an ordinary webpage eligible. Authority publications and clinical guidelines must still have a DOI or PMID. DOI/PMID metadata must be retrieved and reconciled from the source or an approved bibliographic service; it must never be generated or inferred by the LLM.
+
+The following are ineligible: preprints, theses or dissertations, curated local PDFs, general websites, sources older than 20 years, retracted publications, and studies that fail the approved quality appraisal. A local file path, manually uploaded PDF, URL, or organization domain is not evidence of eligibility.
+
+### Quality, retraction, and provenance gates
+
+- Eligibility is a deterministic pre-retrieval and pre-answer gate, not a soft reranking preference.
+- The RAG implementation must record source type, peer-review/indexing status, publication date, DOI/PMID, issuing body or journal, study design, quality-appraisal result and rubric version, retraction/correction status, and the timestamps and providers used to verify that metadata.
+- Low-quality evidence is excluded using a documented, versioned appraisal appropriate to its study design. A missing or failed required appraisal is ineligible, not silently treated as acceptable.
+- Retraction checks run during ingestion and again through an automated weekly monitoring job using PubMed retraction/correction metadata and/or Retraction Watch. A newly retracted source is immediately deactivated from the active corpus, its chunks and cached retrieval results are invalidated, a new corpus version is published, and the action is auditable.
+- Evidence whose weekly retraction status has become stale is not eligible for new answers until it is successfully rechecked. Monitoring failures alert operators and cannot be represented as a clean check.
+- A citation may be emitted only for an eligible source actually returned in the current retrieval result. The system must never cite from model memory, a prompt, an unretrieved bibliography, or a rejected candidate.
+
+### Evidence hierarchy and metadata reranking
+
+After hard eligibility filtering and a minimum semantic-relevance gate, metadata reranking applies this hierarchy from highest to lowest:
+
+1. Clinical guidelines.
+2. Systematic reviews and meta-analyses.
+3. Randomized controlled trials.
+4. Observational studies.
+5. Expert opinion.
+
+Hierarchy is the primary metadata priority. Within the same evidence tier, prefer more recent publication dates, then stronger quality-appraisal results. Relevance remains mandatory: hierarchy or recency cannot make an irrelevant source eligible. Reranking must retain the hierarchy tier, recency contribution, quality contribution, and final score for audit and evaluation.
+
+When eligible evidence contains a material unresolved conflict, the evidence result is `conflicting_evidence`. The answer must explicitly state the controversy, fairly summarize and cite the evidence on each supported side, describe relevant hierarchy/recency/quality limitations, and not select or imply one disputed conclusion as the answer. Reranking must preserve representative evidence for the conflicting positions rather than allowing one side to disappear solely because of score ordering.
+
+### Corpus lifecycle
+
+- Run incremental ingestion once every two weeks (fortnightly). Discover and process new or changed eligible records, deduplicate by DOI/PMID and version relationships, and publish a versioned ingestion report and corpus/index version.
+- Run retraction monitoring weekly, independently of the fortnightly ingestion schedule, so already-ingested publications can be deactivated promptly.
+- Preserve tombstone and audit metadata for removed records, but never return deactivated content from the active corpus.
+
+### Architecture consequences
+
+- Live search and local retrieval use the same eligibility, DOI/PMID, quality, date, and retraction gates.
+- Retrieval contracts must expose sufficient metadata to enforce and audit source eligibility, evidence hierarchy, recency, quality, conflict state, and citation membership.
+- No eligible retrieved evidence produces an explicit limitation; it does not authorize an uncited scientific answer or fallback to general web search.
+
 ## Pending product decisions
 
-5. Scientific-source policy
-6. Evidence and explanation behavior
+6. Evidence and explanation behavior beyond the approved conflict rule
 7. Safety and escalation policy
 8. Privacy and data lifecycle
 9. LLM and deployment constraints
