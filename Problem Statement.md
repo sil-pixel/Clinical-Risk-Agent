@@ -110,11 +110,15 @@ It accepts structured questionnaire features and produces two separate research 
 
 The probabilities remain separate. They must not be combined, recalculated, or modified by the LLM.
 
-Present both probabilities separately as percentages while retaining their exact raw model values internally. Percentage formatting is deterministic application logic, not an LLM responsibility. Do not introduce qualitative risk bands without scientifically validated thresholds. A high out-of-range raw output is not rejected and is displayed as `99.9% at risk`; a raw output below `0.0` is displayed as `No risk could be seen`. In both cases, the exact raw value remains preserved internally. Every result includes a plain-language explanation and the approved research-only disclaimer.
+Present valid probabilities separately as percentages while retaining their exact raw model values inside the protected system boundary. Percentage formatting is deterministic application logic, not an LLM responsibility. Do not introduce qualitative risk bands without scientifically validated thresholds. If a raw value is below `0.0` or above `1.0`, fail closed as an internal system variance: do not clamp it, pass it to the LLM, or display an estimate. The UI displays exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The exact raw value is written only to the encrypted, access-controlled audit trail for debugging and never to standard application logs.
+
+Every valid result includes a plain-language explanation, the approved research-only disclaimer, and a persistent indicator that synthetic-data models may underrepresent real-world clinical comorbidities found in the Indian healthcare ecosystem. The LLM must never claim `Your risk is X because you answered Yes to question Y.` For questions about individual-answer impact, it uses: `The model looks at patterns across all 105 inputs collectively; individual answers do not have an isolated linear impact.`
 
 For the portfolio MVP's manual questionnaire, PRS and batch-by-genetic-PC interaction inputs that cannot be measured from the user use a versioned generic profile populated from the selected artifact's exported training medians. The system must disclose that these genetic inputs are generic and unmeasured, must not describe the result as personalized genetic risk, and must never derive these values from family history, nationality, ethnicity, race, or descent.
 
-The generic genetic profile and the prototype's out-of-range display mappings are demonstration-only behavior. A future hospital research mode must reject them unless separately justified and approved through its research protocol, model contract, and regulatory process. The two modes must be distinguishable in configuration, state, results, telemetry, and tests so demonstration behavior cannot enter hospital workflows accidentally.
+The generic genetic profile is demonstration-only behavior. A future hospital research mode must reject it unless separately justified and approved through its research protocol, model contract, and regulatory process. The fail-closed out-of-range rule applies in every mode. The two modes must be distinguishable in configuration, state, results, telemetry, and tests so demonstration behavior cannot enter hospital workflows accidentally.
+
+Raw probabilities and questionnaire tokens must never be printed to standard logs, traces, metrics, or analytics. Their only permitted persistence destination is an encrypted, access-controlled audit-trail database keyed by a cryptographically random session ID and never user identity. System state, consent capture, audit records, and database schemas must support India-aligned DPDP data fencing and localization controls and fail closed on unauthorized jurisdictional routing.
 
 The Clinical Risk AI Agent treats DCMFNet as a black-box inference service.
 
@@ -248,6 +252,10 @@ Grounded Explanation
 ```
 
 Scientific knowledge should remain external to the model rather than embedded inside prompts.
+
+General websites are not scientific sources. Authority discovery is limited to a versioned domain allowlist initially containing `*.who.int`, `*.cdc.gov`, `*.nih.gov`, `*.nhs.uk`, and configured Indian health-ministry/public-health domains under `*.gov.in`; DOI/PMID, date, quality, and retraction gates remain mandatory.
+
+The scientific vector namespace must be disconnected from questionnaire tokens, patient-specific token matrices, feature vectors, inference payloads, session IDs, and identities. Mandatory metadata filtering admits only the approved scientific-publication/general-mental-health/non-patient class. Every two weeks, the vector pipeline verifies all active PMIDs/DOIs through PubMed and/or another approved retraction index and immediately purges newly detected deprecated or retracted evidence from active retrieval, caches, and context windows.
 
 ## Supported conversational scope
 

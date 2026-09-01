@@ -71,7 +71,9 @@ Each target-specific call requires all 105 unique feature keys in the exact expo
 
 The result contains the exact artifact target—`SCZ18_Pos_Norm` or `SCZ18_Neg_Norm`—and raw predictions named `normalized_symptom_severity`, plus artifact version, checkpoint SHA-256, and fixed limitations. The product definition identifies the positive target as risk probability for positive schizophrenia symptoms, including psychotic and manic symptoms, and the negative target as risk probability for negative schizophrenia symptoms, including depressive symptoms. These research probabilities are not clinically validated, diagnoses, screening results, causal effects, thresholds, or a combined score. Consumers must preserve numeric and identity fields exactly and keep the two probabilities separate.
 
-A deterministic presenter—not the LLM—produces a validated percentage representation. High out-of-range raw values are not rejected and display as `99.9% at risk`; raw values below `0.0` display as `No risk could be seen`. Exact raw values remain unchanged internally. No qualitative risk band is permitted. Downstream components must consume the validated representation rather than implement private formatting rules.
+A deterministic output gate—not the LLM—requires every raw probability to be finite and within inclusive `[0.0, 1.0]` before producing a validated percentage representation. A value below `0.0` or above `1.0` triggers a typed internal-system-variance error and fails closed; it must not be clamped or exposed as an estimate. The public/UI message is exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The exact failing value may be written only through the encrypted audit port and is absent from the public error and Structured Context. No qualitative risk band is permitted. Downstream components must consume the validated representation or typed failure rather than implement private formatting rules.
+
+The explanation contract prohibits attribution to an individual answer, including `Your risk is X because you answered Yes to question Y.` Feature-impact questions receive the approved statement: `The model looks at patterns across all 105 inputs collectively; individual answers do not have an isolated linear impact.` Every valid result response also requires a UI-visible indicator that synthetic-data models may underrepresent real-world clinical comorbidities found in the Indian healthcare ecosystem.
 
 `QuestionnaireRequirements` and `QuestionnaireValidationResult` remain blocked only on approved user-facing wording, units, categorical encodings, and valid ranges for manually collected fields. The portfolio MVP resolves unavailable genetic inputs through `generic_genetic_profile_v1`: read the selected artifact's exported medians for all PRS and batch-by-PC fields, attach the generic-profile provenance, and disclose that these are unmeasured assumptions. This exception applies only to those named genetic groups. No consumer may derive them from family history or population descriptors, present them as the user's genomic values, or invent defaults for any other field.
 
@@ -80,6 +82,8 @@ See [`ML_ARTIFACT_AUDIT.md`](ML_ARTIFACT_AUDIT.md) and [`ML_ENGINEER_HANDOFF.md`
 ## Minimum retrieval boundary
 
 `RetrievalQuery` contains normalized user information needed for semantic search, requested result limit, and optional filters supported by the approved corpus. It must not include the full questionnaire or model feature vector. The AI Architect designs semantic fields and the RAG Engineer validates and implements them.
+
+`RetrievalQuery` must also exclude questionnaire tokens/token matrices, cryptographic session ID, and user identity. The retrieval adapter targets only the isolated scientific-publication namespace and requires metadata filters equivalent to `data_class=scientific_publication`, `document_scope=general_mental_health`, and `contains_patient_data=false`; missing or mismatched isolation metadata fails closed.
 
 Each evidence result must distinguish:
 
@@ -92,6 +96,8 @@ Each evidence item must preserve a stable internal source/document ID, title, so
 Missing optional bibliographic fields remain explicitly absent; they are never generated. Missing DOI/PMID, publication date, eligibility, quality, or current retraction-verification metadata makes an item ineligible for return. Citation display is derived only from eligible source metadata in the current retrieval result.
 
 The result status must additionally distinguish `conflicting_evidence` when materially opposed eligible evidence is retrieved. In that state, results retain representative evidence for each supported position and expose the metadata needed to state the controversy without selecting a conclusion.
+
+Active evidence must have a retraction check no older than 14 days. The adapter must not return a deprecated/retracted or stale-unverified record, including from a cache or already-built context window.
 
 ## Structured explanation context
 
@@ -145,7 +151,11 @@ Every `ServiceError` has:
 - correlation ID
 - optional non-sensitive details from an approved allowlist
 
-Minimum error families are defined in the architecture: validation/safety, session, questionnaire, artifact/configuration, inference, retrieval, LLM, and response-validation errors. Internal exceptions, stack traces, questionnaire values, prompts, and secrets never cross the public boundary.
+Minimum error families are defined in the architecture: validation/safety, session, questionnaire, artifact/configuration, inference, internal-system variance, retrieval, LLM, and response-validation errors. Internal exceptions, stack traces, raw probabilities, questionnaire values, prompts, and secrets never cross the public boundary. Internal-system variance returns no estimate and maps to the exact approved safe message above.
+
+## Sensitive audit and India data-fence boundary
+
+Raw probabilities and questionnaire tokens are prohibited from standard logs, traces, metrics, analytics, public errors, and correlation metadata. The only permitted persistence destination is an encrypted, access-controlled audit-trail database through a typed audit port. Each record uses a cryptographically random opaque `session_id`, never a user identity, and carries consent/purpose, jurisdiction/data-fence, retention, policy-version, and access-audit metadata. State, consent, and database adapters must enforce configured India localization constraints aligned with the DPDP Act and fail closed on an unauthorized jurisdictional route.
 
 ## Contract change process
 

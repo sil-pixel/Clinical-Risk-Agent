@@ -139,9 +139,9 @@ The canonical workflow state is typed and contains only fields required to selec
 MVP state policy:
 
 - Backend memory only; no database or durable LangGraph checkpointer.
-- A random opaque session ID, explicit reset endpoint, bounded inactivity TTL, and bounded message/state size.
+- A cryptographically random opaque session ID, explicit reset endpoint, bounded inactivity TTL, and bounded message/state size.
 - Process restart invalidates sessions and returns a machine-readable expired/not-found state.
-- Raw user input, questionnaire answers, prompts containing those values, and model inputs are excluded from ordinary logs and traces.
+- Raw user input, questionnaire tokens/answers, prompts containing those values, model inputs, and raw probabilities are excluded from ordinary logs, traces, metrics, and analytics. Raw probabilities and questionnaire tokens may be persisted only through the encrypted, access-controlled audit port under the cryptographic-session policy.
 - The Frontend may hold the opaque session ID in Streamlit session state but must not treat its local copy as authoritative workflow state.
 
 TTL duration and state-size limits are configuration values selected by the Backend Engineer and tested; they are not hard-coded into domain behavior.
@@ -155,7 +155,7 @@ TTL duration and state-size limits are configuration values selected by the Back
 3. LangGraph invokes questionnaire validation using the ML-owned feature requirement contract.
 4. If incomplete, the graph returns structured missing-field requests and saves bounded state.
 5. If complete, the graph calls the inference port exactly once for the validated input/version.
-6. The inference adapter returns a structured immutable result or a typed error.
+6. The inference adapter returns a structured immutable result or a typed error. A deterministic boundary gate requires finite probability values in inclusive `[0.0, 1.0]`; any value outside that range is audit-recorded and becomes a fail-closed internal-system-variance error before presentation or LLM context construction.
 7. RAG runs only when scientific explanatory claims are requested/required by the approved workflow.
 8. The context builder passes exact tool results, evidence, and limitations to the LLM.
 9. Response validation compares output against structured inputs and rejects unsupported citations, score changes, and unsafe claims.
@@ -193,6 +193,10 @@ Use defense in depth:
 
 The response validator does not rewrite a bad score or invent a replacement citation. It retries only when policy permits with the same immutable tool context; otherwise it returns a deterministic safe error/limitation response.
 
+For any raw probability below `0.0` or above `1.0`, the UI returns exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The system never clamps or displays the raw value. Only the encrypted audit adapter receives it.
+
+The LLM cannot attribute an estimate to one questionnaire answer or say `Your risk is X because you answered Yes to question Y.` Feature-impact questions use the structured statement `The model looks at patterns across all 105 inputs collectively; individual answers do not have an isolated linear impact.` Valid result views include a persistent warning that synthetic-data models may underrepresent real-world clinical comorbidities found in the Indian healthcare ecosystem.
+
 ## RAG architecture constraints
 
 - The AI Architect owns the RAG architecture, source/corpus policy design, provenance semantics, pipeline stages, provider-selection criteria, and evaluation gates. The RAG Engineer validates feasibility, implements the approved design, tunes it from measured evidence, and proposes architectural changes when necessary.
@@ -201,6 +205,9 @@ The response validator does not rewrite a bad score or invent a replacement cita
 - Retrieval reports corpus/index version and distinguishes no result from infrastructure failure.
 - The LLM may summarize retrieved evidence but may cite only identifiers present in the retrieval result.
 - A provider-neutral retrieval port permits a local vector store for MVP and replacement later.
+- General web sources are prohibited. Authority discovery uses a versioned allowlist initially covering `*.who.int`, `*.cdc.gov`, `*.nih.gov`, `*.nhs.uk`, and configured Indian health-ministry/public-health domains under `*.gov.in`; URL canonicalization and redirects are revalidated, and DOI/PMID plus all quality gates remain mandatory.
+- The scientific vector collection is disconnected from patient-specific data. Questionnaire tokens/matrices, feature vectors, inference payloads, session IDs, and identities are never embedded or indexed. Mandatory pre-search metadata filters require the scientific-publication/general-mental-health/non-patient data class and fail closed if absent or mismatched.
+- Every two weeks, automated retraction scrubbing verifies all active PMIDs/DOIs against PubMed and/or another approved active retraction index. Newly deprecated/retracted vectors are immediately purged from active retrieval and context, caches are invalidated, the index is versioned, and only a non-retrievable tombstone remains.
 
 The initial preferred local adapter is a persistent local vector store with metadata filtering and deterministic test doubles. The AI Architect defines selection criteria and the RAG Engineer supplies measured feasibility evidence before the concrete store is approved; architecture does not pre-approve a vendor-specific result schema.
 
@@ -209,15 +216,16 @@ The initial preferred local adapter is a persistent local vector store with meta
 - Treat `.pt` files as untrusted serialized artifacts: load only repository-supplied, checksum-verified artifacts using the safest PyTorch mode compatible with their confirmed serialization format.
 - Load models once during backend startup or first guarded use; use evaluation mode and inference/no-gradient execution.
 - Validate metadata structure and artifact compatibility before readiness succeeds.
-- Keep raw feature vectors and questionnaire values out of logs.
+- Keep raw feature vectors, questionnaire tokens/values, and raw probabilities out of standard logs, traces, metrics, and analytics. The only permitted persistent copy is in the encrypted, access-controlled audit database associated with a cryptographically random session ID and never an identity.
 - Preserve the separate positive- and negative-symptom research risk probabilities, their normalized target labels, and raw outputs; do not add thresholds, calibration, risk bands, or a combined probability.
+- Fail closed before presentation when a raw probability falls outside inclusive `[0.0, 1.0]`; do not clamp it or pass it to the LLM.
 - Publish an ML-owned contract before questionnaire, graph, API, or UI code binds to feature fields or results.
 
 ML verification against the user-designated Thesis implementation resolved the artifact structure: the 11 groups are one anchor, nine iteratively fused modalities, and one independent modality. Scalar versus list-valued layer configuration is supported by the verified constructor. The target-specific CPU inference adapter, preprocessing, immutable results, and golden tests are implemented under `src/clinical_risk_agent/`. For the portfolio MVP, `generic_genetic_profile_v1` supplies PRS and batch-by-PC fields from the selected artifact's training medians with explicit unmeasured/generic provenance. End-user questionnaire semantics remain blocked only until reviewed wording, encodings, units, and ranges exist for the manually collected fields.
 
 ## API and process boundaries
 
-Product-direction update (2026-08-26): the current application is `prototype_demo`; a future India-first `hospital_silent_research` mode is clinician-only, never patient-facing, and cannot affect care. The mode boundary must be explicit and fail-closed. Generic genetic inputs and prototype out-of-range display rules are not valid in hospital mode by default. Detailed shared-boundary changes require a Software Architect ADR before hospital implementation.
+Product-direction update (2026-09-01): the current application is `prototype_demo`; a future India-first `hospital_silent_research` mode is clinician-only, never patient-facing, and cannot affect care. The mode boundary must be explicit and fail-closed. Generic genetic inputs are not valid in hospital mode by default. All modes use the same fail-closed out-of-range gate. System state, consent capture, audit records, and database schemas natively carry jurisdiction, data-fence, purpose, retention, and policy-version metadata needed to enforce India localization constraints aligned with the DPDP Act. Detailed shared-boundary changes require a Software Architect ADR before hospital implementation.
 
 The public API is versioned under `/v1`. The approved resource shape is session-oriented because workflow state spans turns:
 
@@ -249,11 +257,14 @@ Use a stable error taxonomy across internal and public boundaries:
 - questionnaire incomplete/invalid
 - artifact/configuration incompatibility
 - inference unavailable/failed
+- internal system variance for a probability outside `[0.0, 1.0]`
 - retrieval no-evidence versus retrieval unavailable/failed
 - LLM unavailable/invalid output
 - response validation failure
 
-Public errors expose a stable code, safe message, retryability, and correlation ID without stack traces or sensitive values. Logs are structured and include correlation ID, component, event, duration, state transition name, artifact/corpus version, and error code. They exclude raw messages, questionnaire answers, feature vectors, retrieved full text, prompts, model output beyond approved non-sensitive summaries, and secrets.
+Public errors expose a stable code, safe message, retryability, and correlation ID without stack traces or sensitive values. Logs are structured and include correlation ID, component, event, duration, state transition name, artifact/corpus version, and error code. They exclude raw messages, questionnaire tokens/answers, feature vectors, retrieved full text, prompts, all raw probabilities, cryptographic session IDs, and secrets.
+
+Sensitive audit data is a separate boundary, not an application log sink. Raw probabilities and questionnaire tokens may be written only to an encrypted, access-controlled audit-trail database tied to a cryptographically random opaque session ID and never user identity. Audit access and every read/write are themselves audited. State, consent, audit, and database adapters enforce the configured India data fence and fail closed on prohibited cross-jurisdiction persistence or processing.
 
 Readiness fails when required configuration, DCMFNet artifacts, verified model loader, or required retrieval index is unavailable. Optional external LLM readiness may be reported as degraded if the API contract can represent that state safely.
 
@@ -262,7 +273,9 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 - Pure functions for questionnaire validation, routing post-processing, transition predicates, score/citation integrity checks, and error mapping.
 - Port-level contract suites shared by real adapters and deterministic fakes.
 - Golden artifact tests owned by ML for model loading and repeatable inference.
+- Boundary tests for below-zero and above-one probabilities, the exact public error, audit-only raw-value handling, and standard-log/trace leakage.
 - Retrieval fixtures with explicit synthetic source metadata; fixtures are never presented as real scientific evidence.
+- Retrieval tests for authority allowlisting, mandatory patient/scientific metadata isolation, stale-retraction rejection, and active-index purging.
 - Graph tests for every intent, missing-state branch, tool failure, retry/fallback, unsafe request, and response-validation failure.
 - FastAPI integration tests through the public session contract.
 - Streamlit end-to-end journeys against a deterministic backend test configuration.

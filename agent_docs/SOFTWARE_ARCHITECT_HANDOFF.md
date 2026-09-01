@@ -17,7 +17,7 @@ Architecture scope: ARCH-01 and ARCH-02 initial baseline
 - Explicit LangGraph workflow with injected ML, RAG, and LLM ports.
 - AI Architect design ownership for the detailed LLM/LangGraph and RAG architecture; RAG and AI Engineers retain implementation ownership.
 - One canonical shared contract package; no private duplicate score/citation/questionnaire schemas.
-- In-memory, bounded, expiring MVP session state; no durable sensitive questionnaire store.
+- In-memory, bounded, expiring MVP operational session state; raw probabilities and questionnaire tokens persist only in a separate encrypted, access-controlled audit store tied to a cryptographically random session ID and never identity.
 - Structured validation before and after the LLM; immutable model and evidence results.
 - New agent-generated documentation under `agent_docs/`.
 
@@ -55,7 +55,7 @@ These are blockers to concrete inference and questionnaire contracts, not permis
 - Identical validated input produces identical finite output for each supported artifact.
 - Feature order/preprocessing is tested, including missing, extra, malformed, non-finite, and wrong-shape inputs.
 - Model evaluation/no-gradient settings and supported device/dtype behavior are explicit.
-- Logs and errors contain no raw feature vectors or questionnaire values.
+- Standard logs, traces, metrics, and public errors contain no raw probabilities, feature vectors, or questionnaire tokens/values. The protected audit database is the only permitted persistence destination and must enforce the configured India data fence.
 - Model limitations clearly state synthetic-data provenance and prohibit diagnostic interpretation.
 
 ## Blockers and feedback path

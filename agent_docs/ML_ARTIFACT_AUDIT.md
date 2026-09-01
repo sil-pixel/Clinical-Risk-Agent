@@ -36,9 +36,9 @@ Each artifact returns one raw final-linear-layer value named `normalized_symptom
 | `dcmfnet_pos` | `SCZ18_Pos_Norm` | Positive-symptom risk probability, including risk of psychotic and manic symptoms |
 | `dcmfnet_neg` | `SCZ18_Neg_Norm` | Negative-symptom risk probability, including risk of depressive symptoms |
 
-The inference runtime does not apply sigmoid, clamp values to `[0, 1]`, create thresholds or risk bands, combine the two probabilities, or calculate feature attribution. The probabilities are raw research outputs; they are not clinically validated, diagnoses, screening results, or evidence of causality. The deterministic presentation layer—not the model or LLM—shows a high out-of-range value as `99.9% at risk` and a below-zero value as `No risk could be seen`, while preserving the exact raw value internally.
+The inference runtime does not apply sigmoid, clamp values to `[0, 1]`, create thresholds or risk bands, combine the two probabilities, or calculate feature attribution. The probabilities are raw research outputs; they are not clinically validated, diagnoses, screening results, or evidence of causality. A downstream deterministic boundary gate—not the model or LLM—must fail closed on values outside inclusive `[0.0, 1.0]`. The UI returns only the approved internal-system-variance message; the exact invalid raw value is available solely to the encrypted audit port and never standard logs.
 
-The current exported checkpoints were trained on fully synthetic data. The thesis report provides scientific background and limitations for the research, but it does not turn these particular exports into clinically validated individual-risk models.
+The current exported checkpoints were trained on fully synthetic data. The thesis report provides scientific background and limitations for the research, but it does not turn these particular exports into clinically validated individual-risk models. Every result UI must state that synthetic-data models may underrepresent real-world clinical comorbidities found in the Indian healthcare ecosystem.
 
 ## Artifact inventory
 

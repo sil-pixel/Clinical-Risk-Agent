@@ -17,7 +17,7 @@ The prototype may use:
 - the synthetic-data-trained DCMFNet artifacts
 - the manual questionnaire after field definitions are reviewed
 - `generic_genetic_profile_v1`
-- the approved prototype-only percentage and out-of-range display rules
+- deterministic presentation for valid `[0.0, 1.0]` values and the universal fail-closed internal-system-variance rule
 - explicit research-demonstration disclaimers
 - anonymous, expiring sessions without a durable health record
 
@@ -41,7 +41,7 @@ Hospital mode requires separate approval for:
 - Prototype users are never described as patients.
 - Hospital users are authenticated clinicians or approved researchers; patients never interact with the system.
 - Generic PRS/PCA assumptions are prototype-only and do not enter hospital research records.
-- Prototype out-of-range display rules do not enter hospital research evaluation.
+- Out-of-range values fail closed in both prototype and hospital research modes and never become estimates.
 - Synthetic-artifact performance is not represented as clinical performance.
 - Hospital outputs remain silent and cannot change diagnosis, treatment, triage, or workflow decisions.
 - LLM explanations never alter model outputs or substitute for statistical/clinical validation.

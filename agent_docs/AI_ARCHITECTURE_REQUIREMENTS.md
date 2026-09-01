@@ -66,17 +66,17 @@ A future mode may accept the 16 PRS values and four batch-by-PC interaction valu
 - Present each result as a percentage.
 - Retain the exact raw DCMFNet value internally as an immutable value with target and artifact identity.
 - Percentage formatting is deterministic application logic, never an LLM calculation.
-- Do not reject a raw value merely because it exceeds the nominal probability range.
-- A high out-of-range value is displayed as `99.9% at risk`; the exact raw value remains available internally for integrity checks and observability.
-- A raw value below `0.0` is displayed as `No risk could be seen`; the exact negative raw value remains available internally for integrity checks and observability.
+- Treat any raw probability below `0.0` or above `1.0` as an internal system variance and fail closed. Do not clamp, normalize, convert, or display it as an estimate.
+- The UI must display exactly: `Error: Unable to compute estimate due to an internal system variance. Please try again later.`
+- The exact out-of-range raw value may be written only to the encrypted, access-controlled audit trail described below. It must never appear in the UI, public API payload, standard application log, trace, metric label, or ordinary observability event.
 - Do not introduce low/moderate/high risk bands until scientifically validated thresholds are approved.
-- Every result requires an explanation and disclaimer.
+- Every valid result requires an explanation and disclaimer; an internal-system-variance response contains no estimate or generated explanation.
 
 ### Required explanation
 
 - Identify whether the value is the positive-symptom or negative-symptom probability and explain that category in plain language.
 - Keep the model probability distinct from scientific literature retrieved to contextualize it.
-- Explain uncertainty and avoid causal claims or unsupported statements about which answers produced the result.
+- Explain uncertainty and avoid causal claims or unsupported statements about which answers produced the result. The LLM is specifically prohibited from saying or implying `Your risk is X because you answered Yes to question Y.` When users ask how individual answers affected the estimate, use the structured statement: `The model looks at patterns across all 105 inputs collectively; individual answers do not have an isolated linear impact.`
 - Disclose use of `generic_genetic_profile_v1` and state that PRS/PCA-related values were not measured from the user.
 
 ### Required disclaimer
@@ -86,13 +86,16 @@ A future mode may accept the 16 PRS values and four batch-by-PC interaction valu
 - Not a diagnosis, screening result, medical advice, or replacement for qualified professional judgment.
 - The user must not act on the probability alone.
 - Generic genetic assumptions mean the result is not a personalized genetic-risk estimate.
+- The UI must show a persistent synthetic-data bias indicator stating that models trained on synthetic data may underrepresent real-world clinical comorbidities found in the Indian healthcare ecosystem.
 
 ### Presentation architecture consequences
 
-- The inference result remains raw and immutable. A deterministic result presenter creates the display percentage and display qualifier.
+- The inference result remains raw and immutable. A deterministic output gate validates that every probability is finite and inside the inclusive `[0.0, 1.0]` interval before a deterministic result presenter creates any display percentage.
 - Structured Context carries both the exact raw value and validated display representation; the LLM may repeat but not derive or change either.
-- Response validation verifies target identity, exact raw-value preservation, deterministic display mapping, separate presentation, disclaimer presence, and absence of unapproved risk bands.
-- Logs must not contain raw questionnaire inputs. Whether raw probabilities may appear in ordinary logs remains subject to the observability/privacy decision.
+- An out-of-range value triggers a typed, fail-closed internal-system-variance event. Structured Context and the LLM receive no raw value or display estimate for that result; the public response contains only the approved error message.
+- Response validation verifies target identity, exact raw-value preservation inside the protected boundary, interval validation, deterministic display mapping for valid values, separate presentation, disclaimer and synthetic-data bias indicator presence, and absence of unapproved risk bands or causal attribution.
+- Raw probabilities and questionnaire tokens must never be printed or written to standard application logs, traces, metrics, error payloads, or analytics. They may be written only to an encrypted, access-controlled audit-trail database, associated with a cryptographically random session ID and never with a user identity. Audit access, retention, deletion, and every read/write operation must be policy-controlled and auditable.
+- System state, consent capture, audit records, and database schemas must natively support data fencing and localization constraints aligned with India's Digital Personal Data Protection (DPDP) Act. Deployment adapters must fail closed when the active mode cannot satisfy its configured India data-residency, consent, purpose, retention, and access policy.
 
 ## 4. Supported conversational and RAG scope — approved
 
@@ -143,10 +146,10 @@ A source is eligible only when it was published within the rolling 20-year windo
 
 - a peer-reviewed journal article;
 - PubMed-indexed literature, excluding disallowed publication types;
-- a publication from WHO, NIH, NHS, CDC, or a comparable authoritative health body; or
+- a publication from an explicitly allowlisted authoritative-health domain; or
 - a clinical guideline issued or endorsed by a recognized professional or public-health authority.
 
-Authority status does not make an ordinary webpage eligible. Authority publications and clinical guidelines must still have a DOI or PMID. DOI/PMID metadata must be retrieved and reconciled from the source or an approved bibliographic service; it must never be generated or inferred by the LLM.
+General websites are prohibited. Authority discovery is restricted to a versioned domain allowlist; the initial allowed patterns are `*.who.int`, `*.cdc.gov`, `*.nih.gov`, `*.nhs.uk`, and approved Indian health-ministry or public-health domains under `*.gov.in`. A matching domain is necessary but not sufficient: the issuing organization must be recognized by configuration, and authority publications and clinical guidelines must still have a DOI or PMID and pass every other eligibility gate. Redirects and canonical URLs must be revalidated against the allowlist. DOI/PMID metadata must be retrieved and reconciled from the source or an approved bibliographic service; it must never be generated or inferred by the LLM.
 
 The following are ineligible: preprints, theses or dissertations, curated local PDFs, general websites, sources older than 20 years, retracted publications, and studies that fail the approved quality appraisal. A local file path, manually uploaded PDF, URL, or organization domain is not evidence of eligibility.
 
@@ -155,8 +158,8 @@ The following are ineligible: preprints, theses or dissertations, curated local 
 - Eligibility is a deterministic pre-retrieval and pre-answer gate, not a soft reranking preference.
 - The RAG implementation must record source type, peer-review/indexing status, publication date, DOI/PMID, issuing body or journal, study design, quality-appraisal result and rubric version, retraction/correction status, and the timestamps and providers used to verify that metadata.
 - Low-quality evidence is excluded using a documented, versioned appraisal appropriate to its study design. A missing or failed required appraisal is ineligible, not silently treated as acceptable.
-- Retraction checks run during ingestion and again through an automated weekly monitoring job using PubMed retraction/correction metadata and/or Retraction Watch. A newly retracted source is immediately deactivated from the active corpus, its chunks and cached retrieval results are invalidated, a new corpus version is published, and the action is auditable.
-- Evidence whose weekly retraction status has become stale is not eligible for new answers until it is successfully rechecked. Monitoring failures alert operators and cannot be represented as a clean check.
+- Retraction checks run during ingestion and again through an automated bi-weekly (every-two-weeks) scrubbing job using PubMed retraction/correction metadata and/or another approved active retraction index. A newly deprecated or retracted source is immediately deactivated from the active corpus and context window when detected, its vectors/chunks and cached retrieval results are purged, a new corpus version is published, and the action is auditable.
+- Evidence whose retraction verification is older than 14 days is not eligible for new answers until it is successfully rechecked. Monitoring failures alert operators and cannot be represented as a clean check.
 - A citation may be emitted only for an eligible source actually returned in the current retrieval result. The system must never cite from model memory, a prompt, an unretrieved bibliography, or a rejected candidate.
 
 ### Evidence hierarchy and metadata reranking
@@ -176,14 +179,21 @@ When eligible evidence contains a material unresolved conflict, the evidence res
 ### Corpus lifecycle
 
 - Run incremental ingestion once every two weeks (fortnightly). Discover and process new or changed eligible records, deduplicate by DOI/PMID and version relationships, and publish a versioned ingestion report and corpus/index version.
-- Run retraction monitoring weekly, independently of the fortnightly ingestion schedule, so already-ingested publications can be deactivated promptly.
+- Run automated retraction scrubbing every two weeks, including for the complete active corpus, so already-ingested publications can be deactivated when a new retraction or deprecation is detected.
 - Preserve tombstone and audit metadata for removed records, but never return deactivated content from the active corpus.
+
+### RAG vector guardrails
+
+- **RAG document disconnecting:** Patient-specific questionnaire tokens, feature vectors, token matrices, inference payloads, and session state must never be embedded, indexed, or stored in the scientific-document vector collection. General mental-health documents use a physically or logically isolated collection/namespace and mandatory metadata such as `data_class=scientific_publication`, `document_scope=general_mental_health`, and `contains_patient_data=false`. Retrieval applies those filters before vector search and fails closed for missing or mismatched metadata.
+- Retrieval queries may be derived only from the minimum approved non-sensitive context. They must not contain raw questionnaire tokens, the 105-input matrix, a user identity, or the cryptographic session ID.
+- **Automated retraction scrubbing:** The vector-index pipeline verifies all active PMIDs/DOIs against PubMed and/or another approved active retraction index every two weeks. On detection, it immediately removes deprecated or retracted vectors from the active namespace and context window, invalidates caches, publishes a new corpus/index version, and retains only a non-retrievable audit tombstone.
 
 ### Architecture consequences
 
 - Live search and local retrieval use the same eligibility, DOI/PMID, quality, date, and retraction gates.
 - Retrieval contracts must expose sufficient metadata to enforce and audit source eligibility, evidence hierarchy, recency, quality, conflict state, and citation membership.
 - No eligible retrieved evidence produces an explicit limitation; it does not authorize an uncited scientific answer or fallback to general web search.
+- System state, consent capture, and database schemas must natively support India-aligned data fencing and localization controls under the DPDP compliance mapping; RAG and audit adapters cannot silently route protected data outside the configured jurisdiction.
 
 ## Pending product decisions
 

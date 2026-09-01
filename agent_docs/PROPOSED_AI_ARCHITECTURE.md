@@ -58,7 +58,7 @@ LangGraph is proposed for typed state, explicit conditional routing, resumable q
 
 | Category | Examples |
 | --- | --- |
-| Deterministic | Request validation, urgent-policy overrides, questionnaire completeness, generic-profile application, DCMFNet invocation eligibility, percentage presentation, citation identity checks, disclaimer checks, retry limits, graph transitions after typed results |
+| Deterministic | Request validation, urgent-policy overrides, questionnaire completeness, generic-profile application, DCMFNet invocation eligibility, `[0.0, 1.0]` output gating, percentage presentation, citation identity checks, disclaimer/bias-indicator checks, retry limits, graph transitions after typed results |
 | Model-assisted and bounded | Ambiguous intent classification, scientific query rewriting, evidence relevance grading, cited explanation generation |
 | Prohibited | LLM risk calculation or formatting, LLM-selected arbitrary graph branches, invented questionnaire values, combined probabilities, unapproved risk bands, fabricated citations, diagnosis, unsupported causal attribution, uncontrolled search loops |
 
@@ -92,7 +92,9 @@ initialize assessment
 
 `generic_genetic_profile_v1` reads artifact-provided training medians for the 16 PRS and four batch-by-PC fields. Its generic/unmeasured provenance travels through state, context, UI, and response validation. It is never adjusted from family history or population descriptors.
 
-The two raw model values remain immutable. The deterministic presenter shows them separately as percentages, shows a high out-of-range value as `99.9% at risk`, and shows a below-zero value as `No risk could be seen`. The LLM does not perform this mapping.
+The two raw model values remain immutable inside the protected inference boundary. Before presentation or LLM context construction, a deterministic gate requires each value to be finite and within inclusive `[0.0, 1.0]`. A value below `0.0` or above `1.0` triggers a typed fail-closed internal-system-variance event; it is not clamped or displayed as an estimate. The UI displays exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The raw failing value is sent only to the encrypted audit adapter and never to standard logs or the public response.
+
+Every valid result view includes a persistent indicator that models trained on synthetic data may underrepresent real-world clinical comorbidities found in the Indian healthcare ecosystem. The LLM cannot attribute the result to an individual answer. In response to feature-impact questions it uses: `The model looks at patterns across all 105 inputs collectively; individual answers do not have an isolated linear impact.` It is prohibited from saying or implying `Your risk is X because you answered Yes to question Y.`
 
 ### Risk-explanation subgraph
 
@@ -154,9 +156,9 @@ approved bibliographic discovery adapter
 → ingestion audit report
 ```
 
-Eligible material is limited to peer-reviewed journal articles, PubMed-indexed literature, DOI/PMID-bearing publications from WHO, NIH, NHS, CDC or comparable authorities, and DOI/PMID-bearing clinical guidelines. Every source must fall inside the rolling 20-year window and have a resolvable DOI or PMID. Preprints, theses/dissertations, curated local PDFs, general websites, retracted material, and studies that fail the versioned design-appropriate quality appraisal are hard-excluded before indexing. Authority domain or a locally available file is not an eligibility signal.
+Eligible material is limited to peer-reviewed journal articles, PubMed-indexed literature, DOI/PMID-bearing publications discovered through the configured authority allowlist, and DOI/PMID-bearing clinical guidelines. Every source must fall inside the rolling 20-year window and have a resolvable DOI or PMID. Preprints, theses/dissertations, curated local PDFs, general websites, retracted material, and studies that fail the versioned design-appropriate quality appraisal are hard-excluded before indexing. Authority domain or a locally available file is not an eligibility signal.
 
-Incremental ingestion runs fortnightly and publishes a new corpus/index version plus an audit report for additions, changes, exclusions, and deduplication decisions. Separately, a weekly retraction-monitoring job checks active DOI/PMID records through PubMed retraction/correction metadata and/or Retraction Watch. It deactivates newly retracted records, removes their chunks from active retrieval, invalidates related caches, publishes a new corpus version, and retains an auditable tombstone. Records with retraction verification older than seven days become ineligible for new answers until rechecked; job failures alert operators rather than recording a successful check.
+Incremental ingestion runs every two weeks and publishes a new corpus/index version plus an audit report for additions, changes, exclusions, and deduplication decisions. An automated bi-weekly (every-two-weeks) retraction-scrubbing job checks the entire active DOI/PMID set through PubMed retraction/correction metadata and/or another approved active retraction index. On detection it immediately deactivates deprecated or retracted records, purges their chunks/vectors from active retrieval and the context window, invalidates related caches, publishes a new corpus version, and retains a non-retrievable audit tombstone. Records with retraction verification older than 14 days become ineligible for new answers until rechecked; job failures alert operators rather than recording a successful check.
 
 Use child passages for precise retrieval and larger parent sections for generation context. Prefer scientific section boundaries—abstract, methods, results, discussion, limitations, and recommendations—over blind fixed-character chunks.
 
@@ -167,6 +169,12 @@ Every chunk retains document ID, chunk ID, parent ID, title, authors, required D
 Run dense semantic and sparse lexical retrieval in parallel, merge candidates using Reciprocal Rank Fusion, and rerank the fused candidates with a biomedical cross-encoder or late-interaction model. Apply source eligibility and minimum semantic relevance as hard gates before returning evidence.
 
 Metadata reranking prioritizes relevant candidates in this order: clinical guidelines; systematic reviews/meta-analyses; randomized controlled trials; observational studies; expert opinion. Within a tier, newer evidence ranks ahead of older evidence and stronger quality-appraisal results break remaining ties. The result records hierarchy, recency, quality, model relevance, and final reranking contributions. Hierarchy and recency never rescue an irrelevant or otherwise ineligible source.
+
+#### RAG vector guardrails
+
+The scientific corpus is disconnected from patient-specific state. Questionnaire tokens, the 105-input token matrix, feature vectors, inference payloads, session identifiers, and user identity are never embedded or stored in the document vector index. General mental-health publications occupy an isolated collection or namespace. Before vector search, mandatory metadata filtering requires `data_class=scientific_publication`, `document_scope=general_mental_health`, and `contains_patient_data=false`; absent or mismatched metadata fails closed. Retrieval queries use only the minimum approved non-sensitive context.
+
+The index lifecycle includes automated retraction scrubbing every two weeks. It verifies every active PMID/DOI through PubMed and/or another approved active retraction index, immediately purges a newly deprecated or retracted record from the active vector namespace and context window when detected, invalidates caches, versions the index, and preserves only a non-retrievable audit tombstone.
 
 Qdrant is the proposed local search engine because it supports dense and sparse vectors, hybrid fusion, metadata payloads, and reranking-oriented multivectors. Its documented pipeline combines dense and BM25-style sparse retrieval before reranking: [Qdrant hybrid search and reranking](https://qdrant.tech/documentation/tutorials-basics/reranking-hybrid-search/).
 
@@ -180,10 +188,11 @@ Proposed adapters:
 - PubMed through NCBI E-utilities for live scientific discovery and recent literature.
 - Crossref for DOI and bibliographic metadata reconciliation.
 - PMC or another approved open-access path for eligible DOI/PMID-bearing full text; locally curated PDFs are prohibited.
+- Versioned authority-domain discovery limited initially to `*.who.int`, `*.cdc.gov`, `*.nih.gov`, `*.nhs.uk`, and configured Indian health-ministry/public-health domains under `*.gov.in`.
 
 NCBI documents the supported PubMed E-utilities interface in its [E-utilities guide](https://www.ncbi.nlm.nih.gov/books/NBK25497/). Crossref exposes publication, DOI, licensing, correction, and other scholarly metadata through its [REST API](https://www.crossref.org/documentation/retrieve-metadata/rest-api/).
 
-The search policy returns one of `local_only`, `local_then_live`, `live_required`, or `unsupported`. It must be deterministic after typed scope/recency facts. Live results pass the same source-class, 20-year, DOI/PMID, quality, and retraction gates as the local corpus. Arbitrary general-web pages are not interchangeable with approved scientific evidence.
+The search policy returns one of `local_only`, `local_then_live`, `live_required`, or `unsupported`. It must be deterministic after typed scope/recency facts. Live results pass the same source-class, 20-year, DOI/PMID, quality, and retraction gates as the local corpus. General web search is prohibited. Authority URLs must match the versioned allowlist after redirects and canonicalization; domain match alone never bypasses DOI/PMID or quality requirements.
 
 ### Evidence gate
 
@@ -215,6 +224,8 @@ Pass only validated information needed for the current response:
 
 Exclude the full questionnaire, raw feature vectors, unrelated conversation history, internal prompts, and disallowed source text. The LLM receives no formula or authority to recalculate probabilities.
 
+The LLM receives no individual feature-attribution signal. It cannot state or imply that one answer caused a risk value and uses the approved 105-input collective-pattern statement for feature-impact questions.
+
 ## LLM and prompt architecture
 
 Use a provider-neutral gateway with explicit capabilities for structured output, tool calling when required inside a bounded node, timeouts, retry classification, model/version metadata, and deterministic offline fakes.
@@ -245,7 +256,9 @@ Subjective evidence-support checking may use a bounded secondary model-assisted 
 
 Use opaque session/thread IDs behind a state-store/checkpointer port. Local development uses an in-memory implementation. The hosted prototype uses an anonymous, shared, expiring implementation suitable for multiple application instances, with explicit reset and no long-term user memory; the concrete store remains a provider/privacy decision. Durable checkpoint demonstrations use synthetic cases only until a reviewed policy permits anything else.
 
-Trace graph transitions, tool names, version IDs, latency, candidate counts, evidence status, validation categories, and retry counts. Do not log raw messages, questionnaire answers, feature vectors, prompts containing sensitive values, or full retrieved documents. Whether raw probabilities may enter ordinary logs remains pending.
+Trace graph transitions, tool names, version IDs, latency, candidate counts, evidence status, validation categories, and retry counts. Standard application logs, traces, metrics, and analytics must never contain raw probabilities, questionnaire tokens/answers, feature vectors, prompts containing sensitive values, cryptographic session IDs, or full retrieved documents.
+
+Raw probabilities and questionnaire tokens may be persisted only in an encrypted, access-controlled audit-trail database. Audit records use a cryptographically random, opaque session ID and never a user identity; access and all reads/writes are auditable. State, consent, audit, and database contracts carry jurisdiction, data-fence, purpose, retention, and policy-version metadata so deployment can enforce India localization constraints aligned with the DPDP Act. A non-compliant adapter or cross-fence route fails closed.
 
 LangSmith may be an optional experiment/tracing adapter, never a runtime requirement. The local application and deterministic test suite must function without an external observability account.
 

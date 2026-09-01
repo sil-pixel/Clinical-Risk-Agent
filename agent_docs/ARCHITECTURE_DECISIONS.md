@@ -30,11 +30,11 @@ Owner: Software Architect
 
 ## ADR-004 — Keep MVP conversational state ephemeral
 
-**Decision:** Use opaque session IDs, inactivity expiry, explicit reset, and no durable questionnaire database. Local development uses bounded in-memory state; the hosted prototype uses an anonymous, shared, expiring adapter behind the same state port.
+**Decision:** Use cryptographically random opaque session IDs, inactivity expiry, explicit reset, and no durable operational questionnaire/state database. Local development uses bounded in-memory state; the hosted prototype uses an anonymous, shared, expiring adapter behind the same state port. A separate encrypted, access-controlled audit-trail database is the sole permitted persistence destination for raw probabilities and questionnaire tokens, keyed only by cryptographic session ID and never user identity.
 
 **Why:** Questionnaire content is sensitive, while invited concurrent testers and multiple application instances require consistent ephemeral session state. Durable health-record persistence has no approved prototype requirement.
 
-**Consequences:** The API/UI represents expiry clearly, and prototype sessions are intentionally temporary. Concrete hosted-store technology, TTL, capacity, and deletion behavior remain pending privacy/operations decisions. Durable state requires a privacy review, retention policy, threat model, and new ADR.
+**Consequences:** The API/UI represents expiry clearly, and prototype operational sessions are intentionally temporary. The audit store is not a session checkpointer or application log and cannot be used to reconstruct user identity. Its encryption, access control, India data fence, consent/purpose metadata, retention/deletion policy, and access audit are mandatory. Concrete hosted-store technology, TTL, capacity, and deletion behavior remain pending privacy/operations decisions. Other durable state requires a privacy review, retention policy, threat model, and new ADR.
 
 This does not authorize durable health records.
 
@@ -94,15 +94,23 @@ This does not authorize durable health records.
 
 **Why:** The Product Manager approved a public-facing research demonstration now and an India-first, clinician-only hospital silent-validation product later. Prototype-only generic genetic assumptions, synthetic weights, and display behavior must not leak into hospital research workflows.
 
-**Consequences:** Composition fails closed when a mode requests an unapproved adapter or policy. `generic_genetic_profile_v1` and prototype out-of-range presentation are valid only in `prototype_demo`. Hospital mode remains unimplemented until its regulatory, ethics, privacy, clinical-evidence, security, and data contracts are approved. Clinical decision support is not implied by hospital silent validation.
+**Consequences:** Composition fails closed when a mode requests an unapproved adapter or policy. `generic_genetic_profile_v1` is valid only in `prototype_demo`; fail-closed rejection of out-of-range probabilities applies in every mode. Hospital mode remains unimplemented until its regulatory, ethics, privacy, clinical-evidence, security, and data contracts are approved. Clinical decision support is not implied by hospital silent validation.
 
 ## ADR-012 — Restrict scientific evidence and continuously monitor retractions
 
-**Decision:** Scientific RAG admits only eligible peer-reviewed or PubMed-indexed literature, DOI/PMID-bearing authoritative health-organization publications, and DOI/PMID-bearing clinical guidelines from the rolling prior 20 years. It hard-excludes preprints, theses/dissertations, curated local PDFs, general websites, retracted papers, and evidence failing a versioned quality appraisal. Incremental ingestion runs fortnightly; an independent retraction monitor checks the active corpus weekly.
+**Decision:** Scientific RAG admits only eligible peer-reviewed or PubMed-indexed literature, DOI/PMID-bearing authoritative health-organization publications, and DOI/PMID-bearing clinical guidelines from the rolling prior 20 years. It hard-excludes preprints, theses/dissertations, curated local PDFs, general websites, retracted papers, and evidence failing a versioned quality appraisal. Authority discovery uses a versioned domain allowlist initially covering `*.who.int`, `*.cdc.gov`, `*.nih.gov`, `*.nhs.uk`, and configured Indian health-ministry/public-health domains under `*.gov.in`. Incremental ingestion and complete-corpus retraction scrubbing run every two weeks.
 
 **Why:** Scientific answers require reproducible provenance and ongoing validity. Ingestion-time retraction checks alone cannot detect a later retraction, while authority domains and local files alone do not establish publication identity or quality.
 
-**Consequences:** DOI or PMID, publication date, source class, quality state, evidence tier, and current retraction state are mandatory eligibility metadata. Relevant evidence is metadata-reranked as clinical guidelines, systematic reviews/meta-analyses, RCTs, observational studies, then expert opinion, with recency and quality applied within tiers. Material conflicts produce a controversy response representing both sides without selecting a conclusion. A weekly monitor deactivates newly retracted or stale-unverified records, invalidates affected chunks/caches, versions the corpus, and records an audit trail. Citations can refer only to eligible evidence retrieved for the current answer.
+**Consequences:** DOI or PMID, publication date, source class, quality state, evidence tier, and retraction verification no older than 14 days are mandatory eligibility metadata. Relevant evidence is metadata-reranked as clinical guidelines, systematic reviews/meta-analyses, RCTs, observational studies, then expert opinion, with recency and quality applied within tiers. Material conflicts produce a controversy response representing both sides without selecting a conclusion. Bi-weekly scrubbing immediately deactivates newly detected deprecated/retracted sources, purges affected vectors/chunks and caches, versions the corpus, and records a non-retrievable tombstone. The scientific vector namespace is metadata-isolated from questionnaire tokens, patient matrices, inference state, session IDs, and identities. Citations can refer only to eligible evidence retrieved for the current answer.
+
+## ADR-013 — Fail closed on invalid probabilities and isolate sensitive audit data
+
+**Decision:** Any DCMFNet probability outside inclusive `[0.0, 1.0]` is an internal system variance. The application records the raw value only through the encrypted audit port, sends no estimate to the LLM or UI, and returns the fixed safe error message. Raw probabilities and questionnaire tokens are prohibited from standard logs and may persist only in an access-controlled audit database keyed by a cryptographically random session ID, never user identity.
+
+**Why:** Clamping or friendly display mappings would conceal invalid model behavior, while standard logging would unnecessarily expose sensitive assessment data. India-first deployment also requires state, consent, and storage contracts capable of enforcing jurisdictional data fences and localization policy.
+
+**Consequences:** Result views require an Indian-ecosystem synthetic-data bias indicator. The LLM cannot attribute risk to an individual answer and must use the approved collective-105-input statement for feature-impact questions. State, consent, audit, and database schemas carry jurisdiction, data-fence, purpose, retention, and policy-version metadata aligned with the DPDP compliance mapping; non-compliant storage or routing fails closed.
 
 ## Deferred decisions
 
