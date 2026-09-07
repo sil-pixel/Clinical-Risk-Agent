@@ -110,7 +110,15 @@ This does not authorize durable health records.
 
 **Why:** Clamping or friendly display mappings would conceal invalid model behavior, while standard logging would unnecessarily expose sensitive assessment data. India-first deployment also requires state, consent, and storage contracts capable of enforcing jurisdictional data fences and localization policy.
 
-**Consequences:** Result views require an Indian-ecosystem synthetic-data bias indicator. The LLM cannot attribute risk to an individual answer and must use the approved collective-105-input statement for feature-impact questions. State, consent, audit, and database schemas carry jurisdiction, data-fence, purpose, retention, and policy-version metadata aligned with the DPDP compliance mapping; non-compliant storage or routing fails closed.
+**Consequences:** Result views require an Indian-ecosystem synthetic-data bias indicator. The system reports predictions, not causes; without validated feature importance, it inserts the approved deterministic prediction-only message. State, consent, audit, and database schemas carry jurisdiction, data-fence, purpose, retention, and policy-version metadata aligned with the DPDP compliance mapping; non-compliant storage or routing fails closed.
+
+## ADR-014 — Require claim-level citations and gate feature importance
+
+**Decision:** Every factual medical/scientific claim requires an inline citation mapped to current verified retrieval metadata. Each generation cycle receives at most a configured 3-to-5 distinct sources, defaulting to 5. Response prose never displays raw excerpts; expandable UI evidence records show retrieval-owned exact matched text with DOI/PMID. The current system performs prediction only; locally validated feature importance may be added later, but causal inference is out of scope.
+
+**Why:** Claim-level citations make grounding auditable, while bounded evidence reduces attention dilution and cross-source contamination. Prediction estimates an output; feature importance explains which inputs influenced that estimate; causal inference asks what produced a real-world outcome. This product implements only the first now and may add the second after validation.
+
+**Consequences:** Conflict-aware retrieval represents each supported position within the cap or returns a limitation. Until SHAP is validated, feature-impact answers receive the deterministic prediction-only message. Later, the LLM may describe validated top-three SHAP values as feature importance for the prediction. It must not call them causes. A feature's clinical relevance may be discussed separately when supported by inline-cited medical evidence.
 
 ## Deferred decisions
 

@@ -76,7 +76,7 @@ A future mode may accept the 16 PRS values and four batch-by-PC interaction valu
 
 - Identify whether the value is the positive-symptom or negative-symptom probability and explain that category in plain language.
 - Keep the model probability distinct from scientific literature retrieved to contextualize it.
-- Explain uncertainty and avoid causal claims or unsupported statements about which answers produced the result. The LLM is specifically prohibited from saying or implying `Your risk is X because you answered Yes to question Y.` When users ask how individual answers affected the estimate, use the structured statement: `The model looks at patterns across all 105 inputs collectively; individual answers do not have an isolated linear impact.`
+- State the scope plainly: the current system performs prediction, not causal inference. A future validated SHAP tool may report feature importance—which inputs most influenced the model's estimate—but it still will not identify what caused a clinical outcome.
 - Disclose use of `generic_genetic_profile_v1` and state that PRS/PCA-related values were not measured from the user.
 
 ### Required disclaimer
@@ -195,9 +195,46 @@ When eligible evidence contains a material unresolved conflict, the evidence res
 - No eligible retrieved evidence produces an explicit limitation; it does not authorize an uncited scientific answer or fallback to general web search.
 - System state, consent capture, and database schemas must natively support India-aligned data fencing and localization controls under the DPDP compliance mapping; RAG and audit adapters cannot silently route protected data outside the configured jurisdiction.
 
+## 6. Evidence and explanation behavior — approved
+
+### Claim-level citation and grounding
+
+- Every factual medical or scientific claim must contain an explicit inline citation ID mapped to verified metadata for an eligible source returned by the current retrieval operation. Citation coverage is enforced at claim level; a citation attached only to a distant paragraph or bibliography does not cover intervening claims.
+- An exact DCMFNet probability is rendered as immutable tool output with model/artifact provenance, not represented as a literature-backed fact. It must not receive a paper citation that implies the source validates the individual's number. Every medical/scientific interpretation surrounding that output still requires claim-level inline citations.
+- Speculative, extrapolated, or uncited medical/scientific claims are prohibited. If the current evidence set does not directly support a claim, the claim is removed or the response states that adequate evidence was not retrieved.
+- Citation IDs, DOI/PMID, source identity, and matched text come only from the immutable retrieval result. The LLM cannot create, repair, substitute, or cite metadata from memory.
+- Each generation cycle receives no more than the configured source cap, which must be an integer from 3 through 5 and defaults to 5. Retrieval may supply fewer sources when fewer eligible, relevant sources exist; it must never pad the context with weak evidence to meet a minimum.
+- The context builder selects the highest-relevance eligible evidence after hierarchy, recency, quality, and conflict-preservation reranking. Multiple chunks from one paper count as one source toward the cap and are grouped under one source identity.
+
+### Evidence display
+
+- The response body displays concise claims with inline citation markers, not raw retrieved excerpts.
+- Each citation marker opens an interactive, expandable metadata container such as a tooltip or side drawer. That container displays the exact matched text string supplied by retrieval, DOI/PMID, title, authors when available, publication/source, publication date, evidence tier, and retraction-verification state.
+- The UI must preserve the exact matched string and citation-to-source mapping; it cannot ask the LLM to regenerate or paraphrase the excerpt. Excerpts remain collapsed by default and are never silently inserted into the prose response body.
+
+### Conflicting evidence
+
+- After metadata reranking, materially opposed eligible evidence produces `conflicting_evidence`. The answer labels the controversy, presents and inline-cites each supported position, describes hierarchy/recency/quality limitations, and does not select or imply a winning conclusion.
+- Conflict-preserving selection must represent each materially supported position within the configured 3-to-5-source cap. If fair representation cannot fit or sufficient evidence for one position is unavailable, return an explicit limitation rather than a one-sided synthesis.
+
+### Prediction and future feature importance
+
+- **Current scope:** DCMFNet produces predictions only. The system does not perform causal inference and cannot determine why a clinical outcome occurs.
+- **Before SHAP is validated:** The assistant must not rank individual inputs or explain why a probability is high. It returns the deterministic message: `This is a prediction, not a causal explanation. The model evaluates all 105 inputs together; no single answer can be identified as the cause of the result. Validated feature importance is not available for this result.`
+- **After SHAP is validated:** A locally executed, approved SHAP adapter may report which inputs had the largest influence on that specific model prediction. This is feature importance, not causal inference. The assistant may say that a feature moved the model estimate up or down relative to the validated baseline; it must not say the feature caused the predicted clinical outcome.
+- A feature's clinical relevance may be discussed separately when current retrieved medical literature explicitly supports it and the claim has an inline citation. Clinical relevance must not be inferred from the SHAP value itself.
+- The SHAP adapter must bind its result to the exact inference result, target, artifact checksum, feature schema, SHAP background version, method/version, and attribution-run ID. Attention values alone are insufficient. The LLM receives exactly the top three localized SHAP values with stable feature IDs, ranks, signed values, and directions; it cannot alter them.
+- Alternative feature-importance methods require separately versioned and approved contracts and must not label their outputs as SHAP.
+
+### Architecture consequences
+
+- Structured generation must separate prose claims, inline citation IDs, evidence-display records, the deterministic prediction-only message, and optional validated feature-importance input.
+- Response validation must reject any factual medical/scientific claim without a current inline citation, any citation not mapped to current retrieval metadata, body-level raw excerpts, source-cap violations, invented feature associations, causal claims, or feature-importance statements without the validated runtime object.
+- The UI requires an expandable evidence component that renders retrieval-owned exact matched strings and DOI/PMID metadata without passing excerpt rendering through the LLM.
+- Evaluation fixtures must cover claim-level citation completeness, citation entailment, source-cap enforcement, excerpt/body separation, conflict representation, association extrapolation, feature-importance gate bypass attempts, top-three JSON integrity, prediction-versus-causation wording, and deterministic prediction-only message presence.
+
 ## Pending product decisions
 
-6. Evidence and explanation behavior beyond the approved conflict rule
 7. Safety and escalation policy
 8. Privacy and data lifecycle
 9. LLM and deployment constraints

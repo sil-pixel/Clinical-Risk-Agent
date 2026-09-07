@@ -94,7 +94,7 @@ initialize assessment
 
 The two raw model values remain immutable inside the protected inference boundary. Before presentation or LLM context construction, a deterministic gate requires each value to be finite and within inclusive `[0.0, 1.0]`. A value below `0.0` or above `1.0` triggers a typed fail-closed internal-system-variance event; it is not clamped or displayed as an estimate. The UI displays exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The raw failing value is sent only to the encrypted audit adapter and never to standard logs or the public response.
 
-Every valid result view includes a persistent indicator that models trained on synthetic data may underrepresent real-world clinical comorbidities found in the Indian healthcare ecosystem. The LLM cannot attribute the result to an individual answer. In response to feature-impact questions it uses: `The model looks at patterns across all 105 inputs collectively; individual answers do not have an isolated linear impact.` It is prohibited from saying or implying `Your risk is X because you answered Yes to question Y.`
+Every valid result view includes the required synthetic-data indicator. The system performs prediction, not causal inference. Until validated feature importance exists, the application inserts: `This is a prediction, not a causal explanation. The model evaluates all 105 inputs together; no single answer can be identified as the cause of the result. Validated feature importance is not available for this result.`
 
 ### Risk-explanation subgraph
 
@@ -107,7 +107,7 @@ load immutable assessment result
 → validate probability, claims, citations, and disclaimer
 ```
 
-No feature attribution is claimed unless a separately validated deterministic attribution contract is approved later.
+No feature importance is reported unless the separately validated SHAP contract is approved later.
 
 ### Scientific RAG subgraph
 
@@ -209,6 +209,8 @@ One controlled query rewrite and one live-search escalation are proposed default
 
 For `conflicting evidence`, preserve representative eligible sources for each materially supported position. The generated answer must label the controversy, summarize and cite both sides, state relevant hierarchy/recency/quality limitations, and must not choose or imply a winning conclusion. For every status, citation IDs may be created only from evidence returned by that retrieval operation.
 
+After eligibility and metadata reranking, the context builder injects at most the configured number of distinct sources per generation cycle. The cap is an integer from 3 through 5 and defaults to 5; fewer sources are permitted when the evidence gate returns fewer eligible high-relevance results. Multiple chunks from one publication count as one source. Conflict-aware selection must represent each materially supported side within the cap or return a limitation instead of a one-sided answer.
+
 ## Structured Context
 
 Pass only validated information needed for the current response:
@@ -219,18 +221,26 @@ Pass only validated information needed for the current response:
 - target/artifact identity
 - `generic_genetic_profile_v1` disclosure
 - eligible evidence excerpts and immutable citation IDs
+- evidence-display metadata containing retrieval-owned exact matched strings and DOI/PMID
+- optional validated local feature-importance JSON containing exactly the top three SHAP values
 - model, corpus, and research limitations
 - safety and response requirements
 
 Exclude the full questionnaire, raw feature vectors, unrelated conversation history, internal prompts, and disallowed source text. The LLM receives no formula or authority to recalculate probabilities.
 
-The LLM receives no individual feature-attribution signal. It cannot state or imply that one answer caused a risk value and uses the approved 105-input collective-pattern statement for feature-impact questions.
+By default, the LLM receives no individual feature-importance data and cannot rank inputs or explain why a result is high.
+
+A future SHAP adapter remains disabled until locally validated and approved for DCMFNet. For the exact inference result, it may pass only validated JSON containing the top three localized SHAP values and required provenance. The LLM may describe how those inputs influenced the model estimate relative to its baseline. It cannot describe them as causes of a clinical outcome. Clinical relevance requires separate inline-cited medical evidence. Alternative feature-importance methods require their own versioned contracts.
 
 ## LLM and prompt architecture
 
 Use a provider-neutral gateway with explicit capabilities for structured output, tool calling when required inside a bounded node, timeouts, retry classification, model/version metadata, and deterministic offline fakes.
 
-Prompts contain behavior and formatting instructions, not hidden scientific facts. Proposed response fields include summary, positive-probability explanation, negative-probability explanation, evidence-backed claims with citation IDs, limitations, disclaimer, and safe follow-up options. Exact schema names remain subject to AI Architect and shared-contract review.
+Prompts contain behavior and formatting instructions, not hidden scientific facts. Structured response fields include prose claims with explicit inline citation IDs, positive-probability explanation, negative-probability explanation, limitations, deterministic causal block when required, disclaimer, and safe follow-up options. Evidence-display records remain retrieval-owned UI data and are not generated into the response prose.
+
+Every factual medical or scientific claim requires an inline citation mapped to current verified retrieval metadata. The LLM may discuss a feature association only when the exact retrieved text for the current query explicitly supports it; it cannot synthesize uncited correlations, pathways, mechanisms, epidemiological links, or other extrapolations. Model attribution and literature association remain separate concepts.
+
+The immutable DCMFNet number is a typed tool-result display with artifact provenance, not a literature-backed claim. It receives no paper citation that could imply individual validation; all medical/scientific interpretation around it remains subject to claim-level citation enforcement.
 
 Use low-variance generation settings for clinical-research explanations. One bounded regeneration is allowed only after a typed validation failure; the retry receives the failure category without permission to change model values or citation identity.
 
@@ -245,9 +255,16 @@ Before returning an answer, deterministic validation checks:
 - generic-genetic-profile disclosure
 - required research-only disclaimer
 - every citation ID exists in the current evidence result
+- every factual medical/scientific claim has an unambiguous inline citation to current evidence
 - no new bibliographic metadata appears
-- scientific claims reference allowed evidence
-- no diagnosis, treatment directive, certainty claim, or unsupported causal/feature attribution
+- scientific claims are entailed by allowed matched text rather than speculative extrapolation
+- distinct injected sources do not exceed the configured cap of 3 through 5
+- raw matched excerpts are absent from response prose and present only in evidence-display records
+- conflicting-evidence responses represent each materially supported position without selecting one
+- no diagnosis, treatment directive, certainty claim, causal claim, or unsupported feature-importance statement
+- no feature-importance explanation without a successfully validated SHAP object bound to the current result
+- any attribution object contains exactly the top three unmodified localized SHAP values and required provenance
+- the deterministic prediction-only text is present whenever validated feature importance is absent
 - no questionnaire or feature-vector leakage
 
 Subjective evidence-support checking may use a bounded secondary model-assisted grader, but it cannot override deterministic failures. A second invalid generation returns a safe deterministic response.
@@ -306,7 +323,7 @@ Current evaluation guidance supports separating correctness, relevance, grounded
 - Long-term personal memory
 - Autonomous arbitrary-web browsing
 - Automated diagnosis, treatment, or medication guidance
-- Model-generated questionnaire values or DCMFNet feature attribution
+- Model-generated questionnaire values or unvalidated/LLM-generated DCMFNet feature importance; the planned local SHAP port remains blocked pending validation and approval
 - Clinical decision support, regulated-device claims, or EHR integration; clinician-only hospital silent research remains a separately gated future mode
 
 These can be reconsidered only with evidence that they improve an approved requirement enough to justify their complexity and risk.
@@ -315,13 +332,12 @@ These can be reconsidered only with evidence that they improve an approved requi
 
 The following answers are required before this proposal becomes the approved AI architecture:
 
-1. Evidence, citation, and explanation behavior beyond the approved retrieval-only citation and conflict rules
-2. Safety categories, escalation behavior, and approved urgent wording
-3. Privacy, session lifetime, external-provider, and logging policy
-4. LLM/embedding deployment, cost, latency, offline, and language constraints
-5. User-visible failure behavior and retry budgets
-6. Measurable quality and performance thresholds
-7. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
-8. Hosted-prototype access control, session TTL, concurrency target, deletion behavior, and operating budget
+1. Safety categories, escalation behavior, and approved urgent wording
+2. Privacy, session lifetime, external-provider, and logging policy
+3. LLM/embedding deployment, cost, latency, offline, and language constraints
+4. User-visible failure behavior and retry budgets
+5. Measurable quality and performance thresholds
+6. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
+7. Hosted-prototype access control, session TTL, concurrency target, deletion behavior, and operating budget
 
 Approval requires reconciling these decisions into this document, the interface registry, the AI/RAG decision record, and implementation handoffs for the RAG Engineer, AI Engineer, and Testing Agent.

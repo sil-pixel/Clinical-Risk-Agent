@@ -112,7 +112,7 @@ The probabilities remain separate. They must not be combined, recalculated, or m
 
 Present valid probabilities separately as percentages while retaining their exact raw model values inside the protected system boundary. Percentage formatting is deterministic application logic, not an LLM responsibility. Do not introduce qualitative risk bands without scientifically validated thresholds. If a raw value is below `0.0` or above `1.0`, fail closed as an internal system variance: do not clamp it, pass it to the LLM, or display an estimate. The UI displays exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The exact raw value is written only to the encrypted, access-controlled audit trail for debugging and never to standard application logs.
 
-Every valid result includes a plain-language explanation, the approved research-only disclaimer, and a persistent indicator that synthetic-data models may underrepresent real-world clinical comorbidities found in the Indian healthcare ecosystem. The LLM must never claim `Your risk is X because you answered Yes to question Y.` For questions about individual-answer impact, it uses: `The model looks at patterns across all 105 inputs collectively; individual answers do not have an isolated linear impact.`
+Every valid result includes a plain-language explanation, the approved research-only disclaimer, and the synthetic-data indicator. This system performs prediction, not causal inference. Until validated feature importance is available, individual-answer questions receive: `This is a prediction, not a causal explanation. The model evaluates all 105 inputs together; no single answer can be identified as the cause of the result. Validated feature importance is not available for this result.`
 
 For the portfolio MVP's manual questionnaire, PRS and batch-by-genetic-PC interaction inputs that cannot be measured from the user use a versioned generic profile populated from the selected artifact's exported training medians. The system must disclose that these genetic inputs are generic and unmeasured, must not describe the result as personalized genetic risk, and must never derive these values from family history, nationality, ethnicity, race, or descent.
 
@@ -256,6 +256,16 @@ Scientific knowledge should remain external to the model rather than embedded in
 General websites are not scientific sources. Authority discovery is limited to a versioned domain allowlist initially containing `*.who.int`, `*.cdc.gov`, `*.nih.gov`, `*.nhs.uk`, and configured Indian health-ministry/public-health domains under `*.gov.in`; DOI/PMID, date, quality, and retraction gates remain mandatory.
 
 The scientific vector namespace must be disconnected from questionnaire tokens, patient-specific token matrices, feature vectors, inference payloads, session IDs, and identities. Mandatory metadata filtering admits only the approved scientific-publication/general-mental-health/non-patient class. Every two weeks, the vector pipeline verifies all active PMIDs/DOIs through PubMed and/or another approved retraction index and immediately purges newly detected deprecated or retracted evidence from active retrieval, caches, and context windows.
+
+Every factual medical or scientific claim in an answer must have an explicit inline citation mapped to verified metadata from the current retrieval result. Uncited, speculative, or extrapolated claims are prohibited. A generation cycle receives no more than a configured 3-to-5 distinct highly relevant sources, defaulting to 5; fewer are allowed when fewer eligible sources exist. Conflicting evidence must preserve and cite each materially supported position within that cap or return a limitation rather than a one-sided conclusion.
+
+The exact DCMFNet probability is displayed as an immutable model-tool result with artifact provenance, not cited to a paper as though literature validates the individual's number. Any medical or scientific interpretation around that result still requires an inline citation.
+
+Raw matched excerpts do not appear in response prose. Inline citation markers open collapsed interactive metadata containers that show the retrieval-owned exact matched text string with DOI/PMID and bibliographic/quality metadata.
+
+The current system produces predictions only. It does not determine what caused a clinical outcome and does not currently report individual feature importance.
+
+Later, a locally validated SHAP integration may report the top three inputs that most influenced a specific prediction. The LLM may describe that model influence accurately. SHAP feature importance is not causal inference and must not be presented as proof that a feature caused the outcome. A feature's clinical relevance may be discussed separately when supported by inline-cited retrieved medical evidence.
 
 ## Supported conversational scope
 

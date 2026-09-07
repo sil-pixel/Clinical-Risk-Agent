@@ -28,7 +28,9 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | `InferenceRequest` | Graph → DCMFNet port | ML Engineer | **Implemented internally:** selected target plus records containing all 105 exact numeric feature keys |
 | `InferenceResult` | DCMFNet port → graph/context/API | ML Engineer | **Implemented:** immutable, separate positive- or negative-symptom research risk probability and artifact identity |
 | `RetrievalQuery` | Graph → RAG port | AI Architect (design), RAG Engineer (implementation) | Minimum boundary below; AI/RAG architecture and corpus policy required |
-| `EvidenceResult` | RAG port → graph/context/API | AI Architect (design), RAG Engineer (implementation) | Minimum provenance boundary below; final fields pending corpus selection |
+| `EvidenceResult` | RAG port → graph/context/API | AI Architect (design), RAG Engineer (implementation) | Approved evidence/citation/source-cap boundary below; concrete adapter pending |
+| `EvidenceDisplayRecord` | RAG port → API/UI | AI Architect (design), RAG/Frontend Engineers (implementation) | Retrieval-owned exact-match metadata; never generated as response prose |
+| `LocalFeatureImportanceResult` | Validated SHAP port → context/API | ML Engineer (method), AI Architect (use) | **Blocked:** the planned SHAP adapter is not validated or approved |
 | `StructuredExplanationContext` | Context builder → LLM port | AI Architect (design), AI Engineer (implementation) | Must compose immutable validated results; finalized after ML/RAG contracts |
 | `ValidatedAssistantResponse` | Response validator → API/UI | AI Architect (design), AI Engineer (implementation) | Envelope below; content blocks finalized with Backend/Frontend |
 | Public session transport | FastAPI ↔ Streamlit | Backend Engineer | Architecture baseline below; finalized only after workflow contracts stabilize |
@@ -73,7 +75,7 @@ The result contains the exact artifact target—`SCZ18_Pos_Norm` or `SCZ18_Neg_N
 
 A deterministic output gate—not the LLM—requires every raw probability to be finite and within inclusive `[0.0, 1.0]` before producing a validated percentage representation. A value below `0.0` or above `1.0` triggers a typed internal-system-variance error and fails closed; it must not be clamped or exposed as an estimate. The public/UI message is exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The exact failing value may be written only through the encrypted audit port and is absent from the public error and Structured Context. No qualitative risk band is permitted. Downstream components must consume the validated representation or typed failure rather than implement private formatting rules.
 
-The explanation contract prohibits attribution to an individual answer, including `Your risk is X because you answered Yes to question Y.` Feature-impact questions receive the approved statement: `The model looks at patterns across all 105 inputs collectively; individual answers do not have an isolated linear impact.` Every valid result response also requires a UI-visible indicator that synthetic-data models may underrepresent real-world clinical comorbidities found in the Indian healthcare ecosystem.
+The current explanation contract is prediction-only and does not perform causal inference. Without validated feature importance, the assistant cannot rank inputs or explain why a result is high and must use the deterministic message defined below. Every valid result response also requires the approved synthetic-data indicator.
 
 `QuestionnaireRequirements` and `QuestionnaireValidationResult` remain blocked only on approved user-facing wording, units, categorical encodings, and valid ranges for manually collected fields. The portfolio MVP resolves unavailable genetic inputs through `generic_genetic_profile_v1`: read the selected artifact's exported medians for all PRS and batch-by-PC fields, attach the generic-profile provenance, and disclose that these are unmeasured assumptions. This exception applies only to those named genetic groups. No consumer may derive them from family history or population descriptors, present them as the user's genomic values, or invent defaults for any other field.
 
@@ -91,13 +93,19 @@ Each evidence result must distinguish:
 - no sufficiently relevant evidence
 - unavailable/failed retrieval
 
-Each evidence item must preserve a stable internal source/document ID, title, source authorship when available, publication/source name, required DOI or PMID, publication date, the retrieved excerpt/chunk, source type, study design/evidence-hierarchy tier, peer-review/indexing status, issuing authority when applicable, quality-appraisal result and rubric version, retraction/correction state and verification time, and retrieval/reranking scores whose relevance, hierarchy, recency, and quality semantics are documented. Corpus and index versions are required at result level.
+Each evidence item must preserve a stable internal source/document ID, title, source authorship when available, publication/source name, required DOI or PMID, publication date, the retrieval-owned exact matched text string, source type, study design/evidence-hierarchy tier, peer-review/indexing status, issuing authority when applicable, quality-appraisal result and rubric version, retraction/correction state and verification time, and retrieval/reranking scores whose relevance, hierarchy, recency, and quality semantics are documented. Corpus and index versions are required at result level.
 
 Missing optional bibliographic fields remain explicitly absent; they are never generated. Missing DOI/PMID, publication date, eligibility, quality, or current retraction-verification metadata makes an item ineligible for return. Citation display is derived only from eligible source metadata in the current retrieval result.
 
 The result status must additionally distinguish `conflicting_evidence` when materially opposed eligible evidence is retrieved. In that state, results retain representative evidence for each supported position and expose the metadata needed to state the controversy without selecting a conclusion.
 
 Active evidence must have a retraction check no older than 14 days. The adapter must not return a deprecated/retracted or stale-unverified record, including from a cache or already-built context window.
+
+The retrieval result declares its configured distinct-source cap, which must be from 3 through 5 and defaults to 5. A generation cycle cannot receive more distinct source IDs than that cap; multiple matched chunks sharing one publication identity count once. Fewer sources are valid when fewer eligible relevant sources exist. A conflicting-evidence result must represent every materially supported position within the cap or return an explicit insufficient-conflict-coverage limitation.
+
+Every generated factual medical/scientific claim carries one or more inline citation IDs mapped to these current evidence items. Raw matched text is prohibited from the response prose. The API exposes it only in separate evidence-display records so the UI can render collapsed interactive metadata containers with the exact string, DOI/PMID, and bibliographic/quality metadata without LLM regeneration.
+
+The exact inference probability remains a separately typed immutable tool-output block with artifact provenance. It is not assigned a literature citation, because no retrieved paper validates that individual's number. Any medical/scientific interpretation in adjacent prose is a claim and requires current inline evidence.
 
 ## Structured explanation context
 
@@ -106,11 +114,20 @@ The context builder may pass only validated fields relevant to the current respo
 - intent and allowed response purpose
 - exact immutable inference result, if present
 - exact evidence result, if present
+- optional validated local feature-importance result, if present
 - approved model/corpus limitations
 - allowed citation identifiers
 - safety and response-policy requirements
 
-It does not pass a formula for calculating risk, ask the LLM to infer missing values, or treat model input features as causal explanations. Feature attribution requires a separately verified deterministic model tool and product approval; it is not assumed by the current artifacts.
+It does not pass a formula for calculating risk or ask the LLM to infer missing values. Retrieved literature may support inline-cited clinical context, but it does not explain what caused an individual's prediction.
+
+## Prediction and feature-importance boundary
+
+The current system returns predictions only and does not perform causal inference. No feature-importance tool is currently approved. The application therefore inserts: `This is a prediction, not a causal explanation. The model evaluates all 105 inputs together; no single answer can be identified as the cause of the result. Validated feature importance is not available for this result.`
+
+A future SHAP adapter must pass ML validation and architecture/test/review approval. Its result is bound to the exact inference result and contains required provenance plus exactly three ranked localized SHAP entries: stable feature ID, rank, signed value, and direction. The LLM may accurately state which features moved the model estimate relative to its validated baseline.
+
+SHAP reports feature importance for the model prediction; it does not identify what caused a clinical outcome. Clinical relevance may be discussed separately only when supported by current inline-cited medical evidence. Alternative feature-importance methods require separately versioned contracts.
 
 ## Public API baseline
 
@@ -132,10 +149,11 @@ The response envelope must include:
 - deployment mode
 - session ID
 - workflow status/response kind
-- safe assistant message or structured display blocks
+- safe assistant message or structured display blocks with claim-level inline citation IDs
 - missing-questionnaire information only when supplied by the questionnaire contract
 - inference result only when supplied by the inference port
-- evidence/citations only when supplied by the retrieval port
+- evidence/citations and collapsed evidence-display metadata only when supplied by the retrieval port
+- local attribution only when supplied by the validated attribution port for the current inference result
 - limitations and safe typed error, if any
 
 The Backend Engineer may refine transport names during implementation but must preserve these semantics and record any public-contract change. HTTP status mapping must distinguish invalid transport, missing/expired session, policy rejection, internal dependency failure, and successful workflow responses that request more information.

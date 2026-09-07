@@ -189,13 +189,15 @@ Use defense in depth:
 - **Questionnaire validation:** feature identity, presence, type/range/category, and preprocessing eligibility from ML-owned metadata/contract.
 - **Tool-output validation:** schema, artifact/corpus version, finite numeric values, source identity, and typed failures.
 - **Prompt construction:** structured context with clear provenance; no scientific fact store or risk formula in prompts.
-- **Response validation:** required limitations, prohibited medical claims, exact risk-output integrity, citation membership in retrieved results, and safe fallback on validation failure.
+- **Response validation:** required limitations, prohibited medical claims, exact risk-output integrity, claim-level inline citation completeness and membership, source-cap/excerpt-placement rules, attribution-gate integrity, and safe fallback on validation failure.
 
 The response validator does not rewrite a bad score or invent a replacement citation. It retries only when policy permits with the same immutable tool context; otherwise it returns a deterministic safe error/limitation response.
 
 For any raw probability below `0.0` or above `1.0`, the UI returns exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The system never clamps or displays the raw value. Only the encrypted audit adapter receives it.
 
-The LLM cannot attribute an estimate to one questionnaire answer or say `Your risk is X because you answered Yes to question Y.` Feature-impact questions use the structured statement `The model looks at patterns across all 105 inputs collectively; individual answers do not have an isolated linear impact.` Valid result views include a persistent warning that synthetic-data models may underrepresent real-world clinical comorbidities found in the Indian healthcare ecosystem.
+This system performs prediction, not causal inference. Today it cannot rank individual inputs or explain why a result is high. Without validated feature importance, the application inserts: `This is a prediction, not a causal explanation. The model evaluates all 105 inputs together; no single answer can be identified as the cause of the result. Validated feature importance is not available for this result.` Valid result views also include the required synthetic-data warning.
+
+A future local SHAP adapter may report which inputs most influenced a specific prediction. It is a separately validated ML port, must bind to the exact model result, and exposes only structured provenance plus the top three SHAP values. SHAP describes model behavior; it does not identify what caused a clinical outcome. Clinical relevance is discussed separately only when supported by inline-cited retrieved evidence. Alternative feature-importance methods require separately versioned contracts.
 
 ## RAG architecture constraints
 
@@ -204,6 +206,10 @@ The LLM cannot attribute an estimate to one questionnaire answer or say `Your ri
 - Index artifacts are derived, reproducible data and must not be committed unless the RAG Engineer documents size/licensing/reproducibility reasons.
 - Retrieval reports corpus/index version and distinguishes no result from infrastructure failure.
 - The LLM may summarize retrieved evidence but may cite only identifiers present in the retrieval result.
+- Every factual medical/scientific claim requires an explicit inline citation to current verified evidence. Uncited, speculative, or extrapolated claims fail response validation.
+- The per-generation distinct-source cap is configurable from 3 through 5 and defaults to 5. Fewer sources are allowed; weak evidence is never added to fill the cap. Conflict-aware selection represents each supported position within the cap or returns a limitation.
+- Matched evidence text never appears raw in response prose. The API/UI carries separate retrieval-owned display records so collapsed tooltips or side drawers can show the exact matched string, DOI/PMID, and source metadata.
+- Feature associations may be discussed only when current matched text explicitly states them and the claim is inline-cited. Literature provides clinical context; SHAP provides model feature importance. Neither is causal inference.
 - A provider-neutral retrieval port permits a local vector store for MVP and replacement later.
 - General web sources are prohibited. Authority discovery uses a versioned allowlist initially covering `*.who.int`, `*.cdc.gov`, `*.nih.gov`, `*.nhs.uk`, and configured Indian health-ministry/public-health domains under `*.gov.in`; URL canonicalization and redirects are revalidated, and DOI/PMID plus all quality gates remain mandatory.
 - The scientific vector collection is disconnected from patient-specific data. Questionnaire tokens/matrices, feature vectors, inference payloads, session IDs, and identities are never embedded or indexed. Mandatory pre-search metadata filters require the scientific-publication/general-mental-health/non-patient data class and fail closed if absent or mismatched.
@@ -276,6 +282,8 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 - Boundary tests for below-zero and above-one probabilities, the exact public error, audit-only raw-value handling, and standard-log/trace leakage.
 - Retrieval fixtures with explicit synthetic source metadata; fixtures are never presented as real scientific evidence.
 - Retrieval tests for authority allowlisting, mandatory patient/scientific metadata isolation, stale-retraction rejection, and active-index purging.
+- Response tests for claim-level citation completeness/entailment, the 3-to-5 source cap, collapsed evidence-display separation, and conflict coverage.
+- Explainability tests for absent/invalid feature importance, deterministic prediction-only messaging, exact-result binding, top-three SHAP JSON integrity, value/rank preservation, and causal-language rejection.
 - Graph tests for every intent, missing-state branch, tool failure, retry/fallback, unsafe request, and response-validation failure.
 - FastAPI integration tests through the public session contract.
 - Streamlit end-to-end journeys against a deterministic backend test configuration.
