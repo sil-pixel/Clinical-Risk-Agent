@@ -34,6 +34,10 @@ Deterministic transport validation and safety policy
   ├── terminal safety/refusal result → fixed local UI content → User
   └── ALLOW_NORMAL_PROCESSING
   ↓
+English-language gate
+  ├── UNSUPPORTED/UNCERTAIN_LANGUAGE → fixed English-only response → User
+  └── SUPPORTED_ENGLISH
+  ↓
 Hybrid Intent Router
   ├── deterministic rules for explicit structured/content cases
   └── local fine-tuned encoder classification for ambiguous cases
@@ -66,17 +70,18 @@ LangGraph is proposed for typed state, explicit conditional routing, resumable q
 
 ## Hybrid intent routing
 
-Use a pre-intercepted, two-stage intent router:
+Use a pre-intercepted, English-only intent router:
 
 1. The separate safety interceptor has already produced `ALLOW_NORMAL_PROCESSING`; terminal safety and clinical-refusal categories never reach this router.
-2. Deterministic rules recognize structured questionnaire submissions, explicit assessment commands, and clearly unsupported transport/content cases.
-3. A locally hosted Hugging Face sequence-classification encoder classifies remaining free text into the approved intent enum.
+2. A local language gate accepts supported English or returns a fixed English-only response for unsupported/uncertain free text. It cannot authorize tools. Structured questionnaire payloads bypass language detection but remain schema- and safety-gated.
+3. Deterministic rules recognize structured questionnaire submissions, explicit assessment commands, and clearly unsupported transport/content cases.
+4. A locally hosted Hugging Face sequence-classification encoder classifies remaining English free text into the approved intent enum.
 
-The proposed lightweight baseline is [`distilbert/distilbert-base-multilingual-cased`](https://huggingface.co/distilbert/distilbert-base-multilingual-cased). [`google/muril-base-cased`](https://huggingface.co/google/muril-base-cased) is the mandatory benchmark challenger for Indian-language, transliterated, and code-mixed inputs. Both are pretrained encoders that require project-specific sequence-classification fine-tuning; neither base checkpoint is a zero-shot intent classifier or approved safety control.
+The proposed lightweight baseline is [`distilbert/distilbert-base-uncased`](https://huggingface.co/distilbert/distilbert-base-uncased). It is a pretrained English encoder that requires project-specific sequence-classification fine-tuning; the base checkpoint is not a zero-shot intent classifier or approved safety control.
 
 The encoder returns logits only. A deterministic adapter maps logits to the fixed enum, applies calibration and approved per-class/abstention thresholds, and returns intent, calibrated confidence, clarification requirement, policy-compatible rationale code, model ID, pinned revision/checksum, fine-tuning dataset/version, calibration version, and router version. It does not determine questionnaire completeness, emit user prose, or select tools. Low confidence or out-of-distribution input routes to clarification or the minimal unsupported response; malformed output fails closed.
 
-The evaluation compares rules-only, fine-tuned DistilmBERT, and fine-tuned MuRIL on the same versioned dataset. The dataset must include English, Hindi, Hinglish, supported Indian scripts, transliteration, paraphrases, misspellings, indirect requests, multi-intent cases, out-of-scope medical questions, and adversarial prompt injection. Report per-class precision/recall/F1, macro-F1, confusion matrices, expected calibration error, abstention coverage, out-of-distribution behavior, language/subgroup slices, memory use, and CPU latency. Release thresholds remain part of the pending measurable-quality decision.
+The evaluation compares deterministic rules with fine-tuned English DistilBERT on one versioned English dataset containing standard and Indian English usage, paraphrases, misspellings, indirect requests, multi-intent cases, out-of-scope medical questions, and adversarial prompt injection. Report per-class precision/recall/F1, macro-F1, confusion matrices, expected calibration error, abstention coverage, out-of-distribution behavior, English-usage slices, memory use, and CPU latency. The language gate has a separate dataset for supported English, English medical terms, short/ambiguous text, and unsupported non-English/code-mixed rejection. Release thresholds and the concrete local language-identification implementation remain pending measurable-quality decisions.
 
 ## LangGraph composition
 
@@ -323,7 +328,8 @@ Current evaluation guidance supports separating correctness, relevance, grounded
 | Live scientific search | PubMed E-utilities |
 | Bibliographic reconciliation | Crossref |
 | Generation | Provider-neutral structured-output LLM adapter |
-| Intent/scope classification | Fine-tuned multilingual DistilBERT baseline; mandatory MuRIL benchmark; local Hugging Face sequence-classification adapter |
+| Language gate | Local English-only detector with typed supported/unsupported/uncertain result; implementation selected by evaluation |
+| Intent/scope classification | Project-fine-tuned `distilbert-base-uncased`; local Hugging Face sequence-classification adapter |
 | Session state | Expiring in-memory LangGraph checkpointer |
 | Evaluation | Local deterministic suite plus optional experiment platform |
 | Observability | Allowlisted local status/latency/version telemetry; LangSmith only for synthetic offline fixtures |
@@ -345,7 +351,7 @@ These can be reconsidered only with evidence that they improve an approved requi
 
 The following answers remain required before this proposal becomes the approved AI architecture:
 
-1. Exact local/private-VPC LLM and embedding model selection, cost, latency, offline, and language constraints within the approved no-external-payload boundary
+1. Exact English-capable local/private-VPC LLM and embedding model selection, cost, latency, and offline constraints within the approved no-external-payload boundary
 2. User-visible non-safety failure behavior and retry budgets
 3. Measurable quality and performance thresholds
 4. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields

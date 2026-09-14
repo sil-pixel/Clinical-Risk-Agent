@@ -17,6 +17,8 @@ It is **not** intended to diagnose schizophrenia, provide medical advice, or rep
 
 The current prototype is intended for portfolio evaluation and informal testing by invited users such as friends, developers, and researchers. It is a public-facing demonstration, not a patient product, and no user should act on a DCMFNet output. Results must be accompanied by uncertainty and limitations and must not replace qualified professional judgment.
 
+The portfolio MVP supports English free-text interaction only. Safety interception runs before language validation. After safety permits normal processing, a local language gate blocks unsupported or uncertain language before intent classification, RAG, LLM generation, or DCMFNet and displays: `This prototype currently supports English only. Please enter your question in English.` Rephrased English intent is classified by a project-fine-tuned `distilbert/distilbert-base-uncased` encoder with calibrated confidence and abstention; the base checkpoint is not used zero-shot.
+
 The longer-term startup direction is an India-first, clinician-only hospital product for silent research validation. It will never be patient-facing. During silent validation, outputs must not influence diagnosis, treatment, triage, or other care decisions. Hospital research mode requires separate clinical, regulatory, privacy, security, data-provenance, and model-validation approval and must not inherit demonstration-only assumptions automatically.
 
 The deployed DCMFNet model is trained on a **fully synthetic dataset** designed to reproduce the structure of the research problem without using confidential participant data.

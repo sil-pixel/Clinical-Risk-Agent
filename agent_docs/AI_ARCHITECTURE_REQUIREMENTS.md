@@ -134,13 +134,14 @@ Discussing psychosis, depression, schizophrenia, symptoms, causes, research, die
 ### Router and graph consequences
 
 - The Intent Router identifies assessment, explanation, scientific/education, general conversation, and unsupported/unsafe intent; it does not call tools.
-- Rephrasing is handled by a locally hosted Hugging Face sequence-classification encoder fine-tuned on the approved intent labels. The proposed lightweight baseline is `distilbert/distilbert-base-multilingual-cased`; `google/muril-base-cased` is the mandatory India-language challenger because the product must evaluate English, Indian-language, transliterated, and code-mixed inputs.
+- After safety permits normal processing, an English-language gate returns `SUPPORTED_ENGLISH`, `UNSUPPORTED_LANGUAGE`, or `UNCERTAIN_LANGUAGE`. Unsupported or uncertain free text receives the fixed message `This prototype currently supports English only. Please enter your question in English.` and cannot reach intent classification, RAG, the LLM, or DCMFNet. Structured questionnaire values bypass language detection but not schema or safety validation.
+- Rephrased English questions are handled by a locally hosted Hugging Face sequence-classification encoder fine-tuned on the approved intent labels. The proposed lightweight baseline is `distilbert/distilbert-base-uncased`.
 - This component is a bounded encoder classifier, not a generative LLM. It emits logits and a typed `IntentDecision`; application code performs label mapping, confidence calibration, thresholding, and schema validation. It cannot generate prose, select arbitrary tools, or expand the intent enum.
-- The base checkpoints are not approved for zero-shot production routing. A project-specific labeled routing dataset, fine-tuning run, calibration set, pinned model revision/checksum, license review, and release evaluation are required. DistilmBERT is the architecture baseline, not an approval to deploy an unevaluated checkpoint.
+- The base checkpoint is not approved for zero-shot production routing. A project-specific English labeled routing dataset, fine-tuning run, calibration set, pinned model revision/checksum, license review, and release evaluation are required. English DistilBERT is the architecture baseline, not an approval to deploy an unevaluated checkpoint.
 - Low-confidence or out-of-distribution non-safety inputs return clarification or the minimal unsupported response. They never authorize DCMFNet. Safety decisions remain the responsibility of the earlier safety interceptor and cannot be weakened by the intent classifier.
 - LangGraph enforces the DCMFNet gate and selects the approved RAG, minimal out-of-scope, or safety path.
 - Tool authorization is deterministic after validated intent and state. The LLM cannot invoke DCMFNet directly.
-- Tests must prove that direct and rephrased non-assessment prompts—including adversarial diet, diabetes, medication, general-medical, misspelled, indirect, and prompt-injection variants—cannot reach inference. Evaluation must report per-class precision/recall/F1, macro-F1, confusion matrices, calibration error, abstention coverage, out-of-distribution behavior, subgroup/language slices, and CPU latency.
+- Tests must prove that direct and rephrased English non-assessment prompts—including adversarial diet, diabetes, medication, general-medical, misspelled, indirect, and prompt-injection variants—cannot reach inference. Intent evaluation reports per-class precision/recall/F1, macro-F1, confusion matrices, calibration error, abstention coverage, out-of-distribution behavior, English-usage slices, and CPU latency. Separate language-gate tests cover English medical terminology, short/ambiguous text, and rejection of non-English or code-mixed inputs; rejected languages are not intent-classifier training targets.
 
 ## 5. Scientific-source policy — approved
 
@@ -318,7 +319,7 @@ When eligible evidence contains a material unresolved conflict, the evidence res
 ### Validation and testing consequences
 
 - Response schemas make intercepted content mutually exclusive with generated answers and model results. Validation rejects mixed safety/assessment payloads, modified fixed scripts, missing resource configuration, or prohibited tool calls.
-- Tests cover paraphrases, misspellings, negation, quoted/academic mentions, multilingual and code-mixed India inputs, prompt injection, streaming cancellation, route precedence, false-positive recovery, context clearing, telemetry redaction, age-boundary values, third-party attempts, and proof that each blocked route cannot reach DCMFNet or the LLM.
+- Safety tests cover English paraphrases, misspellings, negation, quoted/academic mentions, language-agnostic emergency numbers/signals handled before language rejection, prompt injection, streaming cancellation, route precedence, false-positive recovery, context clearing, telemetry redaction, age-boundary values, third-party attempts, and proof that each blocked route cannot reach DCMFNet or the LLM.
 - The safety classifier and thresholds require a versioned evaluation set with sensitivity, specificity, subgroup, and regression reporting before release. Safety policy changes require review and a new policy version.
 
 ### Policy verification references
