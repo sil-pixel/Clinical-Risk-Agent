@@ -136,6 +136,14 @@ This does not authorize durable health records.
 
 **Consequences:** Every input is safety-classified on every request. Static-cache keys include content ID, locale, jurisdiction, and policy version and contain no user or model data. Any later retrieval cache is invalidated on retraction, correction, corpus, allowlist, or policy changes and its entries pass current eligibility and citation validation on read.
 
+## ADR-017 — Use a local fine-tuned encoder for bounded intent and scope classification
+
+**Decision:** After deterministic safety interception, classify ambiguous free text with a local Hugging Face sequence-classification encoder. Use `distilbert/distilbert-base-multilingual-cased` as the lightweight architecture baseline and require `google/muril-base-cased` as the India-language benchmark challenger. Fine-tune both on the same project routing dataset; select and pin a release artifact only after evaluation. This component is an encoder classifier, not a generative LLM.
+
+**Why:** Exact keyword rules do not reliably recognize paraphrased scope and intent, while a general generative router adds unnecessary output freedom and provider dependence. Multilingual DistilBERT provides a compact common baseline; MuRIL was pretrained for Indian languages and transliterated text and therefore tests the project's actual language context.
+
+**Consequences:** The classifier emits logits only. Deterministic code owns the fixed label mapping, confidence calibration, out-of-distribution/abstention rules, and typed `IntentDecision`. Low-confidence input clarifies or takes the minimal unsupported path and never authorizes DCMFNet. Safety and clinical-refusal decisions remain upstream and cannot be overridden. Base checkpoints are not used zero-shot in production. Evaluation includes English, Hindi, Hinglish, Indian scripts, transliteration, paraphrases, misspellings, indirect and multi-intent prompts, out-of-scope cases, and prompt injection, with per-class/macro metrics, calibration, abstention, subgroup/language, memory, and CPU-latency reporting. Model downloads require license review, immutable revision/checksum pinning, integrity verification, and a reproducible local artifact process.
+
 ## Deferred decisions
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Streamlit, vector-store, embedding, and LLM package versions.

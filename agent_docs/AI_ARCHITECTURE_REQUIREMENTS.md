@@ -134,9 +134,13 @@ Discussing psychosis, depression, schizophrenia, symptoms, causes, research, die
 ### Router and graph consequences
 
 - The Intent Router identifies assessment, explanation, scientific/education, general conversation, and unsupported/unsafe intent; it does not call tools.
+- Rephrasing is handled by a locally hosted Hugging Face sequence-classification encoder fine-tuned on the approved intent labels. The proposed lightweight baseline is `distilbert/distilbert-base-multilingual-cased`; `google/muril-base-cased` is the mandatory India-language challenger because the product must evaluate English, Indian-language, transliterated, and code-mixed inputs.
+- This component is a bounded encoder classifier, not a generative LLM. It emits logits and a typed `IntentDecision`; application code performs label mapping, confidence calibration, thresholding, and schema validation. It cannot generate prose, select arbitrary tools, or expand the intent enum.
+- The base checkpoints are not approved for zero-shot production routing. A project-specific labeled routing dataset, fine-tuning run, calibration set, pinned model revision/checksum, license review, and release evaluation are required. DistilmBERT is the architecture baseline, not an approval to deploy an unevaluated checkpoint.
+- Low-confidence or out-of-distribution non-safety inputs return clarification or the minimal unsupported response. They never authorize DCMFNet. Safety decisions remain the responsibility of the earlier safety interceptor and cannot be weakened by the intent classifier.
 - LangGraph enforces the DCMFNet gate and selects the approved RAG, minimal out-of-scope, or safety path.
 - Tool authorization is deterministic after validated intent and state. The LLM cannot invoke DCMFNet directly.
-- Tests must prove that non-assessment prompts—including adversarial diet, diabetes, medication, and general-medical prompts—cannot reach inference.
+- Tests must prove that direct and rephrased non-assessment prompts—including adversarial diet, diabetes, medication, general-medical, misspelled, indirect, and prompt-injection variants—cannot reach inference. Evaluation must report per-class precision/recall/F1, macro-F1, confusion matrices, calibration error, abstention coverage, out-of-distribution behavior, subgroup/language slices, and CPU latency.
 
 ## 5. Scientific-source policy — approved
 

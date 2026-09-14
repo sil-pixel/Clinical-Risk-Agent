@@ -195,6 +195,8 @@ Use defense in depth:
 
 The response validator does not rewrite a bad score or invent a replacement citation. It retries only when policy permits with the same immutable tool context; otherwise it returns a deterministic safe error/limitation response.
 
+After safety returns `ALLOW_NORMAL_PROCESSING`, rephrased intent and scope classification uses a local, fine-tuned Hugging Face sequence-classification encoder. The architecture baseline is multilingual DistilBERT, with MuRIL required as an India-language benchmark challenger. A deterministic adapter owns label mapping, calibration, abstention, typed output, and model provenance. The classifier cannot generate text, create labels, call tools, or authorize DCMFNet; low-confidence and out-of-distribution results clarify or fail to the minimal unsupported path. Base checkpoints are not production classifiers until project-specific fine-tuning and evaluation pass approved thresholds.
+
 For any raw probability below `0.0` or above `1.0`, the UI returns exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The system never clamps or displays the raw value. Only the encrypted audit adapter receives it.
 
 This system performs prediction, not causal inference. Today it cannot rank individual inputs or explain why a result is high. Without validated feature importance, the application inserts: `This is a prediction, not a causal explanation. The model evaluates all 105 inputs together; no single answer can be identified as the cause of the result. Validated feature importance is not available for this result.` Valid result views also include the required synthetic-data warning.

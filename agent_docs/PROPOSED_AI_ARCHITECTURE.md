@@ -35,8 +35,8 @@ Deterministic transport validation and safety policy
   └── ALLOW_NORMAL_PROCESSING
   ↓
 Hybrid Intent Router
-  ├── deterministic rules for explicit and safety-critical cases
-  └── structured-output LLM classification for ambiguous cases
+  ├── deterministic rules for explicit structured/content cases
+  └── local fine-tuned encoder classification for ambiguous cases
   ↓
 LangGraph Supervisor
   ├── Assessment subgraph
@@ -61,19 +61,22 @@ LangGraph is proposed for typed state, explicit conditional routing, resumable q
 | Category | Examples |
 | --- | --- |
 | Deterministic | Request validation, urgent-policy overrides, questionnaire completeness, generic-profile application, DCMFNet invocation eligibility, `[0.0, 1.0]` output gating, percentage presentation, citation identity checks, disclaimer/bias-indicator checks, retry limits, graph transitions after typed results |
-| Model-assisted and bounded | Ambiguous intent classification, scientific query rewriting, evidence relevance grading, cited explanation generation |
+| Model-assisted and bounded | Local fine-tuned encoder intent classification, scientific query rewriting, evidence relevance grading, cited explanation generation |
 | Prohibited | LLM risk calculation or formatting, LLM-selected arbitrary graph branches, invented questionnaire values, combined probabilities, unapproved risk bands, fabricated citations, diagnosis, unsupported causal attribution, uncontrolled search loops |
 
 ## Hybrid intent routing
 
-Use a two-stage router:
+Use a pre-intercepted, two-stage intent router:
 
-1. Deterministic rules recognize urgent-policy matches, structured questionnaire submissions, explicit assessment commands, and clearly unsupported transport/content cases.
-2. A structured-output LLM classifies ambiguous free text into the approved intent enum.
+1. The separate safety interceptor has already produced `ALLOW_NORMAL_PROCESSING`; terminal safety and clinical-refusal categories never reach this router.
+2. Deterministic rules recognize structured questionnaire submissions, explicit assessment commands, and clearly unsupported transport/content cases.
+3. A locally hosted Hugging Face sequence-classification encoder classifies remaining free text into the approved intent enum.
 
-The router returns intent, confidence, clarification requirement, policy-compatible rationale code, and router/model version. It does not determine questionnaire completeness or directly select arbitrary tools. Low confidence routes to clarification; malformed output uses a deterministic fallback.
+The proposed lightweight baseline is [`distilbert/distilbert-base-multilingual-cased`](https://huggingface.co/distilbert/distilbert-base-multilingual-cased). [`google/muril-base-cased`](https://huggingface.co/google/muril-base-cased) is the mandatory benchmark challenger for Indian-language, transliterated, and code-mixed inputs. Both are pretrained encoders that require project-specific sequence-classification fine-tuning; neither base checkpoint is a zero-shot intent classifier or approved safety control.
 
-The portfolio evaluation should compare a rules-only baseline, LLM-only baseline, and hybrid router using the same labeled intent dataset.
+The encoder returns logits only. A deterministic adapter maps logits to the fixed enum, applies calibration and approved per-class/abstention thresholds, and returns intent, calibrated confidence, clarification requirement, policy-compatible rationale code, model ID, pinned revision/checksum, fine-tuning dataset/version, calibration version, and router version. It does not determine questionnaire completeness, emit user prose, or select tools. Low confidence or out-of-distribution input routes to clarification or the minimal unsupported response; malformed output fails closed.
+
+The evaluation compares rules-only, fine-tuned DistilmBERT, and fine-tuned MuRIL on the same versioned dataset. The dataset must include English, Hindi, Hinglish, supported Indian scripts, transliteration, paraphrases, misspellings, indirect requests, multi-intent cases, out-of-scope medical questions, and adversarial prompt injection. Report per-class precision/recall/F1, macro-F1, confusion matrices, expected calibration error, abstention coverage, out-of-distribution behavior, language/subgroup slices, memory use, and CPU latency. Release thresholds remain part of the pending measurable-quality decision.
 
 ## LangGraph composition
 
@@ -318,6 +321,7 @@ Current evaluation guidance supports separating correctness, relevance, grounded
 | Live scientific search | PubMed E-utilities |
 | Bibliographic reconciliation | Crossref |
 | Generation | Provider-neutral structured-output LLM adapter |
+| Intent/scope classification | Fine-tuned multilingual DistilBERT baseline; mandatory MuRIL benchmark; local Hugging Face sequence-classification adapter |
 | Session state | Expiring in-memory LangGraph checkpointer |
 | Evaluation | Local deterministic suite plus optional experiment platform |
 | Observability | Redacted structured graph/tool traces; optional LangSmith adapter |

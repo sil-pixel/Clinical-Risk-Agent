@@ -89,6 +89,8 @@ The planned startup product is separate: an India-first, clinician-only platform
 | AC-24 | Every input passes the approved pre-generation safety interceptor. Emergency/self-harm and other terminal routes obey deterministic priority, return immutable local scripts, and cannot invoke prohibited LLM, RAG, or DCMFNet paths. | AI Architect / AI Engineer / Testing Agent / Reviewer |
 | AC-25 | Crisis interception cancels active generation, clears operational chat context, and emits only redacted safety telemetry; configured India resources are source-verified and unexpired at readiness. | Backend Engineer / AI Engineer / Frontend Engineer / Testing Agent / Security Reviewer |
 | AC-26 | Under-18 and third-party assessment attempts fail closed before inference. The UI does not claim adult-only model training without artifact evidence and never processes third-party metrics by merely stripping relational wording. | AI Engineer / Frontend Engineer / Testing Agent / Privacy Reviewer |
+| AC-27 | Rephrased in-scope and out-of-scope requests are routed by a locally fine-tuned encoder behind deterministic safety handling. DistilmBERT and MuRIL are compared on one versioned multilingual/code-mixed dataset; low-confidence or out-of-distribution inputs abstain and cannot authorize DCMFNet. | AI Architect / AI Engineer / Testing Agent / Reviewer |
+| AC-28 | The selected intent-classifier artifact is revision/checksum pinned, locally executed, calibrated, and evaluated with per-class and macro metrics, confusion matrices, abstention/OOD behavior, language slices, memory use, and CPU latency before release. | AI Engineer / Testing Agent / Reviewer |
 
 ## Milestones and ordered backlog
 
@@ -107,7 +109,7 @@ The planned startup product is separate: an India-first, clinician-only platform
 
 ### M3 — Stateful intelligence and service integration
 
-8. **AI-01 — Implement intent and LangGraph workflow** (AI Engineer): build explicit state, routing, questionnaire progression, inference/retrieval tool calls, and failure branches using the approved AI architecture and stable ML/RAG contracts. Depends on AIARCH-01, ML-02, and RAG-01. Done when AC-02 through AC-05 pass focused tests.
+8. **AI-01 — Implement intent and LangGraph workflow** (AI Engineer): build explicit state, routing, questionnaire progression, inference/retrieval tool calls, and failure branches using the approved AI architecture and stable ML/RAG contracts. Fine-tune and calibrate multilingual DistilBERT, benchmark MuRIL on the same routing dataset, pin the selected artifact, and implement deterministic abstention. Depends on AIARCH-01, ML-02, and RAG-01. Done when AC-02 through AC-05 and AC-27/AC-28 pass focused tests.
 9. **AI-02 — Implement grounded explanation and response validation** (AI Engineer): constrain LLM behavior to supplied results/evidence/validated attribution and validate safety, uncertainty, score, claim-level citations, speculation, source cap, causal blocking, and attribution integrity. Depends on AI-01. Done when AC-07 through AC-10 and AI-owned portions of AC-22/AC-23 pass focused evaluations.
 10. **BE-01 — Expose and integrate application APIs** (Backend Engineer): implement FastAPI validation, service wiring, session/state integration, errors, and readiness using established contracts. Depends on AI-02. Done when AC-11 passes integration tests.
 

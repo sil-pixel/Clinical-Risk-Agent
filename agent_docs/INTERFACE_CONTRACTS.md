@@ -19,7 +19,7 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | Contract | Producer → consumers | Owner | Status / gate |
 | --- | --- | --- | --- |
 | `SafetyDecision` | Safety → workflow/API | AI Architect (design), AI Engineer (implementation) | **Architecture-approved:** terminal categories, priority, fixed-response and tool-denial semantics defined below |
-| `IntentDecision` | Router → LangGraph | AI Architect (design), AI Engineer (implementation) | Approved intent enum; confidence/fallback details finalized in AI architecture |
+| `IntentDecision` | Router → LangGraph | AI Architect (design), AI Engineer (implementation) | **Architecture-approved boundary:** local fine-tuned encoder, fixed enum, calibrated confidence, abstention, and provenance; release thresholds pending evaluation approval |
 | `DeploymentMode` | Composition root → all workflow/results/telemetry | Software Architect | **Architecture-approved:** `prototype_demo`; `hospital_silent_research` reserved and unavailable until separately gated |
 | `ArtifactInspection` | DCMFNet artifact validator → readiness/tests | ML Engineer | **Implemented:** integrity/readiness facts |
 | `InferenceInputSchema` | DCMFNet adapter → graph/backend/tools | ML Engineer | **Implemented:** exact machine feature groups/order; not user-facing questionnaire copy |
@@ -48,6 +48,10 @@ The router output uses the roles already named in the problem statement:
 - `unsupported_or_unsafe`
 
 The exact spelling is the canonical machine representation. Adding an intent requires Product Manager approval and an architecture/workflow/test update. Questionnaire completeness is never an intent.
+
+`IntentDecision` contains the enum value, calibrated confidence, `requires_clarification`, non-sensitive rationale code, classifier model ID, pinned source revision/checksum, fine-tuning dataset/version, calibration version, and router version. It contains no generated prose, raw logits in public payloads, tool choice, questionnaire completeness decision, or new label. The local classifier adapter maps model logits to this contract and abstains when confidence or out-of-distribution checks fail.
+
+The proposed baseline is a project-fine-tuned `distilbert/distilbert-base-multilingual-cased`; a project-fine-tuned `google/muril-base-cased` must be evaluated as the India-language challenger before selection. Neither base checkpoint is approved for zero-shot routing. The selected artifact must be pinned and integrity checked, operate locally, and pass the approved routing, calibration, language-slice, adversarial, memory, and CPU-latency gates.
 
 `risk_assessment` alone does not authorize inference. The graph may invoke DCMFNet only when the user explicitly requests positive/psychotic-symptom or negative/depressive-symptom risk calculation, safety permits processing, and deterministic questionnaire validation reports complete valid input. Scientific or educational discussion of those symptoms routes to RAG without inference. `explain_my_risk` consumes a stored immutable result and does not rerun the model unless a new assessment is explicitly requested.
 
