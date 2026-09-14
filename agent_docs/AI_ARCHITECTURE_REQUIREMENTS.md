@@ -68,7 +68,7 @@ A future mode may accept the 16 PRS values and four batch-by-PC interaction valu
 - Percentage formatting is deterministic application logic, never an LLM calculation.
 - Treat any raw probability below `0.0` or above `1.0` as an internal system variance and fail closed. Do not clamp, normalize, convert, or display it as an estimate.
 - The UI must display exactly: `Error: Unable to compute estimate due to an internal system variance. Please try again later.`
-- The exact out-of-range raw value may be written only to the encrypted, access-controlled audit trail described below. It must never appear in the UI, public API payload, standard application log, trace, metric label, or ordinary observability event.
+- The exact out-of-range raw value may exist only in a protected volatile error object for the lifetime of the failed request. It must never be persisted or appear in the UI, public API payload, standard application log, trace, metric label, analytics, crash report, or ordinary observability event; request teardown wipes the object.
 - Do not introduce low/moderate/high risk bands until scientifically validated thresholds are approved.
 - Every valid result requires an explanation and disclaimer; an internal-system-variance response contains no estimate or generated explanation.
 
@@ -94,8 +94,8 @@ A future mode may accept the 16 PRS values and four batch-by-PC interaction valu
 - Structured Context carries both the exact raw value and validated display representation; the LLM may repeat but not derive or change either.
 - An out-of-range value triggers a typed, fail-closed internal-system-variance event. Structured Context and the LLM receive no raw value or display estimate for that result; the public response contains only the approved error message.
 - Response validation verifies target identity, exact raw-value preservation inside the protected boundary, interval validation, deterministic display mapping for valid values, separate presentation, disclaimer and synthetic-data bias indicator presence, and absence of unapproved risk bands or causal attribution.
-- Raw probabilities and questionnaire tokens must never be printed or written to standard application logs, traces, metrics, error payloads, or analytics. They may be written only to an encrypted, access-controlled audit-trail database, associated with a cryptographically random session ID and never with a user identity. Audit access, retention, deletion, and every read/write operation must be policy-controlled and auditable.
-- System state, consent capture, audit records, and database schemas must natively support data fencing and localization constraints aligned with India's Digital Personal Data Protection (DPDP) Act. Deployment adapters must fail closed when the active mode cannot satisfy its configured India data-residency, consent, purpose, retention, and access policy.
+- Raw probabilities and questionnaire tokens must never be printed or written to standard application logs, traces, metrics, error payloads, analytics, caches, or any database. For `prototype_demo`, no sensitive audit database is permitted; volatile processing state is wiped on reset, expiry, request failure, or process termination.
+- System state and consent handling must natively support data fencing and localization constraints aligned with India's Digital Personal Data Protection (DPDP) Act. Deployment adapters fail closed when the active mode cannot satisfy its configured India processing-location, consent, purpose, access, and zero-retention policy.
 
 ## 4. Supported conversational and RAG scope — approved
 
@@ -251,7 +251,7 @@ When eligible evidence contains a material unresolved conflict, the evidence res
 - A positive or safety-critical uncertain match fails closed. If generation has already started because of a concurrent event, the orchestrator cancels it and discards all unvalidated output.
 - Route priority is deterministic: `EMERGENCY_REDIRECTION` or `CRITICAL_SAFETY_REDIRECTION` → `ACUTE_DISTRESS_REDIRECTION` → `STATE_INELIGIBLE_MINOR` → `THIRD_PARTY_REFUSAL` → `DIAGNOSTIC_REFUSAL` → `PRESCRIPTIVE_REFUSAL` → normal routing. A lower-priority route cannot weaken a higher-priority safety action.
 - Intercepted responses are versioned local UI content. The LLM cannot compose, paraphrase, translate, or append to them. Safety routes never invoke DCMFNet. Crisis, emergency, acute-distress, minor, and prescriptive routes also never invoke RAG.
-- Safety events contain the category, policy version, timestamp, cryptographic session ID, and operational outcome, but no raw user text, questionnaire token, probability, identity, or inferred diagnosis. Standard logs receive only non-sensitive event metadata. Session context is cleared after a crisis hard interception; any separately required audit record remains subject to the encrypted audit and retention policy.
+- Safety events may exist only in volatile operational memory and contain the minimum category, policy version, coarse time bucket, and outcome needed to execute the route, but no raw text, questionnaire token, probability, identity, or persistent session identifier. Standard logs receive only non-sensitive status codes. Session context is cleared after a crisis hard interception. If crisis counts are retained for product analytics, they are aggregated and unlinkable under Section 8 before persistence; no event-level safety record is retained.
 
 ### Possible self-harm or crisis statements
 
@@ -332,9 +332,56 @@ When eligible evidence contains a material unresolved conflict, the evidence res
 
 These references record the basis for architecture review and do not enter the scientific RAG corpus unless they independently satisfy Section 5. Resource owners must reverify operational contact details; a documentation link is not a perpetual availability guarantee.
 
+## 8. Privacy and data lifecycle — approved for portfolio MVP
+
+### Zero-persistence questionnaire and result boundary
+
+- `prototype_demo` uses zero persistent application storage for raw conversational text, questionnaire fields, intermediate slider arrays, questionnaire tokens, the 105-input matrix, target objects, model inputs, raw or displayed probabilities, generated personalized responses, and session history. Encryption does not make persistence of these values permissible.
+- These values may exist only in volatile client memory and the minimum volatile backend request/session memory needed for validation and inference. They must never enter a relational or NoSQL database, Redis persistence, filesystem, browser `localStorage` or `sessionStorage`, IndexedDB, service-worker/application cache, URL/query string, cookie payload, backup, crash dump, analytics event, or model/retrieval cache.
+- Sensitive request and response paths set `Cache-Control: no-store`; browser autofill and form restoration are disabled where supported. Deployment disables request-body/APM capture and core dumps and must prevent plaintext swap or hibernation from creating a recoverable copy. A deployment unable to meet these controls fails readiness.
+- The previous portfolio requirement for an encrypted sensitive audit database is superseded. Corpus provenance, model-artifact audit reports, aggregate operational metrics, and retraction tombstones may persist only because they contain no user/session content.
+
+### Session lifetime and automatic teardown
+
+- The inactivity TTL is exactly 15 minutes for the portfolio MVP and is enforced independently by client and server. Only an explicit user interaction accepted by the application resets activity; background polling, health checks, streaming keep-alives, and analytics do not extend the TTL.
+- Expiry atomically invalidates the cryptographically random ephemeral session ID, cancels active generation/inference where possible, wipes frontend and backend volatile state, drops model/explanation context, clears any short-lived application session credential, and returns the UI to `/`. The frontend must never hold an LLM, embedding, or infrastructure-provider credential.
+- Expired, reset, missing, or restarted sessions cannot be resumed. Multi-instance hosting may use session affinity but cannot introduce a persistent shared session store for the MVP.
+
+### User-driven reset
+
+- A prominent `Reset Session` control is available throughout assessment and conversation views. Its synchronous client handler immediately replaces all local state with the uninitialized landing state and navigates to `/`.
+- The client also sends an idempotent backend reset request that purges the server's volatile session state and cancels active work. UI clearing does not wait for the network response; the 15-minute server TTL remains the backstop if delivery fails. Repeated reset calls reveal no prior state.
+
+### External processing boundary
+
+- Raw user text, questionnaire data, model inputs/results, prompts containing user content, session identifiers, and personalized context must not be transmitted to externally operated LLM, embedding, moderation, tracing, or analytics APIs. OpenAI, Anthropic, and comparable public inference APIs are prohibited for this MVP even when they advertise provider-side zero retention.
+- The intent classifier, safety classifier, embedding model, reranker, orchestration LLM, and DCMFNet execute locally or in an operator-controlled, single-tenant isolated VPC deployment that satisfies the India data fence, blocks provider access to payloads, disables provider request logging/training, and has contractual zero-retention terms. Contract terms alone are insufficient without technical isolation.
+- Bibliographic adapters may send only system-generated, non-sensitive scientific search terms to approved authority APIs such as PubMed. They must never forward the raw user question, session/context fields, questionnaire-derived terms, probabilities, or feature data.
+
+### Logging, tracing, and telemetry
+
+- Middleware uses allowlist-based event schemas rather than attempting best-effort redaction after logging. Request/response bodies, prompts, headers containing credentials, raw text, questionnaire values, model vectors, probabilities, session IDs, IP addresses, user agents, referrers, and stack-local sensitive variables are excluded from standard logs, traces, metrics, and error reports.
+- Permitted operational fields are coarse timestamps, component/route identifiers, latency buckets, non-sensitive status/error codes, model/corpus/policy versions, and aggregate counters. Datadog, Loggly, Vercel logs, LangSmith, and similar third-party telemetry integrations may not receive user- or session-level runtime events.
+- Debugging an invalid probability uses only the protected volatile request object. The exact raw value is not logged or retained and disappears on request teardown.
+
+### Product analytics
+
+- The MVP does not use Google Analytics, Mixpanel, Vercel Analytics, or another client/session analytics service. If analytics are enabled later without a new policy decision, collection is limited to local counters for `clicked_start_assessment`, `clicked_reset_session`, coarse duration buckets, and `triggered_crisis_modal`.
+- Before persistence, permitted metrics are aggregated across sessions and stripped of event timestamps, IP/network data, user agent, locale fingerprint, session/correlation ID, route sequence, text, answers, probabilities, and other linkable attributes. No event-level row is retained. Crisis counts require a configured minimum aggregation window and disclosure threshold so a count cannot be associated with a particular session.
+- Analytics failure never blocks safety/reset behavior and cannot extend a session. Analytics code cannot read the questionnaire or conversation stores.
+
+### Upload boundary
+
+- Research-record, medical-history, clinical-PDF, image, audio, and genomic CSV/VCF upload features are omitted from `prototype_demo`. Public contracts contain no upload or attachment union, and backend routes reject multipart/file payloads.
+- The only assessment inputs are approved manual form fields plus `generic_genetic_profile_v1`. Scientific-corpus ingestion is an operator-only offline process and is not a user upload surface.
+
+### Verification consequences
+
+- Tests prove absence of sensitive database/filesystem/browser-cache writes; `no-store` response headers; exact 15-minute expiry; polling-resistant TTL; reset idempotency; cancellation and memory deletion; restart invalidation; absence of provider credentials in the client; external-provider egress denial; logging/trace schema allowlists; aggregate-only analytics; and rejection of upload payloads.
+- Release review includes browser-storage inspection, log/trace capture inspection, network-egress tests, crash/core-dump configuration, swap/hibernation review, and a data-flow inventory. “Zero retention” is not claimed merely because application tables are absent.
+
 ## Pending product decisions
 
-8. Privacy and data lifecycle
 9. LLM and deployment constraints
 10. Workflow failure behavior
 11. Quality targets

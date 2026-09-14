@@ -12,7 +12,7 @@ Sources: [`Problem Statement.md`](../Problem%20Statement.md), [`AI_ARCHITECTURE_
 
 Build a portfolio-grade, research-only AI system that can be safely hosted for invited prototype testers and demonstrates hybrid routing, explicit LangGraph orchestration, adaptive scientific RAG, local and live literature search, structured generation, deterministic validation, and measurable evaluation. Preserve replaceable boundaries for a future India-first, clinician-only hospital silent-validation product. The system remains a bounded workflow rather than an autonomous multi-agent swarm.
 
-This proposal preserves the approved runtime sequence and responsibility boundaries. It incorporates the approved conversational scope and scientific-source policy; it does not finalize pending product choices for safety language, privacy, providers, failure UX, or quality thresholds.
+This proposal preserves the approved runtime sequence and responsibility boundaries. It incorporates the approved conversational scope, scientific-source, safety, and portfolio privacy policies; it does not finalize remaining model-provider selection, non-safety failure UX, or quality thresholds.
 
 ## Product-mode boundary
 
@@ -21,7 +21,7 @@ The architecture defines two non-interchangeable modes:
 - `prototype_demo`: current scope; invited non-patient testers, manual questionnaire, synthetic-data-trained model, `generic_genetic_profile_v1`, prototype result presentation, explicit non-clinical disclaimer, and no health-decision use.
 - `hospital_silent_research`: future scope; India-first, authenticated clinicians/researchers, ethics/governance-approved hospital data, validated provenance, no patient-facing UI, no effect on care, and no generic genetic or prototype display behavior unless independently justified and approved.
 
-Every request, graph state, inference result, audit event, and evaluation fixture carries its deployment mode. Composition fails closed when a mode requests an unapproved adapter, profile, presenter, prompt, source, or persistence policy. The hospital mode is an interface constraint for now, not an implemented or regulated product claim.
+Every volatile request, graph state, and inference result, plus every non-user corpus/artifact audit record and synthetic evaluation fixture, carries its deployment mode. Composition fails closed when a mode requests an unapproved adapter, profile, presenter, prompt, source, or persistence policy. The hospital mode is an interface constraint for now, not an implemented or regulated product claim.
 
 ## Proposed topology
 
@@ -97,7 +97,7 @@ initialize assessment
 
 `generic_genetic_profile_v1` reads artifact-provided training medians for the 16 PRS and four batch-by-PC fields. Its generic/unmeasured provenance travels through state, context, UI, and response validation. It is never adjusted from family history or population descriptors.
 
-The two raw model values remain immutable inside the protected inference boundary. Before presentation or LLM context construction, a deterministic gate requires each value to be finite and within inclusive `[0.0, 1.0]`. A value below `0.0` or above `1.0` triggers a typed fail-closed internal-system-variance event; it is not clamped or displayed as an estimate. The UI displays exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The raw failing value is sent only to the encrypted audit adapter and never to standard logs or the public response.
+The two raw model values remain immutable inside the protected volatile inference boundary. Before presentation or LLM context construction, a deterministic gate requires each value to be finite and within inclusive `[0.0, 1.0]`. A value below `0.0` or above `1.0` triggers a typed fail-closed internal-system-variance event; it is not clamped or displayed as an estimate. The UI displays exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The raw failing value exists only in the protected request object until teardown and never reaches persistence, standard logs, or the public response.
 
 Every valid result view includes the required synthetic-data indicator. The system performs prediction, not causal inference. Until validated feature importance exists, the application inserts: `This is a prediction, not a causal explanation. The model evaluates all 105 inputs together; no single answer can be identified as the cause of the result. Validated feature importance is not available for this result.`
 
@@ -280,13 +280,15 @@ Subjective evidence-support checking may use a bounded secondary model-assisted 
 
 ## State, privacy, and observability
 
-Use opaque session/thread IDs behind a state-store/checkpointer port. Local development uses an in-memory implementation. The hosted prototype uses an anonymous, shared, expiring implementation suitable for multiple application instances, with explicit reset and no long-term user memory; the concrete store remains a provider/privacy decision. Durable checkpoint demonstrations use synthetic cases only until a reviewed policy permits anything else.
+Use cryptographically random opaque session IDs behind a memory-only state port. The inactivity TTL is exactly 15 minutes and is independently enforced by client and server; background polling and keep-alives do not renew it. Expiry, explicit reset, process restart, and crisis context clearing invalidate the ID, cancel active work where possible, wipe all volatile questionnaire/conversation/result state, clear the short-lived application session credential, and return the UI to `/`. The UI clears synchronously and sends an idempotent backend purge without waiting to reset its view. Multi-instance hosting may use session affinity but cannot add a persistent shared session store.
 
-Trace graph transitions, tool names, version IDs, latency, candidate counts, evidence status, validation categories, and retry counts. Standard application logs, traces, metrics, and analytics must never contain raw probabilities, questionnaire tokens/answers, feature vectors, prompts containing sensitive values, cryptographic session IDs, or full retrieved documents.
+Raw text, questionnaire/token/vector data, model inputs/results, probabilities, personalized prompts/responses, and session history exist only in volatile client/backend memory. They never enter databases, files, browser storage/cache, URLs, cookies, backups, crash dumps, APM, logs, traces, analytics, or caches. Sensitive HTTP responses use `Cache-Control: no-store`; deployment disables body capture and core dumps and prevents plaintext swap/hibernation recovery.
 
-Raw probabilities and questionnaire tokens may be persisted only in an encrypted, access-controlled audit-trail database. Audit records use a cryptographically random, opaque session ID and never a user identity; access and all reads/writes are auditable. State, consent, audit, and database contracts carry jurisdiction, data-fence, purpose, retention, and policy-version metadata so deployment can enforce India localization constraints aligned with the DPDP Act. A non-compliant adapter or cross-fence route fails closed.
+Runtime observability uses allowlisted non-sensitive status/version fields, latency/coarse-time buckets, and aggregate counters only. No sensitive audit database exists in `prototype_demo`. Product analytics, if enabled, persist only pre-aggregated unlinkable counters and duration buckets; no session-level event row is retained, and crisis counts use minimum aggregation/disclosure thresholds.
 
-LangSmith may be an optional experiment/tracing adapter, never a runtime requirement. The local application and deterministic test suite must function without an external observability account.
+Raw runtime payloads never go to public LLM, embedding, moderation, tracing, or analytics APIs. Models run locally or in an operator-controlled isolated single-tenant VPC satisfying the India data fence and technical plus contractual zero retention. Bibliographic APIs receive only system-generated non-sensitive search terms, never raw user queries. LangSmith and external analytics are permitted only for synthetic/offline evaluation fixtures, never live user runtime data.
+
+The public schema has no attachment/file-upload variant and backend routes reject multipart payloads. Scientific corpus ingestion remains an operator-only offline process.
 
 ## Evaluation architecture
 
@@ -324,7 +326,7 @@ Current evaluation guidance supports separating correctness, relevance, grounded
 | Intent/scope classification | Fine-tuned multilingual DistilBERT baseline; mandatory MuRIL benchmark; local Hugging Face sequence-classification adapter |
 | Session state | Expiring in-memory LangGraph checkpointer |
 | Evaluation | Local deterministic suite plus optional experiment platform |
-| Observability | Redacted structured graph/tool traces; optional LangSmith adapter |
+| Observability | Allowlisted local status/latency/version telemetry; LangSmith only for synthetic offline fixtures |
 
 ## Deliberately deferred
 
@@ -343,11 +345,10 @@ These can be reconsidered only with evidence that they improve an approved requi
 
 The following answers remain required before this proposal becomes the approved AI architecture:
 
-1. Privacy, session lifetime, external-provider, and logging policy
-2. LLM/embedding deployment, cost, latency, offline, and language constraints
-3. User-visible non-safety failure behavior and retry budgets
-4. Measurable quality and performance thresholds
-5. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
-6. Hosted-prototype access control, session TTL, concurrency target, deletion behavior, and operating budget
+1. Exact local/private-VPC LLM and embedding model selection, cost, latency, offline, and language constraints within the approved no-external-payload boundary
+2. User-visible non-safety failure behavior and retry budgets
+3. Measurable quality and performance thresholds
+4. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
+5. Hosted-prototype access control, concurrency target, India-fenced hosting implementation, and operating budget
 
 Approval requires reconciling these decisions into this document, the interface registry, the AI/RAG decision record, and implementation handoffs for the RAG Engineer, AI Engineer, and Testing Agent.

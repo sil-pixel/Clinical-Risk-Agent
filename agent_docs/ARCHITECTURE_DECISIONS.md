@@ -30,11 +30,11 @@ Owner: Software Architect
 
 ## ADR-004 — Keep MVP conversational state ephemeral
 
-**Decision:** Use cryptographically random opaque session IDs, inactivity expiry, explicit reset, and no durable operational questionnaire/state database. Local development uses bounded in-memory state; the hosted prototype uses an anonymous, shared, expiring adapter behind the same state port. A separate encrypted, access-controlled audit-trail database is the sole permitted persistence destination for raw probabilities and questionnaire tokens, keyed only by cryptographic session ID and never user identity.
+**Decision:** Use cryptographically random opaque session IDs, an exact 15-minute inactivity expiry, explicit reset, and bounded process-memory-only state. Questionnaire data, conversation content, model inputs/results, and probabilities have no persistent destination, including an encrypted audit database. Multi-instance hosting uses session affinity rather than a durable shared state adapter.
 
 **Why:** Questionnaire content is sensitive, while invited concurrent testers and multiple application instances require consistent ephemeral session state. Durable health-record persistence has no approved prototype requirement.
 
-**Consequences:** The API/UI represents expiry clearly, and prototype operational sessions are intentionally temporary. The audit store is not a session checkpointer or application log and cannot be used to reconstruct user identity. Its encryption, access control, India data fence, consent/purpose metadata, retention/deletion policy, and access audit are mandatory. Concrete hosted-store technology, TTL, capacity, and deletion behavior remain pending privacy/operations decisions. Other durable state requires a privacy review, retention policy, threat model, and new ADR.
+**Consequences:** Client and server enforce the TTL independently; polling does not renew it. Expiry, reset, restart, and crisis purge cancel work where possible and wipe volatile state. Sensitive HTTP responses are non-cacheable, browser persistent storage is prohibited, and the deployment prevents body capture, core dumps, and plaintext swap/hibernation recovery. Other user/session persistence requires a privacy review, retention policy, threat model, and new ADR.
 
 This does not authorize durable health records.
 
@@ -104,13 +104,13 @@ This does not authorize durable health records.
 
 **Consequences:** DOI or PMID, publication date, source class, quality state, evidence tier, and retraction verification no older than 14 days are mandatory eligibility metadata. Relevant evidence is metadata-reranked as clinical guidelines, systematic reviews/meta-analyses, RCTs, observational studies, then expert opinion, with recency and quality applied within tiers. Material conflicts produce a controversy response representing both sides without selecting a conclusion. Bi-weekly scrubbing immediately deactivates newly detected deprecated/retracted sources, purges affected vectors/chunks and caches, versions the corpus, and records a non-retrievable tombstone. The scientific vector namespace is metadata-isolated from questionnaire tokens, patient matrices, inference state, session IDs, and identities. Citations can refer only to eligible evidence retrieved for the current answer.
 
-## ADR-013 — Fail closed on invalid probabilities and isolate sensitive audit data
+## ADR-013 — Fail closed on invalid probabilities without retaining sensitive values
 
-**Decision:** Any DCMFNet probability outside inclusive `[0.0, 1.0]` is an internal system variance. The application records the raw value only through the encrypted audit port, sends no estimate to the LLM or UI, and returns the fixed safe error message. Raw probabilities and questionnaire tokens are prohibited from standard logs and may persist only in an access-controlled audit database keyed by a cryptographically random session ID, never user identity.
+**Decision:** Any DCMFNet probability outside inclusive `[0.0, 1.0]` is an internal system variance. The raw value remains only in a protected volatile error object until request teardown, no estimate reaches the LLM or UI, and the application returns the fixed safe error message. Raw probabilities and questionnaire tokens are prohibited from all persistence and standard observability.
 
 **Why:** Clamping or friendly display mappings would conceal invalid model behavior, while standard logging would unnecessarily expose sensitive assessment data. India-first deployment also requires state, consent, and storage contracts capable of enforcing jurisdictional data fences and localization policy.
 
-**Consequences:** Result views require an Indian-ecosystem synthetic-data bias indicator. The system reports predictions, not causes; without validated feature importance, it inserts the approved deterministic prediction-only message. State, consent, audit, and database schemas carry jurisdiction, data-fence, purpose, retention, and policy-version metadata aligned with the DPDP compliance mapping; non-compliant storage or routing fails closed.
+**Consequences:** Result views require an Indian-ecosystem synthetic-data bias indicator. The system reports predictions, not causes; without validated feature importance, it inserts the approved deterministic prediction-only message. State and consent flows carry jurisdiction, data-fence, purpose, and policy-version metadata in memory; non-compliant processing or routing fails closed.
 
 ## ADR-014 — Require claim-level citations and gate feature importance
 
@@ -143,6 +143,14 @@ This does not authorize durable health records.
 **Why:** Exact keyword rules do not reliably recognize paraphrased scope and intent, while a general generative router adds unnecessary output freedom and provider dependence. Multilingual DistilBERT provides a compact common baseline; MuRIL was pretrained for Indian languages and transliterated text and therefore tests the project's actual language context.
 
 **Consequences:** The classifier emits logits only. Deterministic code owns the fixed label mapping, confidence calibration, out-of-distribution/abstention rules, and typed `IntentDecision`. Low-confidence input clarifies or takes the minimal unsupported path and never authorizes DCMFNet. Safety and clinical-refusal decisions remain upstream and cannot be overridden. Base checkpoints are not used zero-shot in production. Evaluation includes English, Hindi, Hinglish, Indian scripts, transliteration, paraphrases, misspellings, indirect and multi-intent prompts, out-of-scope cases, and prompt injection, with per-class/macro metrics, calibration, abstention, subgroup/language, memory, and CPU-latency reporting. Model downloads require license review, immutable revision/checksum pinning, integrity verification, and a reproducible local artifact process.
+
+## ADR-018 — Enforce zero persistent user-data retention in the portfolio MVP
+
+**Decision:** User text, questionnaire and slider state, tokens/vectors, inference inputs/results, probabilities, personalized prompts/responses, and conversation history exist only in volatile client/backend memory and are destroyed after exactly 15 minutes of inactivity, explicit reset, relevant failure/crisis purge, or process restart. They never enter a database, filesystem, browser persistent store/cache, backup, crash dump, analytics event, model cache, or external provider. This supersedes ADR-004/ADR-013's earlier encrypted sensitive-audit-store allowance.
+
+**Why:** The portfolio demonstration does not need a health record or sensitive debugging archive. Eliminating retention and public-provider payload transmission reduces privacy, consent, breach, and India data-fence exposure.
+
+**Consequences:** Client and server enforce independent non-renewable-by-polling TTLs. Reset clears the UI synchronously and invokes an idempotent backend purge. Models run locally or in an operator-controlled isolated India-fenced VPC with technical and contractual zero retention; public inference and live-user tracing APIs are forbidden. Observability is allowlist-based. Only pre-aggregated unlinkable product counters may persist, with no session/event rows and thresholded crisis counts. Upload schemas/routes do not exist and multipart payloads are rejected. Release testing inspects browser storage, logs/traces, network egress, crash dumps, swap/hibernation, expiry, reset, and upload rejection.
 
 ## Deferred decisions
 

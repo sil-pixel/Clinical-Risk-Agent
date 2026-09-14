@@ -8,7 +8,7 @@ Architecture scope: ARCH-01 and ARCH-02 initial baseline
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md): system shape, repository layout, boundaries, dependency direction, runtime flows, state/privacy policy, safety layers, dependencies, errors, observability, and testing seams.
 - [`INTERFACE_CONTRACTS.md`](INTERFACE_CONTRACTS.md): contract ownership/status, approved intent values, public session API baseline, minimum retrieval/error boundaries, and blocked ML contracts.
-- [`ARCHITECTURE_DECISIONS.md`](ARCHITECTURE_DECISIONS.md): ten accepted decisions and deferred selections.
+- [`ARCHITECTURE_DECISIONS.md`](ARCHITECTURE_DECISIONS.md): accepted decision index and deferred selections.
 - [`PRODUCT_PLAN.md`](PRODUCT_PLAN.md): updated to record product-owner approval.
 
 ## Decisions implementation agents must preserve
@@ -17,7 +17,7 @@ Architecture scope: ARCH-01 and ARCH-02 initial baseline
 - Explicit LangGraph workflow with injected ML, RAG, and LLM ports.
 - AI Architect design ownership for the detailed LLM/LangGraph and RAG architecture; RAG and AI Engineers retain implementation ownership.
 - One canonical shared contract package; no private duplicate score/citation/questionnaire schemas.
-- In-memory, bounded, expiring MVP operational session state; raw probabilities and questionnaire tokens persist only in a separate encrypted, access-controlled audit store tied to a cryptographically random session ID and never identity.
+- In-memory-only, bounded MVP session state with exact 15-minute inactivity expiry and explicit reset; raw text, questionnaire data, model inputs/results, probabilities, personalized responses, and history have no persistent destination or external-provider route.
 - Structured validation before and after the LLM; immutable model and evidence results.
 - New agent-generated documentation under `agent_docs/`.
 
@@ -55,7 +55,7 @@ These are blockers to concrete inference and questionnaire contracts, not permis
 - Identical validated input produces identical finite output for each supported artifact.
 - Feature order/preprocessing is tested, including missing, extra, malformed, non-finite, and wrong-shape inputs.
 - Model evaluation/no-gradient settings and supported device/dtype behavior are explicit.
-- Standard logs, traces, metrics, and public errors contain no raw probabilities, feature vectors, or questionnaire tokens/values. The protected audit database is the only permitted persistence destination and must enforce the configured India data fence.
+- Standard logs, traces, metrics, public errors, browser stores, caches, backups, and crash artifacts contain no raw probabilities, feature vectors, questionnaire tokens/values, conversation content, or personalized responses. No sensitive audit database exists in `prototype_demo`; models execute locally or inside the operator-controlled isolated India-fenced boundary.
 - Model limitations clearly state synthetic-data provenance and prohibit diagnostic interpretation.
 
 ## Blockers and feedback path

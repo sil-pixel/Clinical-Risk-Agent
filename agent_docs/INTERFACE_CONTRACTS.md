@@ -79,7 +79,7 @@ Each target-specific call requires all 105 unique feature keys in the exact expo
 
 The result contains the exact artifact target—`SCZ18_Pos_Norm` or `SCZ18_Neg_Norm`—and raw predictions named `normalized_symptom_severity`, plus artifact version, checkpoint SHA-256, and fixed limitations. The product definition identifies the positive target as risk probability for positive schizophrenia symptoms, including psychotic and manic symptoms, and the negative target as risk probability for negative schizophrenia symptoms, including depressive symptoms. These research probabilities are not clinically validated, diagnoses, screening results, causal effects, thresholds, or a combined score. Consumers must preserve numeric and identity fields exactly and keep the two probabilities separate.
 
-A deterministic output gate—not the LLM—requires every raw probability to be finite and within inclusive `[0.0, 1.0]` before producing a validated percentage representation. A value below `0.0` or above `1.0` triggers a typed internal-system-variance error and fails closed; it must not be clamped or exposed as an estimate. The public/UI message is exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The exact failing value may be written only through the encrypted audit port and is absent from the public error and Structured Context. No qualitative risk band is permitted. Downstream components must consume the validated representation or typed failure rather than implement private formatting rules.
+A deterministic output gate—not the LLM—requires every raw probability to be finite and within inclusive `[0.0, 1.0]` before producing a validated percentage representation. A value below `0.0` or above `1.0` triggers a typed internal-system-variance error and fails closed; it must not be clamped or exposed as an estimate. The public/UI message is exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The exact failing value exists only in the protected volatile failure object until request teardown and is absent from persistence, logs, the public error, and Structured Context. No qualitative risk band is permitted. Downstream components must consume the validated representation or typed failure rather than implement private formatting rules.
 
 The current explanation contract is prediction-only and does not perform causal inference. Without validated feature importance, the assistant cannot rank inputs or explain why a result is high and must use the deterministic message defined below. Every valid result response also requires the approved synthetic-data indicator.
 
@@ -141,9 +141,9 @@ The MVP API is versioned and session-oriented:
 
 | Operation | Method and path | Purpose |
 | --- | --- | --- |
-| Create session | `POST /v1/sessions` | Return an opaque session ID and state/API version |
+| Create session | `POST /v1/sessions` | Return an opaque ephemeral session ID, state/API version, and fixed 15-minute inactivity expiry |
 | Submit turn | `POST /v1/sessions/{session_id}/messages` | Validate one user message/structured answer update and advance the workflow once |
-| Reset session | `DELETE /v1/sessions/{session_id}` | Remove in-memory state and acknowledge completion idempotently |
+| Reset session | `DELETE /v1/sessions/{session_id}` | Cancel active work, remove all in-memory state, and acknowledge completion idempotently |
 | Liveness | `GET /health/live` | Confirm the API process is running |
 | Readiness | `GET /health/ready` | Report required artifact/index/configuration readiness without secrets |
 
@@ -151,7 +151,7 @@ The submit-turn request must be a discriminated union separating free text from 
 
 The response envelope must include:
 
-- API/schema version and correlation ID
+- API/schema version
 - deployment mode
 - session ID
 - workflow status/response kind
@@ -172,14 +172,17 @@ Every `ServiceError` has:
 - safe message
 - originating component
 - retryable flag
-- correlation ID
 - optional non-sensitive details from an approved allowlist
 
 Minimum error families are defined in the architecture: validation/safety, session, questionnaire, artifact/configuration, inference, internal-system variance, retrieval, LLM, and response-validation errors. Internal exceptions, stack traces, raw probabilities, questionnaire values, prompts, and secrets never cross the public boundary. Internal-system variance returns no estimate and maps to the exact approved safe message above.
 
-## Sensitive audit and India data-fence boundary
+## Zero-retention and India data-fence boundary
 
-Raw probabilities and questionnaire tokens are prohibited from standard logs, traces, metrics, analytics, public errors, and correlation metadata. The only permitted persistence destination is an encrypted, access-controlled audit-trail database through a typed audit port. Each record uses a cryptographically random opaque `session_id`, never a user identity, and carries consent/purpose, jurisdiction/data-fence, retention, policy-version, and access-audit metadata. State, consent, and database adapters must enforce configured India localization constraints aligned with the DPDP Act and fail closed on an unauthorized jurisdictional route.
+Raw text, questionnaire values/tokens, vectors, prompts containing user data, inference inputs/results, probabilities, personalized responses, and session history are prohibited from every persistent store, browser store/cache, standard log, trace, metric event, analytics event, public error, backup, and crash dump. `prototype_demo` has no sensitive audit port or database. Exact invalid values may exist only in a protected volatile failure object until request teardown.
+
+The session contract expires after exactly 15 minutes of explicit-user inactivity. Polling does not renew it. Expiry and reset invalidate the session, cancel active work where possible, and wipe client/server memory. Sensitive responses carry `Cache-Control: no-store`; the frontend receives no provider credential and stores payload state only in memory.
+
+The submit-turn union contains no upload/attachment variant and multipart/file payloads are rejected. Runtime model and telemetry adapters cannot transmit user/session payloads to externally operated services. Portfolio state/consent objects enforce the India processing fence in memory and fail closed on an unauthorized route. Only pre-aggregated unlinkable product counters may persist, never session-level event records.
 
 ## Contract change process
 

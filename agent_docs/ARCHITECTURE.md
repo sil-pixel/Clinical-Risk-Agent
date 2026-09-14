@@ -14,8 +14,8 @@ Related: [`INTERFACE_CONTRACTS.md`](INTERFACE_CONTRACTS.md), [`ARCHITECTURE_DECI
 - Keep risk inference, validation, routing, and graph transitions explicit and testable.
 - Treat DCMFNet, retrieval, and LLM providers as replaceable adapters behind typed ports.
 - Run locally with minimal operational complexity while retaining production-quality module boundaries.
-- Keep the modular-monolith prototype safely hostable for invited concurrent testers, with state, identity, audit, inference, retrieval, and LLM adapters replaceable behind typed ports.
-- Minimize exposure and persistence of mental-health questionnaire content.
+- Keep the modular-monolith prototype safely hostable for invited concurrent testers, with volatile state, identity, inference, retrieval, and LLM adapters replaceable behind typed ports.
+- Enforce zero persistent application storage for user text, questionnaire content, model inputs/results, probabilities, and personalized responses in `prototype_demo`.
 - Fail closed: missing data, unavailable tools, invalid citations, or invalid model outputs produce structured failures, never plausible substitutes.
 
 ## System shape
@@ -47,7 +47,7 @@ FastAPI boundary
                     FastAPI response
 ```
 
-External LLM or embedding services, if selected, are infrastructure dependencies. They do not own workflow decisions or domain state.
+LLM, embedding, reranking, and classifier services are infrastructure dependencies only when they execute locally or inside the operator-controlled isolated VPC. Public/external inference APIs cannot receive portfolio runtime payloads and no provider owns workflow decisions or domain state.
 
 ## Runtime responsibility map
 
@@ -139,12 +139,12 @@ The canonical workflow state is typed and contains only fields required to selec
 MVP state policy:
 
 - Backend memory only; no database or durable LangGraph checkpointer.
-- A cryptographically random opaque session ID, explicit reset endpoint, bounded inactivity TTL, and bounded message/state size.
-- Process restart invalidates sessions and returns a machine-readable expired/not-found state.
-- Raw user input, questionnaire tokens/answers, prompts containing those values, model inputs, and raw probabilities are excluded from ordinary logs, traces, metrics, and analytics. Raw probabilities and questionnaire tokens may be persisted only through the encrypted, access-controlled audit port under the cryptographic-session policy.
-- The Frontend may hold the opaque session ID in Streamlit session state but must not treat its local copy as authoritative workflow state.
+- A cryptographically random opaque session ID, explicit reset endpoint, exactly 15 minutes of inactivity, and bounded message/state size.
+- Client and server enforce expiry independently. Background polling and keep-alives do not renew activity. Expiry, reset, crisis purge, or process restart cancels active work where possible, wipes volatile state, invalidates the session, and returns a machine-readable expired/not-found state.
+- Raw user input, questionnaire tokens/answers, prompts containing those values, model inputs/results, probabilities, and personalized responses are excluded from all persistence, logs, traces, metrics, analytics events, caches, crash dumps, and backups.
+- The frontend may hold the opaque session ID and questionnaire state only in volatile application memory. It cannot use cookies for payload state, `localStorage`, `sessionStorage`, IndexedDB, service-worker caches, or URL/query parameters. Sensitive responses use `Cache-Control: no-store`.
 
-TTL duration and state-size limits are configuration values selected by the Backend Engineer and tested; they are not hard-coded into domain behavior.
+State-size limits remain configured and tested. The 15-minute TTL is an approved product invariant, not a provider default.
 
 ## Runtime flows
 
@@ -155,7 +155,7 @@ TTL duration and state-size limits are configuration values selected by the Back
 3. LangGraph invokes questionnaire validation using the ML-owned feature requirement contract.
 4. If incomplete, the graph returns structured missing-field requests and saves bounded state.
 5. If complete, the graph calls the inference port exactly once for the validated input/version.
-6. The inference adapter returns a structured immutable result or a typed error. A deterministic boundary gate requires finite probability values in inclusive `[0.0, 1.0]`; any value outside that range is audit-recorded and becomes a fail-closed internal-system-variance error before presentation or LLM context construction.
+6. The inference adapter returns a structured immutable result or a typed error. A deterministic boundary gate requires finite probability values in inclusive `[0.0, 1.0]`; any value outside that range remains only in the protected volatile request object and becomes a fail-closed internal-system-variance error before presentation or LLM context construction.
 7. RAG runs only when scientific explanatory claims are requested/required by the approved workflow.
 8. The context builder passes exact tool results, evidence, and limitations to the LLM.
 9. Response validation compares output against structured inputs and rejects unsupported citations, score changes, and unsafe claims.
@@ -197,7 +197,7 @@ The response validator does not rewrite a bad score or invent a replacement cita
 
 After safety returns `ALLOW_NORMAL_PROCESSING`, rephrased intent and scope classification uses a local, fine-tuned Hugging Face sequence-classification encoder. The architecture baseline is multilingual DistilBERT, with MuRIL required as an India-language benchmark challenger. A deterministic adapter owns label mapping, calibration, abstention, typed output, and model provenance. The classifier cannot generate text, create labels, call tools, or authorize DCMFNet; low-confidence and out-of-distribution results clarify or fail to the minimal unsupported path. Base checkpoints are not production classifiers until project-specific fine-tuning and evaluation pass approved thresholds.
 
-For any raw probability below `0.0` or above `1.0`, the UI returns exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The system never clamps or displays the raw value. Only the encrypted audit adapter receives it.
+For any raw probability below `0.0` or above `1.0`, the UI returns exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The system never clamps, displays, logs, transmits, or persists the raw value. It remains only in the protected volatile failure object until request teardown.
 
 This system performs prediction, not causal inference. Today it cannot rank individual inputs or explain why a result is high. Without validated feature importance, the application inserts: `This is a prediction, not a causal explanation. The model evaluates all 105 inputs together; no single answer can be identified as the cause of the result. Validated feature importance is not available for this result.` Valid result views also include the required synthetic-data warning.
 
@@ -226,7 +226,7 @@ The initial preferred local adapter is a persistent local vector store with meta
 - Treat `.pt` files as untrusted serialized artifacts: load only repository-supplied, checksum-verified artifacts using the safest PyTorch mode compatible with their confirmed serialization format.
 - Load models once during backend startup or first guarded use; use evaluation mode and inference/no-gradient execution.
 - Validate metadata structure and artifact compatibility before readiness succeeds.
-- Keep raw feature vectors, questionnaire tokens/values, and raw probabilities out of standard logs, traces, metrics, and analytics. The only permitted persistent copy is in the encrypted, access-controlled audit database associated with a cryptographically random session ID and never an identity.
+- Keep raw feature vectors, questionnaire tokens/values, and raw probabilities out of all persistence, standard logs, traces, metrics, analytics, caches, crash dumps, and backups. They exist only in protected volatile memory for the current session/request.
 - Preserve the separate positive- and negative-symptom research risk probabilities, their normalized target labels, and raw outputs; do not add thresholds, calibration, risk bands, or a combined probability.
 - Fail closed before presentation when a raw probability falls outside inclusive `[0.0, 1.0]`; do not clamp it or pass it to the LLM.
 - Publish an ML-owned contract before questionnaire, graph, API, or UI code binds to feature fields or results.
@@ -235,7 +235,7 @@ ML verification against the user-designated Thesis implementation resolved the a
 
 ## API and process boundaries
 
-Product-direction update (2026-09-01): the current application is `prototype_demo`; a future India-first `hospital_silent_research` mode is clinician-only, never patient-facing, and cannot affect care. The mode boundary must be explicit and fail-closed. Generic genetic inputs are not valid in hospital mode by default. All modes use the same fail-closed out-of-range gate. System state, consent capture, audit records, and database schemas natively carry jurisdiction, data-fence, purpose, retention, and policy-version metadata needed to enforce India localization constraints aligned with the DPDP Act. Detailed shared-boundary changes require a Software Architect ADR before hospital implementation.
+Product-direction update (2026-09-01): the current application is `prototype_demo`; a future India-first `hospital_silent_research` mode is clinician-only, never patient-facing, and cannot affect care. The mode boundary must be explicit and fail-closed. Generic genetic inputs are not valid in hospital mode by default. All modes use the same fail-closed out-of-range gate. Portfolio state and consent objects carry jurisdiction, data-fence, purpose, and policy-version metadata only in volatile memory. Any future hospital persistence requires separate schemas, retention policy, governance, and ADR; it cannot inherit or weaken the prototype boundary silently.
 
 The public API is versioned under `/v1`. The approved resource shape is session-oriented because workflow state spans turns:
 
@@ -272,18 +272,21 @@ Use a stable error taxonomy across internal and public boundaries:
 - LLM unavailable/invalid output
 - response validation failure
 
-Public errors expose a stable code, safe message, retryability, and correlation ID without stack traces or sensitive values. Logs are structured and include correlation ID, component, event, duration, state transition name, artifact/corpus version, and error code. They exclude raw messages, questionnaire tokens/answers, feature vectors, retrieved full text, prompts, all raw probabilities, cryptographic session IDs, and secrets.
+Public errors expose a stable code, safe message, and retryability without stack traces or sensitive values. Internal logs use allowlisted component/route, latency bucket, artifact/corpus/policy version, and error/status code fields. They exclude raw messages, request/response bodies, questionnaire tokens/answers, feature vectors, retrieved full text, prompts, probabilities, session/correlation IDs, IP addresses, user agents, referrers, headers, secrets, and stack-local sensitive values.
 
-Sensitive audit data is a separate boundary, not an application log sink. Raw probabilities and questionnaire tokens may be written only to an encrypted, access-controlled audit-trail database tied to a cryptographically random opaque session ID and never user identity. Audit access and every read/write are themselves audited. State, consent, audit, and database adapters enforce the configured India data fence and fail closed on prohibited cross-jurisdiction persistence or processing.
+There is no sensitive audit sink in `prototype_demo`. Exact invalid probabilities may be inspected only inside a protected volatile error object and are wiped on request teardown. Persisted product metrics, if enabled, are aggregate counters or coarse duration buckets created before persistence with no event rows, time stamps, session/correlation IDs, network/device fields, route sequences, safety text, questionnaire data, or probabilities. Crisis counts use minimum aggregation and disclosure thresholds.
 
-Readiness fails when required configuration, DCMFNet artifacts, verified model loader, or required retrieval index is unavailable. Optional external LLM readiness may be reported as degraded if the API contract can represent that state safely.
+Raw runtime payloads cannot leave the operator-controlled boundary. LLMs, embeddings, rerankers, safety/intent classifiers, and DCMFNet run locally or in a single-tenant isolated India-fenced VPC with provider payload access/logging/training disabled and contractual zero retention. Public provider APIs and live-user third-party tracing/analytics are prohibited. Bibliographic APIs receive only generated non-sensitive scientific search terms.
+
+Readiness fails when required configuration, DCMFNet artifacts, verified model loader, required local/private-VPC models, privacy controls, or required retrieval index is unavailable. Configuration of a public runtime inference/embedding/telemetry provider is a failed-readiness condition, not a degraded option.
 
 ## Testing seams
 
 - Pure functions for questionnaire validation, routing post-processing, transition predicates, score/citation integrity checks, and error mapping.
 - Port-level contract suites shared by real adapters and deterministic fakes.
 - Golden artifact tests owned by ML for model loading and repeatable inference.
-- Boundary tests for below-zero and above-one probabilities, the exact public error, audit-only raw-value handling, and standard-log/trace leakage.
+- Boundary tests for below-zero and above-one probabilities, the exact public error, volatile-only raw-value handling, teardown wiping, and log/trace/cache leakage.
+- Privacy tests for 15-minute client/server expiry, polling resistance, reset idempotency, browser storage, `no-store` headers, provider egress, aggregate-only analytics, crash/swap controls, and multipart/upload rejection.
 - Retrieval fixtures with explicit synthetic source metadata; fixtures are never presented as real scientific evidence.
 - Retrieval tests for authority allowlisting, mandatory patient/scientific metadata isolation, stale-retraction rejection, and active-index purging.
 - Response tests for claim-level citation completeness/entailment, the 3-to-5 source cap, collapsed evidence-display separation, and conflict coverage.

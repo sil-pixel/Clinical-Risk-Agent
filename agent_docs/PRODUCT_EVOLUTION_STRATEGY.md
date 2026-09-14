@@ -48,7 +48,7 @@ Hospital mode requires separate approval for:
 
 ## Scale-without-overbuilding principle
 
-The prototype remains a modular monolith with clear ports for inference, retrieval, LLMs, state, identity, audit, and storage. Local adapters can later be replaced with managed or hospital-hosted implementations without changing domain contracts. Services are extracted only when security, scaling, regulatory isolation, or independent deployment provides an evidenced benefit.
+The prototype remains a modular monolith with clear ports for inference, retrieval, LLMs, volatile state, and ephemeral identity. `prototype_demo` has no sensitive audit/storage port. Future hospital-governed audit or storage requires new mode-specific contracts and may not silently replace the zero-retention prototype boundary. Services are extracted only when security, scaling, regulatory isolation, or independent deployment provides an evidenced benefit.
 
 ## Promotion gate
 
