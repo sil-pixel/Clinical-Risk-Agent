@@ -18,7 +18,7 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 | Contract | Producer → consumers | Owner | Status / gate |
 | --- | --- | --- | --- |
-| `SafetyDecision` | Safety → workflow/API | AI Architect (design), AI Engineer (implementation) | Architecture-defined categories; wording/escalation policy remains open |
+| `SafetyDecision` | Safety → workflow/API | AI Architect (design), AI Engineer (implementation) | **Architecture-approved:** terminal categories, priority, fixed-response and tool-denial semantics defined below |
 | `IntentDecision` | Router → LangGraph | AI Architect (design), AI Engineer (implementation) | Approved intent enum; confidence/fallback details finalized in AI architecture |
 | `DeploymentMode` | Composition root → all workflow/results/telemetry | Software Architect | **Architecture-approved:** `prototype_demo`; `hospital_silent_research` reserved and unavailable until separately gated |
 | `ArtifactInspection` | DCMFNet artifact validator → readiness/tests | ML Engineer | **Implemented:** integrity/readiness facts |
@@ -51,19 +51,21 @@ The exact spelling is the canonical machine representation. Adding an intent req
 
 `risk_assessment` alone does not authorize inference. The graph may invoke DCMFNet only when the user explicitly requests positive/psychotic-symptom or negative/depressive-symptom risk calculation, safety permits processing, and deterministic questionnaire validation reports complete valid input. Scientific or educational discussion of those symptoms routes to RAG without inference. `explain_my_risk` consumes a stored immutable result and does not rerun the model unless a new assessment is explicitly requested.
 
-General mental health, genetics/environmental factors, diet/lifestyle/diabetes/physical health, and mental-health-related general medication/treatment education may use RAG under the approved source policy. Unrelated general medical questions use the minimal out-of-scope response contract and do not invoke full RAG or DCMFNet.
+General mental health, genetics/environmental factors, diet/lifestyle/diabetes/physical health, and non-drug-specific, non-personalized treatment research may use RAG under the approved source policy. Any drug-specific question, medication selection, suitability, dosing, start/stop/change, or individualized treatment evaluation takes `PRESCRIPTIVE_REFUSAL` without RAG or DCMFNet. Unrelated general medical questions use the minimal out-of-scope response contract and do not invoke full RAG or DCMFNet.
 
 ## Minimum safety decision
 
 `SafetyDecision` must include:
 
-- a stable policy category suitable for deterministic graph routing
+- one stable category: `EMERGENCY_REDIRECTION`, `CRITICAL_SAFETY_REDIRECTION`, `ACUTE_DISTRESS_REDIRECTION`, `STATE_INELIGIBLE_MINOR`, `THIRD_PARTY_REFUSAL`, `DIAGNOSTIC_REFUSAL`, `PRESCRIPTIVE_REFUSAL`, or `ALLOW_NORMAL_PROCESSING`
 - whether normal processing may continue
-- a safe user-facing response when processing must stop
+- the immutable fixed-content ID and version when processing must stop
+- explicit `allow_llm`, `allow_rag`, and `allow_inference` booleans, defaulting to `false`
 - policy/ruleset version
-- limitations or escalation configuration status
+- jurisdiction/resource-bundle version and verification status when escalation resources are shown
+- a non-sensitive rationale code and classifier/rule version; never the raw triggering text
 
-It must not contain a diagnosis. The AI Architect specifies the policy categories and the AI Engineer implements/tests them; neither may allow a probabilistic model to be the sole gate for deterministic validation.
+Priority is the category order shown above; `ALLOW_NORMAL_PROCESSING` is last. It must not contain a diagnosis, raw questionnaire data, raw user text, probability, identity, or relationship token. Crisis interception also commands generation cancellation and operational-context clearing. A probabilistic model is never the sole gate for deterministic age validation or explicit high-risk rules.
 
 ## ML-owned contracts
 

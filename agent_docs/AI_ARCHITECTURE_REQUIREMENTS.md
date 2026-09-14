@@ -108,11 +108,11 @@ A future mode may accept the 16 PRS values and four batch-by-PC interaction valu
 
 These answers require approved evidence and citation provenance. A diet, diabetes, lifestyle, or physical-health question never invokes DCMFNet.
 
-### Medication and treatment information — narrowly supported
+### Medication and treatment boundary — refusal for prescriptive requests
 
-- Only provide a general evidence summary when the question is related to schizophrenia or another mental-health disorder.
-- Do not provide individualized treatment selection, prescribing, dosage, medication-start/stop/change instructions, or claims that a treatment is appropriate for the user.
-- Tell the user to contact an appropriate qualified professional for details. Medication questions should direct the user to a psychiatrist or other prescribing doctor; psychological-support questions may also direct the user to a psychologist or suitable mental-health professional.
+- Any drug-specific question, and any request to recommend, select, compare for the user, dose, start, stop, alter, or evaluate a medication or treatment plan, takes the deterministic `PRESCRIPTIVE_REFUSAL` route.
+- The fixed refusal directs the user to a registered medical practitioner, psychiatrist, or treating doctor. It does not invoke DCMFNet, RAG, or the LLM.
+- Non-personalized questions about treatment research may use scientific RAG only when they are not drug-specific and do not request a choice, dosage, modification, or individualized evaluation. This is a deliberately conservative product boundary, not a claim that Indian telemedicine rules prohibit every form of remote prescribing.
 
 ### General medical questions — out of scope
 
@@ -212,6 +212,12 @@ When eligible evidence contains a material unresolved conflict, the evidence res
 - Each citation marker opens an interactive, expandable metadata container such as a tooltip or side drawer. That container displays the exact matched text string supplied by retrieval, DOI/PMID, title, authors when available, publication/source, publication date, evidence tier, and retraction-verification state.
 - The UI must preserve the exact matched string and citation-to-source mapping; it cannot ask the LLM to regenerate or paraphrase the excerpt. Excerpts remain collapsed by default and are never silently inserted into the prose response body.
 
+### Caching boundary
+
+- Semantic caching of generated medical, scientific, assessment, explanation, or safety responses is prohibited for the MVP. Similar wording does not establish identical intent, safety state, evidence currency, or entitlement to personalized context.
+- Versioned static FAQs, fixed refusal/redirection scripts, and other non-generated standard UI content may use exact-key caching by content ID, locale, jurisdiction, and policy version. No raw user text, questionnaire token, probability, identity, or session context may enter a cache key or value.
+- Retrieval-result caching, if later implemented, must use only non-sensitive normalized queries and include corpus/index version, eligibility-policy version, and retraction-check freshness in the key. Retraction, correction, corpus, allowlist, or policy changes immediately invalidate affected entries. A cached retrieval result still passes current eligibility and citation validation before use.
+
 ### Conflicting evidence
 
 - After metadata reranking, materially opposed eligible evidence produces `conflicting_evidence`. The answer labels the controversy, presents and inline-cites each supported position, describes hierarchy/recency/quality limitations, and does not select or imply a winning conclusion.
@@ -233,9 +239,97 @@ When eligible evidence contains a material unresolved conflict, the evidence res
 - The UI requires an expandable evidence component that renders retrieval-owned exact matched strings and DOI/PMID metadata without passing excerpt rendering through the LLM.
 - Evaluation fixtures must cover claim-level citation completeness, citation entailment, source-cap enforcement, excerpt/body separation, conflict representation, association extrapolation, feature-importance gate bypass attempts, top-three JSON integrity, prediction-versus-causation wording, and deterministic prediction-only message presence.
 
+## 7. Safety policy and interception architecture — approved
+
+### Pre-generation enforcement and route priority
+
+- Every free-text input passes through a local, low-latency safety interceptor before intent routing, RAG, DCMFNet, prompt construction, or LLM generation. Exact rules and a separately evaluated local safety classifier may contribute to detection; regex alone is not treated as sufficient coverage.
+- A positive or safety-critical uncertain match fails closed. If generation has already started because of a concurrent event, the orchestrator cancels it and discards all unvalidated output.
+- Route priority is deterministic: `EMERGENCY_REDIRECTION` or `CRITICAL_SAFETY_REDIRECTION` → `ACUTE_DISTRESS_REDIRECTION` → `STATE_INELIGIBLE_MINOR` → `THIRD_PARTY_REFUSAL` → `DIAGNOSTIC_REFUSAL` → `PRESCRIPTIVE_REFUSAL` → normal routing. A lower-priority route cannot weaken a higher-priority safety action.
+- Intercepted responses are versioned local UI content. The LLM cannot compose, paraphrase, translate, or append to them. Safety routes never invoke DCMFNet. Crisis, emergency, acute-distress, minor, and prescriptive routes also never invoke RAG.
+- Safety events contain the category, policy version, timestamp, cryptographic session ID, and operational outcome, but no raw user text, questionnaire token, probability, identity, or inferred diagnosis. Standard logs receive only non-sensitive event metadata. Session context is cleared after a crisis hard interception; any separately required audit record remains subject to the encrypted audit and retention policy.
+
+### Possible self-harm or crisis statements
+
+- `CRITICAL_SAFETY_REDIRECTION` is an immediate hard interception with zero LLM generation. It cancels active generation, clears operational conversation context, and emits minimal critical-safety telemetry.
+- The prominent modal is accessible, selectable, copyable, and provides click-to-call controls; safety contact information must not be made deliberately difficult to copy.
+- Approved India copy:
+
+  > If you or someone you know is in crisis, help is available. You are not alone. Please reach out now to **Tele-MANAS** at **14416** or **1800-89-14416** (free, 24/7), or the **Vandrevala Foundation** at **+91 9999 666 555** (24/7). If there is immediate danger, call **112** or go to the nearest hospital emergency department.
+
+- Helpline names, numbers, availability, jurisdiction, verification source, verification time, and configuration expiry are versioned configuration—not prompt text. Readiness fails closed if required India resources are absent or past their verification expiry. Operators must reverify the configuration on a scheduled basis and may update it without changing prompts.
+
+### Hallucinations, psychosis, or acute distress
+
+- Active delusional framing, severe panic, or acute ungrounded sensory distress routes to `ACUTE_DISTRESS_REDIRECTION`. The response does not validate, invalidate, analyze, interpret, or argue about the reported experience.
+- The system renders only this stored script:
+
+  > It sounds like you are experiencing a deeply overwhelming and stressful moment. Because this is an automated research demonstration, I cannot provide the clinical grounding or support you need right now. Please connect with a trusted friend, family member, or a qualified mental health professional immediately.
+
+- Any indication of immediate danger or self-harm takes the higher-priority emergency or crisis route instead.
+
+### Requests for diagnosis
+
+- `DIAGNOSTIC_REFUSAL` prevents diagnostic labels, diagnostic classification, or confirmation about the user or another person, including in structured output fields.
+- The response starts with: `I am an AI research prototype and cannot diagnose any medical or psychiatric condition.` If the user also asks for general education and no higher-priority route applies, a separate scientific-RAG response may follow. That response is population-level, does not receive questionnaire, inference, or user-specific context, and is returned only when claim-level citation validation succeeds.
+
+### Medication or treatment recommendations
+
+- `PRESCRIPTIVE_REFUSAL` blocks any drug-specific question, plus recommendations, selection, suitability judgments, dosing, and instructions to start, stop, or modify a medication or treatment plan. It is an intentionally conservative product-safety policy; it must not be described as proof that Indian law prohibits all telemedicine prescribing.
+- The system renders only this stored script:
+
+  > I cannot recommend, select, dose, evaluate, start, stop, or change medication or treatment plans. Please consult a registered medical practitioner, psychiatrist, or treating doctor before making any changes.
+
+### Requests to interpret another person's data
+
+- `THIRD_PARTY_REFUSAL` blocks inference or interpretation of another person's questionnaire, symptoms, health information, or model result. Relational wording is not stripped to disguise third-party data, and the data is not processed through `prototype_demo`.
+- The system renders only this stored script:
+
+  > I cannot assess or interpret another person's health information. I can provide general, non-personalized education, or that person may choose to use the adult research demonstration themselves.
+
+- General education, when separately requested and otherwise safe, receives no third-party facts, questionnaire state, or inference context.
+
+### Minors
+
+- The product imposes an adults-only use policy. If validated runtime age is below 18, the deterministic age gate transitions to `STATE_INELIGIBLE_MINOR` and blocks DCMFNet, RAG personalization, prompt construction, and LLM generation.
+- The system renders only this stored script:
+
+  > Access denied. This research prototype is approved for adults aged 18 and over. No risk calculation has been performed.
+
+- The UI and documentation must not claim that DCMFNet was trained exclusively on adults unless artifact-backed evidence is added and verified. The gate is a product eligibility decision and also avoids introducing a child-data consent flow into this prototype.
+
+### Emergency situations
+
+- Emergency indicators such as overdose, acute attack, immediate danger, or an explicit emergency route to `EMERGENCY_REDIRECTION`. The UI displays a persistent, accessible emergency overlay that remains visible until the session is reset, without trapping keyboard focus or blocking click-to-call/copy actions.
+- The system renders only this stored script:
+
+  > 🚨 **EMERGENCY DETECTED:** This tool is not a triage or emergency response service. If you are experiencing a medical or psychological emergency, call **112** (India's national emergency number) or go immediately to the nearest hospital emergency department.
+
+### Educational RAG summarization router
+
+- Requests for definitions, mechanisms, or population-level explanations concerning schizophrenia, hallucinations, or associations between schizophrenia and substance use route independently of questionnaire state and model-result context.
+- The context builder supplies only current retrieved scientific evidence. It does not supply questionnaire tokens, model probabilities, feature-importance data, third-party details, or prior personalized conversation content.
+- Every medical/scientific assertion requires an inline citation mapped to current verified corpus metadata. Raw matched text remains in expandable evidence metadata with DOI/PMID; uncited pretrained knowledge and speculative pathways are prohibited.
+
+### Validation and testing consequences
+
+- Response schemas make intercepted content mutually exclusive with generated answers and model results. Validation rejects mixed safety/assessment payloads, modified fixed scripts, missing resource configuration, or prohibited tool calls.
+- Tests cover paraphrases, misspellings, negation, quoted/academic mentions, multilingual and code-mixed India inputs, prompt injection, streaming cancellation, route precedence, false-positive recovery, context clearing, telemetry redaction, age-boundary values, third-party attempts, and proof that each blocked route cannot reach DCMFNet or the LLM.
+- The safety classifier and thresholds require a versioned evaluation set with sensitivity, specificity, subgroup, and regression reporting before release. Safety policy changes require review and a new policy version.
+
+### Policy verification references
+
+- India emergency number: [Emergency Response Support System, 112 India](https://112.gov.in/).
+- Current national tele-mental-health resource: [Tele-MANAS, Directorate General of Health Services](https://dghs.mohfw.gov.in/national-mental-health-programme.php).
+- KIRAN transition: [Ministry of Social Justice and Empowerment press release, 15 February 2024](https://www.pib.gov.in/PressReleasePage.aspx?PRID=2006265&lang=2&reg=48).
+- Vandrevala contact and availability: [Vandrevala Foundation contact page](https://www.vandrevalafoundation.com/free-counseling/contact-us).
+- Telemedicine boundary reference: [Telemedicine Practice Guidelines](https://esanjeevani.mohfw.gov.in/assets/guidelines/Telemedicine_Practice_Guidelines.pdf).
+- Child-data boundary reference: [Digital Personal Data Protection Act, 2023](https://www.indiacode.nic.in/bitstream/123456789/22037/2/a2023-22.pdf).
+
+These references record the basis for architecture review and do not enter the scientific RAG corpus unless they independently satisfy Section 5. Resource owners must reverify operational contact details; a documentation link is not a perpetual availability guarantee.
+
 ## Pending product decisions
 
-7. Safety and escalation policy
 8. Privacy and data lifecycle
 9. LLM and deployment constraints
 10. Workflow failure behavior

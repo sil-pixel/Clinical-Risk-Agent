@@ -21,7 +21,7 @@ The planned startup product is separate: an India-first, clinician-only platform
 1. **Complete a research risk assessment:** request an assessment, supply missing required information over one or more turns, receive separate DCMFNet-produced positive- and negative-symptom risk probabilities only after validation, and see uncertainty and research-only limitations.
 2. **Explain an existing result:** ask why a result may be elevated or reduced, retrieve relevant scientific evidence, and receive an explanation that keeps model output distinct from literature-backed contextual claims.
 3. **Ask an educational/scientific question:** receive an evidence-grounded answer with traceable citations, or a clear statement that adequate evidence was not retrieved.
-4. **Ask within the approved health scope:** use RAG for general mental health, genetics/environmental factors, diet/lifestyle/diabetes/physical health, and narrowly scoped mental-health medication/treatment education; unrelated medical questions receive a minimal referral response.
+4. **Ask within the approved health scope:** use RAG for general mental health, genetics/environmental factors, diet/lifestyle/diabetes/physical health, and non-drug-specific, non-personalized treatment research; drug-specific or prescriptive medication/treatment requests receive a fixed refusal and unrelated medical questions receive a minimal referral response.
 5. **Make a general or unsupported request:** receive an appropriate conversational response or safe refusal without invoking irrelevant inference/retrieval steps.
 6. **Recover from incomplete or failed operations:** understand what information is missing or which service failed without fabricated fallback results.
 
@@ -81,11 +81,14 @@ The planned startup product is separate: an India-first, clinician-only platform
 | AC-16 | Every prototype result states that the system is a research demonstration, not a patient product, and that the output must not be used for a health or care decision. | AI Engineer / Frontend Engineer / Testing Agent |
 | AC-17 | Deployment mode is explicit and fail-closed; prototype-only generic inputs and display behavior cannot execute under any future hospital-research configuration. | Software Architect / Backend Engineer / Testing Agent / Reviewer |
 | AC-18 | DCMFNet is unreachable from every non-assessment path; only an explicit positive/psychotic- or negative/depressive-symptom risk request with complete validated input can invoke it. | AI Engineer / Testing Agent / Reviewer |
-| AC-19 | Medication/treatment answers remain general, mental-health-related, evidence-grounded, and referral-oriented; unrelated medical questions receive only the approved minimal out-of-scope response. | AI Engineer / RAG Engineer / Testing Agent / Reviewer |
+| AC-19 | Any drug-specific question, medication selection, suitability, dosing, start/stop/change, or individualized treatment evaluation receives the fixed prescriptive refusal without RAG, LLM, or DCMFNet. Only non-drug-specific, non-personalized treatment research may use evidence-grounded RAG; unrelated medical questions receive the approved minimal out-of-scope response. | AI Engineer / RAG Engineer / Testing Agent / Reviewer |
 | AC-20 | Raw probabilities and questionnaire tokens never enter standard logs and persist only in the encrypted, access-controlled audit store under a cryptographically random session ID, never identity; state, consent, and databases enforce the configured India data fence. | Software Architect / Backend Engineer / Testing Agent / Security Reviewer |
 | AC-21 | RAG accepts no general websites, uses the authority-domain allowlist, isolates scientific vectors from patient-specific matrices, and purges deprecated/retracted evidence through a complete PMID/DOI scrub every two weeks. | RAG Engineer / Testing Agent / Reviewer |
 | AC-22 | Each generation receives no more than the configured 3-to-5 distinct eligible sources; response prose contains inline citations but no raw excerpts, while expandable UI evidence containers show retrieval-owned exact matched text with DOI/PMID. | RAG Engineer / AI Engineer / Frontend Engineer / Testing Agent |
 | AC-23 | Feature importance is unavailable until a locally validated SHAP result is bound to the exact inference. Later, the LLM may report the three ranked SHAP values as influences on the model prediction, never as causes of a clinical outcome. | ML Engineer / AI Architect / AI Engineer / Testing Agent / Reviewer |
+| AC-24 | Every input passes the approved pre-generation safety interceptor. Emergency/self-harm and other terminal routes obey deterministic priority, return immutable local scripts, and cannot invoke prohibited LLM, RAG, or DCMFNet paths. | AI Architect / AI Engineer / Testing Agent / Reviewer |
+| AC-25 | Crisis interception cancels active generation, clears operational chat context, and emits only redacted safety telemetry; configured India resources are source-verified and unexpired at readiness. | Backend Engineer / AI Engineer / Frontend Engineer / Testing Agent / Security Reviewer |
+| AC-26 | Under-18 and third-party assessment attempts fail closed before inference. The UI does not claim adult-only model training without artifact evidence and never processes third-party metrics by merely stripping relational wording. | AI Engineer / Frontend Engineer / Testing Agent / Privacy Reviewer |
 
 ## Milestones and ordered backlog
 
@@ -115,7 +118,7 @@ The planned startup product is separate: an India-first, clinician-only platform
 
 ### M5 — Release confidence and handoff
 
-13. **TEST-01 — Execute cross-system verification** (Testing Agent): complete acceptance traceability, automate critical unit/contract/integration/end-to-end/safety paths, and route failures to component owners. Depends on the functioning core system. Done when AC-01 through AC-14 have results and residual gaps are explicit.
+13. **TEST-01 — Execute cross-system verification** (Testing Agent): complete acceptance traceability, automate critical unit/contract/integration/end-to-end/safety paths, and route failures to component owners. Depends on the functioning core system. Done when all acceptance criteria have results and residual gaps are explicit.
 14. **REV-01 — Review release candidate** (Reviewer): assess code, architecture, safety, privacy, provenance, dependencies, technical debt, and test evidence; require owner fixes and recheck them. Depends on TEST-01. Done when blockers are resolved or formally accepted by the appropriate owner.
 15. **DOC-01 — Complete reproducible documentation** (Documentation Agent): document only reviewed behavior, contracts, setup, operation, tests, and limitations. Depends on REV-01. Done when AC-14 and AC-15 are independently reproducible.
 
@@ -144,6 +147,8 @@ Work may overlap only where contracts are not being guessed. In particular:
 - The MVP minimizes collection and operational persistence of sensitive questionnaire data. Raw probabilities and questionnaire tokens never enter standard logs and may be persisted only in an encrypted, access-controlled audit database tied to a cryptographically random session ID, never identity. State, consent, audit, and database schemas support India-aligned DPDP data fencing and localization.
 - Logs, fixtures, screenshots, and documentation must not contain real personal mental-health data.
 - The application must communicate service/tool failures rather than generating a substitute answer.
+- Safety routes execute before normal intent handling. Versioned fixed responses, tool-denial flags, context clearing, and redacted telemetry are enforced by contracts rather than prompts.
+- Emergency and crisis interfaces keep contact details selectable, copyable, accessible, and click-to-call. Required India resource configuration is source-verified and expires into a failed-readiness state rather than silently becoming stale.
 
 ## Risks and mitigations
 
@@ -178,7 +183,7 @@ Work may overlap only where contracts are not being guessed. In particular:
 5. **Resolved — evidence and explanation:** Require claim-level inline citations, prohibit speculation, cap each generation at 3-to-5 sources, render exact matched text only in collapsed evidence containers, and preserve both sides of conflicts. The system performs prediction now, may report validated SHAP feature importance later, and never performs causal inference.
 6. **Provider constraints:** Which LLM and embedding configurations balance reproducibility, cost, privacy, and portfolio usability?
 7. **State and audit lifetime:** What explicit reset/expiry applies to memory-only operational assessment state, and what approved retention/deletion period applies to the separately required encrypted audit records?
-8. **Safety escalation language:** What approved response should accompany potentially urgent user statements while preserving the prototype's non-clinical role?
+8. **Resolved — safety escalation:** Apply the approved pre-generation route priority, immutable refusal/redirection scripts, adult and third-party gates, redacted crisis telemetry, and versioned India resource bundle. Operational owners must still select resource reverification cadence and classifier release thresholds within the approved architecture.
 9. **Public prototype operations:** What invitation/access control, session TTL, concurrency, hosting, and deletion behavior are required for friends and testers?
 
 ## Software Architect handoff

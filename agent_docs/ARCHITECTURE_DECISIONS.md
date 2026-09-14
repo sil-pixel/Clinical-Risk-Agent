@@ -120,12 +120,28 @@ This does not authorize durable health records.
 
 **Consequences:** Conflict-aware retrieval represents each supported position within the cap or returns a limitation. Until SHAP is validated, feature-impact answers receive the deterministic prediction-only message. Later, the LLM may describe validated top-three SHAP values as feature importance for the prediction. It must not call them causes. A feature's clinical relevance may be discussed separately when supported by inline-cited medical evidence.
 
+## ADR-015 — Intercept safety-critical and clinically prohibited requests before generation
+
+**Decision:** Run a local safety interceptor before intent routing, RAG, inference, prompt construction, or LLM generation. Terminal decisions follow this priority: emergency/self-harm, acute distress, minor, third-party data, diagnosis, medication/treatment prescription, then normal processing. They render immutable, versioned local content and explicitly deny tools. Crisis interception cancels active generation, clears operational chat context, and emits redacted telemetry only.
+
+**Why:** Safety behavior must not depend on generative compliance or allow a lower-priority educational route to reach assessment. Third-party processing without the data principal's participation creates consent and privacy risk. Emergency contacts and clinical boundary statements also require verified configuration rather than model memory.
+
+**Consequences:** India resource configuration carries jurisdiction, source, verification time, and expiry; missing or stale required resources fail readiness. Tele-MANAS replaces KIRAN in current primary crisis copy because official government communications state that KIRAN was merged into Tele-MANAS. The adult-only gate is a product eligibility rule and cannot be described as an artifact training fact without evidence. Prescriptive refusal is a conservative product rule, not a claim that all telemedicine prescribing is unlawful. Safety UI remains accessible and permits copying and click-to-call. Tests must prove route precedence, streaming cancellation, context clearing, telemetry redaction, and non-reachability of prohibited tools.
+
+## ADR-016 — Do not semantic-cache generated clinical content in the MVP
+
+**Decision:** Do not semantic-cache generated medical, scientific, assessment, explanation, or safety responses. Exact caching is permitted only for versioned static content such as FAQs and fixed intercept scripts. A future retrieval cache may contain only non-sensitive results and must be keyed by corpus/index, eligibility-policy, and retraction-verification versions.
+
+**Why:** Semantically similar questions may have different safety intent, personalized context, or evidence requirements. Reusing a generated answer could bypass the current safety interceptor, citation membership checks, conflict handling, or retraction state.
+
+**Consequences:** Every input is safety-classified on every request. Static-cache keys include content ID, locale, jurisdiction, and policy version and contain no user or model data. Any later retrieval cache is invalidated on retraction, correction, corpus, allowlist, or policy changes and its entries pass current eligibility and citation validation on read.
+
 ## Deferred decisions
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Streamlit, vector-store, embedding, and LLM package versions.
 - Concrete retrieval adapter and quality-appraisal instruments; the scientific source/corpus eligibility policy is approved in ADR-012.
 - DCMFNet input feasibility and provenance.
 - Final questionnaire presentation.
-- Exact inactivity TTL, request/state size bounds, and approved urgent-response content.
+- Exact inactivity TTL and request/state size bounds.
 
 Deferred items remain owned by the roles and gates identified in the product plan and interface registry; deferral is not permission for downstream agents to guess.

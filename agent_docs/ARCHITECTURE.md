@@ -178,7 +178,9 @@ Questions outside the approved corpus—such as a personalized diabetes-risk que
 
 ### Unsupported, unsafe, or urgent content
 
-Safety policy can terminate or redirect the graph before inference. Deterministic policy rules and schema checks are primary; any probabilistic classifier is advisory unless separately evaluated and approved. Urgent-response wording and jurisdictional resources remain a product/safety decision and must be configuration-backed rather than fabricated by the LLM.
+Safety policy terminates or redirects the graph before intent routing, retrieval, prompt construction, or inference. The deterministic priority is emergency/self-harm, acute distress, minor, third-party data, diagnosis, medication/treatment prescription, then normal processing. Exact rules and an evaluated local classifier may detect safety cases, but safety-critical uncertainty fails closed. Terminal routes render versioned local scripts; the LLM never authors or modifies them.
+
+Self-harm interception cancels active generation, clears operational chat context, and emits only redacted event metadata. Third-party health data is rejected rather than made apparently anonymous by stripping relational words. The under-18 gate blocks inference as a product eligibility rule; architecture must not assert an adult-only training population without artifact evidence. India emergency and crisis resources are versioned, source-verified configuration and readiness fails if required resources are missing or stale.
 
 ## Safety and validation architecture
 

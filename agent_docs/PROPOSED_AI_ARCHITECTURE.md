@@ -31,6 +31,8 @@ Every request, graph state, inference result, audit event, and evaluation fixtur
 User
   ↓
 Deterministic transport validation and safety policy
+  ├── terminal safety/refusal result → fixed local UI content → User
+  └── ALLOW_NORMAL_PROCESSING
   ↓
 Hybrid Intent Router
   ├── deterministic rules for explicit and safety-critical cases
@@ -41,7 +43,7 @@ LangGraph Supervisor
   ├── Risk-explanation subgraph
   ├── Scientific RAG subgraph
   ├── Education/conversation subgraph
-  └── Unsupported/urgent-content subgraph
+  └── Unsupported-content subgraph
   ↓
 Structured Context Builder
   ↓
@@ -137,7 +139,11 @@ Only the LangGraph assessment subgraph can invoke DCMFNet, and only after an exp
 
 ### Unsupported or urgent-content subgraph
 
-Deterministic safety policy may terminate or redirect normal processing before inference/retrieval. Exact categories, wording, jurisdiction behavior, and escalation resources remain pending product decisions.
+The safety interceptor runs before the intent router and returns a typed terminal result for `EMERGENCY_REDIRECTION`, `CRITICAL_SAFETY_REDIRECTION`, `ACUTE_DISTRESS_REDIRECTION`, `STATE_INELIGIBLE_MINOR`, `THIRD_PARTY_REFUSAL`, `DIAGNOSTIC_REFUSAL`, or `PRESCRIPTIVE_REFUSAL`. Priority follows that order. Exact rules plus a separately evaluated local classifier may detect safety cases; a critical or uncertain positive fails closed.
+
+Emergency, crisis, acute-distress, minor, and prescriptive routes return versioned local scripts without invoking RAG, DCMFNet, or the LLM. Diagnostic refusal may hand off only a separately requested population-level question to the isolated scientific-RAG path. Third-party health data is rejected rather than anonymized by deleting relational wording. Any educational handoff receives no questionnaire, probability, attribution, third-party, or personalized conversation context.
+
+Self-harm interception cancels any active generation, discards unvalidated output, clears operational chat context, and emits `CRITICAL_SAFETY_REDIRECTION` with no raw message or identity. Emergency and crisis UI uses configuration-backed India resources with source and last-verification metadata. Stale or missing required resource configuration fails readiness. Fixed content, including Tele-MANAS (`14416` or `1800-89-14416`), Vandrevala Foundation (`+91 9999 666 555`), and emergency number `112`, is never fabricated or altered by the LLM.
 
 ## Proposed adaptive RAG architecture
 
@@ -325,19 +331,19 @@ Current evaluation guidance supports separating correctness, relevance, grounded
 - Automated diagnosis, treatment, or medication guidance
 - Model-generated questionnaire values or unvalidated/LLM-generated DCMFNet feature importance; the planned local SHAP port remains blocked pending validation and approval
 - Clinical decision support, regulated-device claims, or EHR integration; clinician-only hospital silent research remains a separately gated future mode
+- Semantic caching of generated medical, scientific, assessment, explanation, or safety responses. The MVP may exact-cache only versioned static content; any future retrieval cache must be non-sensitive, corpus/policy/retraction-versioned, and revalidated on read.
 
 These can be reconsidered only with evidence that they improve an approved requirement enough to justify their complexity and risk.
 
 ## Pending product decisions
 
-The following answers are required before this proposal becomes the approved AI architecture:
+The following answers remain required before this proposal becomes the approved AI architecture:
 
-1. Safety categories, escalation behavior, and approved urgent wording
-2. Privacy, session lifetime, external-provider, and logging policy
-3. LLM/embedding deployment, cost, latency, offline, and language constraints
-4. User-visible failure behavior and retry budgets
-5. Measurable quality and performance thresholds
-6. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
-7. Hosted-prototype access control, session TTL, concurrency target, deletion behavior, and operating budget
+1. Privacy, session lifetime, external-provider, and logging policy
+2. LLM/embedding deployment, cost, latency, offline, and language constraints
+3. User-visible non-safety failure behavior and retry budgets
+4. Measurable quality and performance thresholds
+5. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
+6. Hosted-prototype access control, session TTL, concurrency target, deletion behavior, and operating budget
 
 Approval requires reconciling these decisions into this document, the interface registry, the AI/RAG decision record, and implementation handoffs for the RAG Engineer, AI Engineer, and Testing Agent.
