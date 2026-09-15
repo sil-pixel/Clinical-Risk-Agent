@@ -283,6 +283,18 @@ Unrelated general medical questions are out of scope. The assistant provides at 
 
 Conversational risk-calculation intent never invokes DCMFNet. It returns fixed `ASSESSMENT_REDIRECTION` content and a `Launch Research Questionnaire Router` action. Only a complete valid submission from the structured assessment view, after session, route, safety, and questionnaire validation, may invoke DCMFNet. Discussion or education about psychosis, depression, schizophrenia, genetics, diet, lifestyle, diabetes, medication, treatment, or other health topics never authorizes inference. Explaining an existing result uses the stored immutable result and RAG without rerunning DCMFNet; a new calculation requires another structured assessment submission.
 
+## Workflow and failure behavior
+
+Every approved manual questionnaire field is required and Framer disables submission until those visible fields are locally valid. The backend remains authoritative: it ignores client completion flags, validates the submitted manual values, adds only `generic_genetic_profile_v1`, and confirms the exact complete 105-variable matrix before inference. Users do not manually enter the generic-profile variables.
+
+The intent classifier uses `0.85` as its initial calibrated maximum-confidence threshold. A lower score, an out-of-distribution result, or unresolved incompatible intents produces the fixed two-action clarification and grants no RAG, LLM, or inference permission. This number is an initial abstention policy, not model accuracy, clinical confidence, or a safety threshold; calibration and per-class evaluation must justify it before release.
+
+Out-of-range/non-finite model outputs, invalid inputs, and artifact/configuration errors are never retried. Only a transient execution interruption before a result exists may retry once with the exact immutable in-memory request and idempotency key. No-evidence, retrieval outage, local-generation outage, and inference outage remain distinct deterministic states. A valid result may stay visible if only its explanation fails, but an outage never creates a prediction or sends a risk summary in response to a standalone scientific question.
+
+A citation validation failure removes its entire factual claim block, not merely the citation marker. If the remaining content is not coherent, complete, and fully cited, all generated content is discarded; one bounded regeneration is permitted before a fixed failure response.
+
+The runtime must not create `ticket.jsonl` or another user-bearing incident file. Operational failure telemetry contains only allowlisted component/operation/error codes, coarse time and latency buckets, retry count, deployment mode, and version identifiers. Raw exception stacks/locals, queries, questionnaire or target metrics, probabilities, evidence text, and session/user/network identifiers are prohibited.
+
 ---
 
 # Tool Calling

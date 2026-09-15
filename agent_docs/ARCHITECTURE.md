@@ -161,12 +161,13 @@ State-size limits remain configured and tested. The 30-minute TTL is an approved
 
 ### Structured risk assessment
 
-1. The structured assessment route validates the active session, route authorization, safety state, and questionnaire against the ML-owned feature contract.
+1. Framer enables submission only after every approved manual field is locally valid; the structured route then independently validates the active session, route authorization, safety state, and questionnaire against the ML-owned feature contract.
 2. If incomplete, it returns structured missing-field information in volatile state.
-3. If complete, it calls the inference port exactly once for the validated input/version.
-4. The inference adapter returns an immutable result or typed error. A deterministic boundary gate requires finite values in inclusive `[0.0, 1.0]`; an invalid value remains only in the protected volatile request object and becomes a fail-closed internal-system-variance error.
-5. RAG runs only when scientific explanatory claims are requested or required.
-6. The context builder passes exact results, evidence, and limitations to the LLM; response validation rejects unsupported citations, score changes, causal overstatement, and unsafe claims.
+3. The backend adds only `generic_genetic_profile_v1`, assembles and validates the exact complete 105-variable matrix, and ignores forged client-completion flags.
+4. If complete, it calls the inference port once for the validated input/version. Only an allowlisted transient execution interruption before a result exists may repeat that call once using the identical volatile vector, target, artifact, and idempotency key.
+5. The inference adapter returns an immutable result or typed error. A deterministic boundary gate requires finite values in inclusive `[0.0, 1.0]`; an invalid value is never retried, remains only in the protected volatile request object, and becomes a fail-closed internal-system-variance error.
+6. RAG runs only when scientific explanatory claims are requested or required.
+7. The context builder passes exact results, evidence, and limitations to the LLM; response validation rejects unsupported citations, score changes, causal overstatement, and unsafe claims.
 
 ### Explain existing risk
 
@@ -203,7 +204,7 @@ Use defense in depth:
 
 The response validator does not rewrite a bad score or invent a replacement citation. It retries only when policy permits with the same immutable tool context; otherwise it returns a deterministic safe error/limitation response.
 
-After safety returns `ALLOW_NORMAL_PROCESSING`, a local language gate admits only supported English free text. Unsupported or uncertain language returns exactly `Input error: Language unsupported. Please resubmit your query in English.` and cannot reach intent classification or tools. Rephrased English intent and scope classification then uses a project-fine-tuned `distilbert/distilbert-base-uncased` Hugging Face sequence-classification encoder. A deterministic adapter owns label mapping, calibration, abstention, typed output, and model provenance. The classifier cannot generate text, create labels, call tools, or authorize DCMFNet; low-confidence and out-of-distribution results clarify or fail to the minimal unsupported path. The base checkpoint is not a production classifier until project-specific fine-tuning and evaluation pass approved thresholds.
+After safety returns `ALLOW_NORMAL_PROCESSING`, a local language gate admits only supported English free text. Unsupported or uncertain language returns exactly `Input error: Language unsupported. Please resubmit your query in English.` and cannot reach intent classification or tools. Rephrased English intent and scope classification then uses a project-fine-tuned `distilbert/distilbert-base-uncased` Hugging Face sequence-classification encoder. A deterministic adapter owns label mapping, calibration, abstention, typed output, and model provenance. The classifier cannot generate text, create labels, call tools, or authorize DCMFNet. A calibrated maximum confidence below `0.85`, an out-of-distribution result, or unresolved incompatible intent produces `INTENT_CLARIFICATION_REQUIRED` with the approved two actions and no RAG, LLM, or inference. The base checkpoint is not a production classifier until project-specific fine-tuning and evaluation pass approved thresholds.
 
 For any raw probability below `0.0` or above `1.0`, the UI returns exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The system never clamps, displays, logs, transmits, or persists the raw value. It remains only in the protected volatile failure object until request teardown.
 
@@ -288,7 +289,15 @@ Use a stable error taxonomy across internal and public boundaries:
 
 Public errors expose a stable code, safe message, and retryability without stack traces or sensitive values. Internal logs use allowlisted component/route, latency bucket, artifact/corpus/policy version, and error/status code fields. They exclude raw messages, request/response bodies, questionnaire tokens/answers, feature vectors, retrieved full text, prompts, probabilities, session/correlation IDs, IP addresses, user agents, referrers, headers, secrets, and stack-local sensitive values.
 
-There is no sensitive audit sink in `prototype_demo`. Exact invalid probabilities may be inspected only inside a protected volatile error object and are wiped on request teardown. Persisted product metrics, if enabled, are aggregate counters or coarse duration buckets created before persistence with no event rows, time stamps, session/correlation IDs, network/device fields, route sequences, safety text, questionnaire data, or probabilities. Crisis counts use minimum aggregation and disclosure thresholds.
+Failure routing is typed and deterministic:
+
+- `INTENT_CLARIFICATION_REQUIRED` renders the approved two-button clarification; each button opens a new bounded flow and neither executes a tool.
+- invalid/non-finite DCMFNet values, schema errors, and artifact/configuration failures are non-retryable; transient execution failures alone may retry once with immutable inputs and idempotency.
+- `NO_ELIGIBLE_EVIDENCE`, `RETRIEVAL_UNAVAILABLE`, and `GENERATION_UNAVAILABLE` have distinct fixed messages and never fall back to uncited model knowledge.
+- A valid existing result may remain visible when only explanation dependencies fail, with a deterministic target-aware limitation. A standalone RAG request never receives a risk summary.
+- Citation failure rejects the associated factual claim block rather than deleting its citation. If the remaining response is incomplete or incoherent, reject the whole response; one bounded regeneration is allowed before the fixed failure response.
+
+There is no sensitive audit sink in `prototype_demo`, and runtime creation of `ticket.jsonl` is prohibited. Exact invalid probabilities and full exception objects may be inspected only inside protected volatile request memory and are wiped on teardown. Operational failure telemetry is limited to allowlisted coarse time/latency buckets, component/operation/error codes, retry count, deployment mode, and version identifiers; it contains no raw stack/locals, query, target metrics, probability, evidence, or session/user/network identifier. Persisted product metrics, if enabled, are aggregate counters or coarse duration buckets created before persistence with no event rows, time stamps, session/correlation IDs, network/device fields, route sequences, safety text, questionnaire data, or probabilities. Crisis counts use minimum aggregation and disclosure thresholds.
 
 Raw runtime payloads cannot be sent to public model or telemetry APIs. LLMs, embeddings, rerankers, safety/intent classifiers, and DCMFNet run inside the approved Modal backend. User-bearing transport uses only documented no-payload-storage endpoint types; ordinary function invocation, async/spawn payloads, user-data logs/snapshots, and persistent Modal stores are prohibited. Compute/routing is pinned to Mumbai and the provider's metadata/log location and TLS edge remain explicit compliance limitations. Bibliographic APIs receive only generated non-sensitive scientific search terms.
 
@@ -306,6 +315,7 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 - Response tests for claim-level citation completeness/entailment, the 3-to-5 source cap, collapsed evidence-display separation, and conflict coverage.
 - Explainability tests for absent/invalid feature importance, deterministic prediction-only messaging, exact-result binding, top-three SHAP JSON integrity, value/rank preservation, and causal-language rejection.
 - Graph tests for every intent, missing-state branch, tool failure, retry/fallback, unsafe request, and response-validation failure.
+- Failure tests for the calibrated `0.85` boundary, two-action clarification, zero retry on invalid outputs, single retry on allowlisted transient failures, no-evidence/outage separation, claim-level citation rejection, and absence of `ticket.jsonl` or sensitive exception telemetry.
 - FastAPI integration tests through the public session contract.
 - Framer end-to-end journeys against a deterministic backend test configuration, including validated SSE ordering/cancellation, assessment redirection, offline no-inference behavior, secret absence, CORS, and no persistent replay.
 

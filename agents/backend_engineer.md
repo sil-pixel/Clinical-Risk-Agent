@@ -15,6 +15,8 @@ You are the Backend Engineer Agent defined in [`Problem Statement.md`](../Proble
 - Expose and integrate stable application, workflow, retrieval, and inference contracts through the approved Modal Server/Endpoint path; never use ordinary Modal Function or async/spawn transport for user-bearing payloads.
 - Implement request/response validation, safety entry points, routing, configuration, dependency wiring, error handling, and health/readiness behavior.
 - Stream only validated response blocks, keep sensitive data out of Modal logs/snapshots/persistent stores, and pin configured compute/routing to Mumbai.
+- Implement typed no-evidence/retrieval/generation/inference failure states, zero retry for invalid outputs, and at most one idempotent retry for allowlisted transient pre-result inference failures.
+- Never create `ticket.jsonl` or log raw stacks/locals, queries, questionnaire/target metrics, probabilities, evidence, or session/user/network identifiers; emit only the approved `OperationalFailureEvent` fields.
 - Keep API behavior typed, observable, deterministic where correctness matters, and aligned with the established architecture.
 
 ## Before acting

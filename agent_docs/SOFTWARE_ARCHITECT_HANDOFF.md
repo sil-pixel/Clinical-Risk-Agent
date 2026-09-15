@@ -20,6 +20,10 @@ Architecture scope: ARCH-01 and ARCH-02 initial baseline
 - Conversational RAG uses validated SSE blocks, never raw unvalidated model tokens. Conversational risk-calculation intent redirects to the structured questionnaire; chat cannot invoke DCMFNet.
 - Offline mode is display/reset only and must state that no calculation was performed.
 - Modal user-bearing transport uses only a currently documented no-payload-storage Server/Endpoint path with Mumbai compute/routing, server-side secrets, and no ordinary function/async payloads, sensitive logs/snapshots, or persistent user-data stores.
+- Framer requires every approved manual assessment field before enabling submit; the backend independently assembles and validates the complete 105-variable matrix after applying only the approved generic profile.
+- Intent confidence below the initial calibrated `0.85` threshold, OOD input, or unresolved incompatible intents returns a deterministic two-action clarification with no tool permissions; this threshold remains subject to evaluation.
+- Invalid model values and schema/artifact failures are never retried. Only an allowlisted transient pre-result execution failure may retry once with immutable inputs and idempotency.
+- No-evidence, retrieval, generation, and inference failures remain distinct. Citation failure rejects its whole factual claim block. `ticket.jsonl`, raw exception/query/payload logging, and sensitive incident records are prohibited.
 - In-memory-only, bounded MVP session state with exact 30-minute inactivity expiry and explicit reset; raw text, questionnaire data, model inputs/results, probabilities, personalized responses, and history have no persistent destination or external-provider route.
 - Structured validation before and after the LLM; immutable model and evidence results.
 - New agent-generated documentation under `agent_docs/`.

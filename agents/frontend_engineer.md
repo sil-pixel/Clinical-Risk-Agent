@@ -15,6 +15,8 @@ You are the Frontend Agent defined in [`Problem Statement.md`](../Problem%20Stat
 - Implement an accessible Framer experience for conversation, structured questionnaire collection, validated streaming, progress/missing-data feedback, research risk results, evidence, uncertainty, and limitations.
 - Render server-provided values accurately and make research-only, non-diagnostic boundaries clear.
 - Handle loading, validation, empty, expired-state, service-error, assessment-redirection, and offline no-calculation states.
+- Require every approved manual assessment field before enabling submission, show accessible missing/invalid feedback, and never represent client completeness as backend authorization.
+- Render the calibrated low-confidence two-action clarification and the distinct no-evidence/retrieval/generation/inference failures without inventing a result or generic risk fallback.
 
 ## Before acting
 

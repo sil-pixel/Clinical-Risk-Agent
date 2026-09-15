@@ -20,7 +20,7 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | --- | --- | --- | --- |
 | `SafetyDecision` | Safety → workflow/API | AI Architect (design), AI Engineer (implementation) | **Architecture-approved:** terminal categories, priority, fixed-response and tool-denial semantics defined below |
 | `LanguageDecision` | Language gate → workflow/API | AI Architect (design), AI Engineer (implementation) | **Architecture-approved boundary:** English-only supported/unsupported/uncertain result; concrete local detector and thresholds pending evaluation |
-| `IntentDecision` | Router → LangGraph | AI Architect (design), AI Engineer (implementation) | **Architecture-approved boundary:** local fine-tuned encoder, fixed enum, calibrated confidence, abstention, and provenance; release thresholds pending evaluation approval |
+| `IntentDecision` | Router → LangGraph | AI Architect (design), AI Engineer (implementation) | **Architecture-approved boundary:** local fine-tuned encoder, fixed enum, initial calibrated `0.85` clarification threshold, abstention, and provenance; release use pending calibration/evaluation approval |
 | `DeploymentMode` | Composition root → all workflow/results/telemetry | Software Architect | **Architecture-approved:** `prototype_demo`; `hospital_silent_research` reserved and unavailable until separately gated |
 | `ArtifactInspection` | DCMFNet artifact validator → readiness/tests | ML Engineer | **Implemented:** integrity/readiness facts |
 | `InferenceInputSchema` | DCMFNet adapter → graph/backend/tools | ML Engineer | **Implemented:** exact machine feature groups/order; not user-facing questionnaire copy |
@@ -35,6 +35,8 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | `StructuredExplanationContext` | Context builder → LLM port | AI Architect (design), AI Engineer (implementation) | Must compose immutable validated results; finalized after ML/RAG contracts |
 | `ValidatedAssistantResponse` | Response validator → API/UI | AI Architect (design), AI Engineer (implementation) | Envelope below; content blocks finalized with Backend/Frontend |
 | `AssessmentRedirection` | Conversational router → API/Framer | AI Architect / Frontend Engineer | **Architecture-approved:** fixed text and action; no inference permission |
+| `IntentClarification` | Intent adapter → API/Framer | AI Architect / Frontend Engineer | **Architecture-approved:** calibrated `<0.85`/OOD ambiguity route with two fixed actions and no tool permission |
+| `OperationalFailureEvent` | Backend components → allowlisted telemetry | Software Architect / Backend Engineer | **Architecture-approved:** non-sensitive codes/buckets/versions only; no `ticket.jsonl` |
 | Public session transport | Modal-hosted FastAPI ↔ Framer | Backend Engineer | Architecture baseline below; JSON plus validated SSE |
 | `ServiceError` | All components → API/tests | Software Architect / Backend Engineer | Minimum taxonomy approved |
 
@@ -51,7 +53,7 @@ The router output uses the roles already named in the problem statement:
 
 The exact spelling is the canonical machine representation. Adding an intent requires Product Manager approval and an architecture/workflow/test update. Questionnaire completeness is never an intent.
 
-`IntentDecision` contains the enum value, calibrated confidence, `requires_clarification`, non-sensitive rationale code, classifier model ID, pinned source revision/checksum, fine-tuning dataset/version, calibration version, and router version. It contains no generated prose, raw logits in public payloads, tool choice, questionnaire completeness decision, or new label. The local classifier adapter maps model logits to this contract and abstains when confidence or out-of-distribution checks fail.
+`IntentDecision` contains the enum value, calibrated confidence, `requires_clarification`, non-sensitive rationale code, classifier model ID, pinned source revision/checksum, fine-tuning dataset/version, calibration version, and router version. It contains no generated prose, raw logits in public payloads, tool choice, questionnaire completeness decision, or new label. The local classifier adapter maps model logits to this contract. A maximum calibrated confidence below `0.85`, an out-of-distribution result, or unresolved incompatible intents sets `requires_clarification=true` and denies all tools. Safety uncertainty is resolved before this threshold and cannot be downgraded to clarification.
 
 The proposed baseline is a project-fine-tuned `distilbert/distilbert-base-uncased`. The base checkpoint is not approved for zero-shot routing. The selected artifact must be pinned and integrity checked, operate locally, and pass the approved English routing, calibration, adversarial, memory, and CPU-latency gates.
 
@@ -60,6 +62,8 @@ The proposed baseline is a project-fine-tuned `distilbert/distilbert-base-uncase
 `risk_assessment` in a conversational message produces `ASSESSMENT_REDIRECTION` and never authorizes inference. Only a complete valid submission from the separately initialized structured assessment view, with safety and route authorization, may invoke DCMFNet. Scientific or educational discussion of symptoms routes to RAG without inference. `explain_my_risk` consumes a stored immutable result and does not rerun the model; a new calculation requires another structured assessment submission.
 
 `AssessmentRedirection` contains `response_kind=ASSESSMENT_REDIRECTION`, fixed-content ID/version, the exact approved redirection text, `action_id=launch_research_questionnaire_router`, an internal Framer route target, and `allow_inference=false`, `allow_rag=false`, `allow_llm=false`. Activating the action initializes volatile questionnaire state but does not call DCMFNet.
+
+`IntentClarification` contains `response_kind=INTENT_CLARIFICATION_REQUIRED`, fixed text `I didn't quite catch that. Please select what you would like to do:`, actions `submit_risk_assessment_questionnaire` and `ask_about_schizophrenia_and_clinical_associations`, classifier/calibration/router versions, and `allow_inference=false`, `allow_rag=false`, `allow_llm=false`. The first action launches a blank volatile assessment form; the second requests a new English question. Neither action treats the ambiguous input as authorized content.
 
 General mental health, genetics/environmental factors, diet/lifestyle/diabetes/physical health, and non-drug-specific, non-personalized treatment research may use RAG under the approved source policy. Any drug-specific question, medication selection, suitability, dosing, start/stop/change, or individualized treatment evaluation takes `PRESCRIPTIVE_REFUSAL` without RAG or DCMFNet. Unrelated general medical questions use the minimal out-of-scope response contract and do not invoke full RAG or DCMFNet.
 
@@ -170,6 +174,8 @@ The response envelope must include:
 - local attribution only when supplied by the validated attribution port for the current inference result
 - limitations and safe typed error, if any
 
+Valid terminal response kinds include `INTENT_CLARIFICATION_REQUIRED`, `ASSESSMENT_REDIRECTION`, `NO_ELIGIBLE_EVIDENCE`, `RETRIEVAL_UNAVAILABLE`, `GENERATION_UNAVAILABLE`, `INFERENCE_UNAVAILABLE`, and `INTERNAL_SYSTEM_VARIANCE`, in addition to successful and safety/refusal kinds. These states are not interchangeable.
+
 The Backend Engineer may refine transport names during implementation but must preserve these semantics and record any public-contract change. HTTP status mapping must distinguish invalid transport, missing/expired session, policy rejection, internal dependency failure, and successful workflow responses that request more information.
 
 The Framer client calls only these Modal-hosted backend routes. It sends the opaque credential in the `Authorization` header from volatile memory, never in a URL, cookie, browser store, response replay, or log. The backend requires narrow CORS/origin configuration, request-size and rate limits, and short-lived signed session credentials; an `Origin` header is not an authentication mechanism. Infrastructure or model credentials never cross this contract.
@@ -203,6 +209,12 @@ Every `ServiceError` has:
 - optional non-sensitive details from an approved allowlist
 
 Minimum error families are defined in the architecture: validation/safety, session, questionnaire, artifact/configuration, inference, internal-system variance, retrieval, LLM, and response-validation errors. Internal exceptions, stack traces, raw probabilities, questionnaire values, prompts, and secrets never cross the public boundary. Internal-system variance returns no estimate and maps to the exact approved safe message above.
+
+Retryability is explicit rather than inferred from an HTTP status. Questionnaire/schema, artifact/configuration, non-finite/out-of-range output, safety/policy, no-evidence, and response-integrity errors are non-retryable by the orchestrator. A transient inference execution interruption before any result may retry once with the same idempotency key and immutable in-memory request. Retrieval or generation availability errors do not silently switch providers or use pretrained knowledge.
+
+`OperationalFailureEvent` contains only a coarse time bucket, component/operation/error codes, retry count, latency bucket, deployment mode, and artifact/corpus/model/policy versions. It expressly excludes raw stacks and locals, user/query text, questionnaire/feature/target metrics, probabilities/results, evidence text, session/correlation IDs, identity/network fields, headers, and credentials. `ticket.jsonl` is not a permitted sink.
+
+Generated response content is a sequence of independently validated blocks. A citation/provenance failure invalidates its whole factual claim block; removing only the citation marker is prohibited. Remaining blocks may be returned only if they still form a coherent, complete, fully cited response with all mandatory limitations. Otherwise all generated blocks are discarded, one bounded regeneration may run, and a second failure returns `GENERATION_UNAVAILABLE` or the more specific dependency state.
 
 ## Zero-retention and India data-fence boundary
 

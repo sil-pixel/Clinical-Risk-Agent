@@ -445,7 +445,59 @@ These references record the basis for architecture review and do not enter the s
 - [Modal cold-start configuration](https://modal.com/docs/guide/cold-start)
 - [Framer Fetch security guidance](https://www.framer.com/help/articles/how-to-use-fetch/)
 
+## 10. Workflow and failure behavior — approved for portfolio MVP
+
+### Questionnaire completeness gate
+
+- Every approved user-facing questionnaire control is required and has a deterministic type, range, unit, and encoding. Framer keeps the assessment submit action disabled until every manually collected field is locally valid and displays a missing/invalid-field summary that does not rely on the disabled control alone.
+- The user does not manually enter all 105 model variables. After submission, the backend independently validates the manual fields, adds only the approved `generic_genetic_profile_v1` values, constructs the exact 105-variable target matrix, and validates completeness again. Client validation is usability support and can never authorize inference.
+- Missing, extra, malformed, non-finite, incorrectly encoded, or unapproved values return a typed questionnaire validation result. They never invoke DCMFNet, and forged client completion flags are ignored.
+
+### Ambiguous conversational intent
+
+- The bounded intent classifier uses calibrated probabilities. When the highest permitted non-safety intent confidence is below `0.85`, when the out-of-distribution detector fires, or when two incompatible intents remain unresolved, the system suppresses generation, RAG, and inference and returns `INTENT_CLARIFICATION_REQUIRED`.
+- Safety-critical or clinically prohibited uncertainty is handled by the earlier fail-closed safety policy; the `0.85` clarification rule cannot downgrade a safety route.
+- Framer renders exactly: `I didn't quite catch that. Please select what you would like to do:` with two actions: `Submit Risk Assessment Questionnaire` and `Ask About Schizophrenia & Clinical Associations`.
+- The first action only launches a new volatile structured questionnaire state; despite its label, it does not submit data or invoke DCMFNet. The second opens the bounded scientific-question experience and asks the user for a new English question; it does not reuse the ambiguous text as an authorized medical query.
+- `0.85` is the initial product threshold, not proof of adequate classifier quality. Calibration and per-class evaluation under Section 11 remain release gates; a later threshold change requires a versioned policy decision and regression evidence.
+
+### DCMFNet failures and retry policy
+
+- A non-finite or out-of-range model output is a deterministic validation failure, not a transient outage. It is never retried, because rerunning the same deterministic model and vector cannot make the value valid. It immediately uses the Section 3 internal-system-variance response and destroys the protected raw value at request teardown.
+- Input/schema errors, incomplete matrices, artifact checksum/configuration failures, and policy denials are also non-retryable and fail closed through their typed errors.
+- Only an explicitly classified transient execution failure—such as a temporary worker interruption before a result exists—may be retried once. The retry uses the same already-validated vector held in volatile memory, the same artifact/target, and the same idempotency key; it never reconstructs inputs, changes values, or writes them to telemetry.
+- If that single retry also fails, the UI renders exactly: `System Note: The model failed to compute your specific risk estimation at this time. You may attempt to re-submit your parameters if you wish.` No estimate, RAG explanation, or LLM output accompanies it.
+
+### RAG and generation fallbacks
+
+- Retrieval distinguishes `NO_ELIGIBLE_EVIDENCE` from `RETRIEVAL_UNAVAILABLE`. Neither state permits the LLM to answer from pretrained knowledge.
+- For `NO_ELIGIBLE_EVIDENCE`, the UI renders: `I couldn't find eligible, current scientific evidence in the approved corpus for this question. I won't generate a medical or scientific answer without verified sources. You may search PubMed directly or ask a broader question.`
+- For vector-store or retrieval infrastructure failure, the UI renders: `Scientific evidence is temporarily unavailable, so I can't provide an evidence-based answer right now. Please try again later or search PubMed directly.`
+- For locally hosted orchestrator-LLM timeout, capacity exhaustion, or invalid output after the bounded response-validation retry, the UI renders: `I couldn't generate a validated evidence-based response at this time. Please try again later.` The architecture has no external LLM-provider fallback and does not characterize this path as a public-provider `429`.
+- A previously validated DCMFNet result remains displayable when only RAG or the LLM fails. In that case Framer may also render a deterministic, target-aware assessment fallback: `Result Summary: The simulated research estimate for {validated_target_label} is shown above. An evidence-grounded explanation is temporarily unavailable. ⚠️ CAUTION: This metric is strictly intended for portfolio research and engineering demonstration purposes only and is not validated for individual care decisions. You may search PubMed directly for scientific literature.` The target label and displayed estimate come only from the existing validated result contract.
+- The target-aware assessment fallback is never shown for a standalone scientific question, before successful inference, after an invalid probability, or for an expired/reset session. It cannot turn a RAG or LLM failure into a new prediction. The universal psychotic/manic fallback proposed for all outage types is therefore not adopted.
+
+### Response-validation failures
+
+- Every response is represented as structured claim/content blocks and validated before any `validated_content` SSE event reaches Framer.
+- When a citation fails provenance or entailment validation, the system rejects the entire associated factual claim block. It must not remove only the citation marker and expose the now-uncited medical claim.
+- A rejected claim block may be omitted only if the remaining response is coherent, answers the request, retains every required limitation/disclaimer, and contains no uncited medical or scientific claim. Otherwise the entire generation is rejected.
+- One bounded regeneration may receive only non-sensitive validation error codes and the same immutable result/evidence context. If it fails, the output is purged and the appropriate no-evidence, dependency-unavailable, or generation-unavailable message above is returned. A generic risk-summary block cannot substitute for a failed educational answer.
+
+### Privacy-safe operational failure telemetry
+
+- `ticket.jsonl` is prohibited in `prototype_demo`. A local serverless file is not a durable incident system and would violate the zero-persistent-user-data and no-filesystem requirements if it contained raw stacks, queries, target metrics, vectors, or probabilities.
+- Failures emit only the allowlisted `OperationalFailureEvent`: coarse time bucket, component and operation codes, stable error category, retry count, latency bucket, deployment mode, and artifact/corpus/model/policy versions. It contains no raw exception stack, exception locals, user query/token string, questionnaire data, target payload metrics, probability, evidence text, session/correlation ID, identity, IP address, or credential.
+- Emission is non-blocking and cannot delay safety, reset, or the public failure response. Provider logs may receive this sanitized event only under the Section 8 retention/residency disclosure; any durable incident tracker requires a separate privacy review and must remain non-sensitive.
+- The full exception may exist only in protected volatile process memory while the request is being handled, with local-variable capture and body capture disabled. It is destroyed at teardown. Operators diagnose recurring failures from aggregate codes, versions, controlled synthetic reproductions, and non-sensitive deployment telemetry.
+
+### Failure-path verification
+
+- Tests cover client and server questionnaire enforcement, all 105-variable server completeness after generic-profile assembly, forged completion flags, the calibrated `0.85` boundary, clarification actions, safety precedence, and proof that clarification cannot reach tools.
+- Inference tests prove zero retries for invalid/non-finite outputs and schema/artifact failures, at most one retry for allowlisted transient failures, immutable retry inputs, idempotency, exact public messages, and absence of sensitive telemetry.
+- RAG/LLM tests distinguish no evidence, retrieval outage, generation outage, valid-result preservation, and standalone-query behavior. Response tests prove claim-level rejection, no orphaned claims after citation failure, bounded regeneration, pre-stream validation, and no universal risk fallback.
+- Privacy tests fail if `ticket.jsonl` or another runtime failure file is created, if raw exception stacks or queries reach logs, or if any failure event contains a session/user/model-input/result value.
+
 ## Pending product decisions
 
-10. Workflow failure behavior
 11. Quality targets

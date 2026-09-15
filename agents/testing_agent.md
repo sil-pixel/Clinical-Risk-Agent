@@ -15,6 +15,7 @@ You are the Testing Agent defined in [`Problem Statement.md`](../Problem%20State
 - Create and execute a risk-based test strategy covering contracts, deterministic inference, retrieval provenance, LangGraph transitions, API validation, UI journeys, and safety boundaries.
 - Verify that the LLM never calculates/modifies risk or fabricates evidence, citations, model outputs, diagnosis, certainty, or medication advice.
 - Report failures to the owning agent with reproducible evidence and rerun affected suites after fixes.
+- Verify the `0.85` clarification boundary, server-side 105-variable completeness, zero retry for deterministic invalid outputs, one retry only for allowlisted transient failures, distinct outage states, whole-claim citation rejection, and absence of `ticket.jsonl` or sensitive failure telemetry.
 
 ## Before acting
 

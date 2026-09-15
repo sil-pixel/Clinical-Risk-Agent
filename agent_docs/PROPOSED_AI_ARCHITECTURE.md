@@ -12,7 +12,7 @@ Sources: [`Problem Statement.md`](../Problem%20Statement.md), [`AI_ARCHITECTURE_
 
 Build a portfolio-grade, research-only AI system that can be safely hosted for invited prototype testers and demonstrates hybrid routing, explicit LangGraph orchestration, adaptive scientific RAG, local and live literature search, structured generation, deterministic validation, and measurable evaluation. Preserve replaceable boundaries for a future India-first, clinician-only hospital silent-validation product. The system remains a bounded workflow rather than an autonomous multi-agent swarm.
 
-This proposal preserves the approved runtime sequence and responsibility boundaries. It incorporates the approved conversational scope, scientific-source, safety, and portfolio privacy policies; it does not finalize remaining model-provider selection, non-safety failure UX, or quality thresholds.
+This proposal preserves the approved runtime sequence and responsibility boundaries. It incorporates the approved conversational scope, scientific-source, safety, portfolio privacy, deployment, and workflow-failure policies; it does not finalize remaining model-provider selection or quality thresholds.
 
 ## Product-mode boundary
 
@@ -82,9 +82,9 @@ Use a pre-intercepted, English-only intent router:
 
 The proposed lightweight baseline is [`distilbert/distilbert-base-uncased`](https://huggingface.co/distilbert/distilbert-base-uncased). It is a pretrained English encoder that requires project-specific sequence-classification fine-tuning; the base checkpoint is not a zero-shot intent classifier or approved safety control.
 
-The encoder returns logits only. A deterministic adapter maps logits to the fixed enum, applies calibration and approved per-class/abstention thresholds, and returns intent, calibrated confidence, clarification requirement, policy-compatible rationale code, model ID, pinned revision/checksum, fine-tuning dataset/version, calibration version, and router version. It does not determine questionnaire completeness, emit user prose, or select tools. Low confidence or out-of-distribution input routes to clarification or the minimal unsupported response; malformed output fails closed.
+The encoder returns logits only. A deterministic adapter maps logits to the fixed enum, applies calibration and the initial `0.85` maximum-confidence threshold, and returns intent, calibrated confidence, clarification requirement, policy-compatible rationale code, model ID, pinned revision/checksum, fine-tuning dataset/version, calibration version, and router version. It does not determine questionnaire completeness, emit user prose, or select tools. Confidence below `0.85`, out-of-distribution input, or unresolved incompatible intent returns the deterministic two-action `INTENT_CLARIFICATION_REQUIRED` component without RAG, LLM, or inference. Safety uncertainty remains governed by the earlier fail-closed safety interceptor.
 
-The evaluation compares deterministic rules with fine-tuned English DistilBERT on one versioned English dataset containing standard and Indian English usage, paraphrases, misspellings, indirect requests, multi-intent cases, out-of-scope medical questions, and adversarial prompt injection. Report per-class precision/recall/F1, macro-F1, confusion matrices, expected calibration error, abstention coverage, out-of-distribution behavior, English-usage slices, memory use, and CPU latency. The language gate has a separate dataset for supported English, English medical terms, short/ambiguous text, and unsupported non-English/code-mixed rejection. Release thresholds and the concrete local language-identification implementation remain pending measurable-quality decisions.
+The evaluation compares deterministic rules with fine-tuned English DistilBERT on one versioned English dataset containing standard and Indian English usage, paraphrases, misspellings, indirect requests, multi-intent cases, out-of-scope medical questions, and adversarial prompt injection. Report per-class precision/recall/F1, macro-F1, confusion matrices, expected calibration error, abstention coverage, out-of-distribution behavior, English-usage slices, memory use, and CPU latency. The language gate has a separate dataset for supported English, English medical terms, short/ambiguous text, and unsupported non-English/code-mixed rejection. Production use of the initial `0.85` intent threshold requires measurable calibration and per-class quality evidence; the concrete local language-identification implementation and its thresholds remain pending evaluation.
 
 ## LangGraph composition
 
@@ -104,6 +104,8 @@ initialize assessment
 ```
 
 `generic_genetic_profile_v1` reads artifact-provided training medians for the 16 PRS and four batch-by-PC fields. Its generic/unmeasured provenance travels through state, context, UI, and response validation. It is never adjusted from family history or population descriptors.
+
+Framer marks every approved manual field required and disables submission until those visible fields are locally valid, while presenting missing/invalid-field feedback. The backend ignores client completion claims, independently validates the manual values, adds the approved generic profile, and confirms the complete exact 105-variable matrix before inference. Users do not manually fill generic-profile variables.
 
 Conversational `risk_assessment` intent does not enter this subgraph. It returns deterministic `ASSESSMENT_REDIRECTION` with the fixed approved copy and `Launch Research Questionnaire Router` action. Only that action can initialize the structured assessment state, and only a later complete form submission can reach the subgraph's inference node.
 
@@ -261,7 +263,7 @@ Every factual medical or scientific claim requires an inline citation mapped to 
 
 The immutable DCMFNet number is a typed tool-result display with artifact provenance, not a literature-backed claim. It receives no paper citation that could imply individual validation; all medical/scientific interpretation around it remains subject to claim-level citation enforcement.
 
-Use low-variance generation settings for clinical-research explanations. One bounded regeneration is allowed only after a typed validation failure; the retry receives the failure category without permission to change model values or citation identity.
+Use low-variance generation settings for clinical-research explanations. One bounded regeneration is allowed only after a typed validation failure; the retry receives non-sensitive failure codes and the same immutable context without permission to change model values or citation identity.
 
 ## Response validation
 
@@ -286,7 +288,16 @@ Before returning an answer, deterministic validation checks:
 - the deterministic prediction-only text is present whenever validated feature importance is absent
 - no questionnaire or feature-vector leakage
 
-Subjective evidence-support checking may use a bounded secondary model-assisted grader, but it cannot override deterministic failures. A second invalid generation returns a safe deterministic response.
+Subjective evidence-support checking may use a bounded secondary model-assisted grader, but it cannot override deterministic failures. A citation failure rejects its entire factual claim block, never just the citation marker. The block may be omitted only if the remaining validated response is complete, coherent, and fully cited; otherwise the whole generation is rejected. A second invalid generation returns the typed generation-unavailable response.
+
+## Deterministic workflow failure behavior
+
+- `INTENT_CLARIFICATION_REQUIRED` renders `I didn't quite catch that. Please select what you would like to do:` plus `Submit Risk Assessment Questionnaire` and `Ask About Schizophrenia & Clinical Associations`. The first launches but does not submit the questionnaire; the second requests a new English scientific question. Neither reuses the ambiguous text or authorizes a tool.
+- Out-of-range/non-finite predictions, input/schema errors, and artifact/configuration failures are never retried. The invalid-probability path immediately returns the existing internal-system-variance message. Only an allowlisted transient worker/execution failure before a result exists may retry once with the same volatile validated vector, target, artifact, and idempotency key.
+- After two transient execution failures, return `System Note: The model failed to compute your specific risk estimation at this time. You may attempt to re-submit your parameters if you wish.` with no estimate or generated explanation.
+- `NO_ELIGIBLE_EVIDENCE`, `RETRIEVAL_UNAVAILABLE`, and `GENERATION_UNAVAILABLE` are separate terminal states with the fixed messages defined in the requirements. No-evidence and outage states never authorize pretrained-knowledge synthesis.
+- If a valid result already exists when RAG or generation fails, the UI may retain the deterministic result and show the target-aware assessment fallback. A standalone scientific question never receives a risk-result fallback.
+- `ticket.jsonl` and other user-bearing failure files are prohibited. Only sanitized `OperationalFailureEvent` fields—coarse time/latency buckets, component/operation/error codes, retry count, deployment mode, and version identifiers—may reach standard operational telemetry. Raw stacks, locals, query strings, questionnaire/target metrics, probabilities, evidence, and session/user/network identifiers remain excluded.
 
 ## State, privacy, and observability
 
@@ -370,9 +381,8 @@ These can be reconsidered only with evidence that they improve an approved requi
 The following answers remain required before this proposal becomes the approved AI architecture:
 
 1. Exact English-capable self-hosted LLM and embedding model selection and benchmarked resource profile inside Modal
-2. User-visible non-safety failure behavior and retry budgets
-3. Measurable quality and performance thresholds
-4. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
-5. Hosted-prototype access-control mechanism beyond signed ephemeral sessions, concurrency target, and operating budget
+2. Measurable quality and performance thresholds
+3. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
+4. Hosted-prototype access-control mechanism beyond signed ephemeral sessions, concurrency target, and operating budget
 
 Approval requires reconciling these decisions into this document, the interface registry, the AI/RAG decision record, and implementation handoffs for the RAG Engineer, AI Engineer, and Testing Agent.

@@ -160,6 +160,14 @@ This does not authorize durable health records.
 
 **Consequences:** The Framer bundle contains no infrastructure/model credentials and calls only the backend. Public transport uses narrow CORS, signed ephemeral sessions, rate/concurrency/request-size controls, and `Cache-Control: no-store`. SSE has typed `status`, `validated_content`, `evidence`, `done`, and `error` events; disconnects cancel work and no persistent replay exists. Zero idle compute and sub-second warm validation/first-status latency are objectives, not absolute zero-cost or full-RAG latency guarantees. Modal-specific code stays in the deployment adapter. Provider-documented payload retention, data residency, and endpoint behavior are reverified before release; an incompatible India data fence fails readiness. Offline UI states exactly that no calculation was performed.
 
+## ADR-020 — Fail explicitly without sensitive incident files or uncited fallbacks
+
+**Decision:** Apply dual client/server questionnaire completeness, use `0.85` as the initial calibrated intent-abstention threshold, and return a deterministic two-action clarification below it. Never retry invalid/non-finite model outputs, schema errors, or artifact/configuration failures; allow one identical idempotent retry only for a transient execution interruption before a result exists. Keep no-evidence, retrieval outage, generation outage, and inference outage as distinct states. Reject an entire factual claim block when its citation fails. Prohibit `ticket.jsonl` and user-bearing failure telemetry.
+
+**Why:** A disabled incomplete form improves the UI but cannot secure the backend. Repeating a deterministic invalid output cannot repair it. A universal risk-summary fallback could imply that inference occurred during a standalone evidence request, while removing only a bad citation would expose an unsupported medical claim. Raw queries, stacks, metrics, and vectors in a serverless JSONL file conflict with the approved zero-retention boundary.
+
+**Consequences:** Backend validation alone authorizes the exact 105-variable matrix after approved generic-profile assembly. `0.85` is a versioned initial product threshold—not an accuracy or safety guarantee—and remains subject to calibration and per-class release evaluation. Existing valid results may survive an explanation outage with a target-aware limitation, but outages cannot create results. A failed claim block is returned only if the remaining response stays coherent, complete, and fully cited; otherwise one bounded regeneration precedes the fixed failure response. Operational failure events contain only allowlisted codes, coarse buckets, retry count, deployment mode, and component/version fields.
+
 ## Deferred decisions
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Modal SDK, Framer integration, vector-store, embedding, and locally hosted LLM package/model versions.
