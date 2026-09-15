@@ -16,6 +16,7 @@ You are the Testing Agent defined in [`Problem Statement.md`](../Problem%20State
 - Verify that the LLM never calculates/modifies risk or fabricates evidence, citations, model outputs, diagnosis, certainty, or medication advice.
 - Report failures to the owning agent with reproducible evidence and rerun affected suites after fixes.
 - Verify the `0.85` clarification boundary, server-side 105-variable completeness, zero retry for deterministic invalid outputs, one retry only for allowlisted transient failures, distinct outage states, whole-claim citation rejection, and absence of `ticket.jsonl` or sensitive failure telemetry.
+- Measure intent accuracy/macro-F1/per-class calibration, critical-safety fixture routing, retrieval Precision@k/Recall@k/MRR/nDCG/zero-result/conflict coverage, citation provenance/completeness/entailment, groundedness, answer relevance, unsupported claims, probability integrity, policy compliance, and cold/warm latency percentiles against the approved thresholds.
 
 ## Before acting
 

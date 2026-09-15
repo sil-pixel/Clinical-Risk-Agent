@@ -335,7 +335,13 @@ Compare these retrieval configurations using the same corpus and queries:
 | Hybrid plus reranker | Precision comparison |
 | Adaptive hybrid plus bounded live search | Proposed deployed architecture |
 
-Measure Recall@k, Precision@k, MRR, nDCG, citation precision/recall, answer groundedness, unsupported-claim rate, router accuracy, graph-path accuracy, latency, token usage, and dependency-failure behavior. Probability/citation identity and prohibited-branch checks use deterministic evaluators and require a perfect pass rate. Human review and optional LLM-as-judge are limited to subjective clarity, relevance, and groundedness.
+Measure Recall@k, Precision@k, MRR, nDCG, citation precision/recall, answer groundedness, unsupported-claim rate, router accuracy/macro-F1/per-class metrics, calibration, abstention, graph-path accuracy, latency, token usage, and dependency-failure behavior. On frozen versioned fixtures, intent accuracy and macro-F1 must each exceed `0.85`; every critical safety fixture must take its required route with zero observed false negatives. The dense candidate gate is cosine similarity strictly above `0.85` for the selected normalized embedding artifact, but this model-specific score never substitutes for relevance-labeled evaluation and must be recalibrated when the embedding changes.
+
+Unvalidated first-pass citation-context matching must exceed `85%`, and its unsupported-claim rate must be at most `5%`. Public output remains stricter: citation provenance precision, citation membership, displayed medical/scientific claim support, probability identity, and prohibited-branch checks require a perfect pass rate. One failure is blocked regardless of aggregate model quality. Human review and optional LLM-as-judge are limited to subjective clarity, relevance, and groundedness.
+
+The DCMFNet raw numeric result must preserve exact equality through the backend/public result contract; the separate deterministic percentage presenter may scale and round only for display. End-to-end controlled runs must reach a terminal `done` or safe `error` UI state within `60 seconds`, with cold/warm p50, p95, p99, and maximum reported separately. A timeout is a safe failure, not a successful answer.
+
+Evaluation runs use synthetic or approved non-user fixtures and publish versioned aggregate CI reports with metric definitions, denominators, environment, and component versions. They never read `ticket.jsonl` or retained production content.
 
 Current evaluation guidance supports separating correctness, relevance, groundedness, and retrieval relevance rather than relying on one aggregate score: [LangSmith RAG evaluation guide](https://docs.langchain.com/langsmith/evaluate-rag-tutorial).
 
@@ -378,11 +384,11 @@ These can be reconsidered only with evidence that they improve an approved requi
 
 ## Pending product decisions
 
-The following answers remain required before this proposal becomes the approved AI architecture:
+The following implementation selections and release evidence remain required before this proposal becomes deployable:
 
 1. Exact English-capable self-hosted LLM and embedding model selection and benchmarked resource profile inside Modal
-2. Measurable quality and performance thresholds
-3. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
-4. Hosted-prototype access-control mechanism beyond signed ephemeral sessions, concurrency target, and operating budget
+2. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
+3. Hosted-prototype access-control mechanism beyond signed ephemeral sessions, concurrency target, and operating budget
+4. Benchmark-derived release thresholds for additional retrieval metrics beyond the approved `>0.85` dense cosine gate
 
 Approval requires reconciling these decisions into this document, the interface registry, the AI/RAG decision record, and implementation handoffs for the RAG Engineer, AI Engineer, and Testing Agent.

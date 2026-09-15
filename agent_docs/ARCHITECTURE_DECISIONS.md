@@ -168,6 +168,14 @@ This does not authorize durable health records.
 
 **Consequences:** Backend validation alone authorizes the exact 105-variable matrix after approved generic-profile assembly. `0.85` is a versioned initial product threshold—not an accuracy or safety guarantee—and remains subject to calibration and per-class release evaluation. Existing valid results may survive an explanation outage with a target-aware limitation, but outages cannot create results. A failed claim block is returned only if the remaining response stays coherent, complete, and fully cited; otherwise one bounded regeneration precedes the fixed failure response. Operational failure events contain only allowlisted codes, coarse buckets, retry count, deployment mode, and component/version fields.
 
+## ADR-021 — Separate statistical quality targets from hard runtime integrity
+
+**Decision:** Require `>85%` intent accuracy and `>0.85` macro-F1 on the frozen evaluation set while keeping `0.85` as a distinct calibrated per-request clarification threshold. Require zero observed false negatives on the finite critical-safety release suite. Treat first-pass citation matching `>85%` and unsupported claims `<=5%` as generator diagnostics; displayed citations and medical/scientific claims still require `100%` provenance/support. Apply dense cosine `>0.85` only to the selected normalized embedding configuration. Require exact raw-result preservation and a terminal success-or-safe-failure UI state within 60 seconds in controlled tests.
+
+**Why:** Accuracy, confidence, cosine similarity, and citation validity have different denominators and meanings. Aggregate model targets cannot authorize a known bad citation, unsupported claim, altered probability, or unsafe route. Embedding scores are not portable across models, and zero observed errors on a finite suite is not proof of zero production error.
+
+**Consequences:** Reports include dataset/component versions, class distribution, per-class metrics, calibration, abstention, retrieval metrics, cold/warm latency percentiles, denominators, and confidence intervals where meaningful. Changing the embedding requires similarity recalibration. Raw model values remain immutable while the presenter deterministically formats percentages. Evaluation evidence comes from synthetic or approved non-user fixtures and aggregate CI artifacts, never `ticket.jsonl` or retained production conversations.
+
 ## Deferred decisions
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Modal SDK, Framer integration, vector-store, embedding, and locally hosted LLM package/model versions.

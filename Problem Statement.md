@@ -295,6 +295,18 @@ A citation validation failure removes its entire factual claim block, not merely
 
 The runtime must not create `ticket.jsonl` or another user-bearing incident file. Operational failure telemetry contains only allowlisted component/operation/error codes, coarse time and latency buckets, retry count, deployment mode, and version identifiers. Raw exception stacks/locals, queries, questionnaire or target metrics, probabilities, evidence text, and session/user/network identifiers are prohibited.
 
+## Quality targets
+
+On a frozen versioned English intent dataset, routing accuracy and macro-F1 must each exceed `0.85`, with per-class metrics, calibration, abstention, and confusion matrices reported. This dataset-level accuracy is separate from the calibrated `0.85` per-request confidence threshold. Every finite critical-safety release fixture must route correctly with zero observed false negatives; this blocks a failing release but is not a guarantee of error-free production behavior.
+
+For retrieval, dense candidates must have cosine similarity strictly above `0.85` under the pinned normalized embedding version. The score is model-specific, not an 85% probability, and must be recalibrated after an embedding change. Evaluation also reports Precision@k, Recall@k, MRR, nDCG, zero-result rate, and conflict-position coverage.
+
+For generation, unvalidated first-pass citation-context matching must exceed `85%` and unsupported medical/scientific claims must be at most `5%`. Public output is stricter: every displayed citation must map to eligible retrieved DOI/PMID metadata and every displayed medical/scientific claim must be supported and cited. One known failure is blocked regardless of aggregate quality.
+
+The canonical raw DCMFNet value and target/artifact identity must preserve exact equality through backend serialization. Framer displays only the separate deterministic percentage representation; formatting never changes the raw result. Controlled end-to-end tests must reach terminal validated success or safe failure within `60 seconds`, with cold/warm p50, p95, p99, and maximum latency reported separately.
+
+Quality evaluation uses versioned synthetic or approved non-user fixtures and aggregate CI reports. It never uses `ticket.jsonl`, retained production conversations, or user questionnaire/results.
+
 ---
 
 # Tool Calling

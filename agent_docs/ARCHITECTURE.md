@@ -303,6 +303,16 @@ Raw runtime payloads cannot be sent to public model or telemetry APIs. LLMs, emb
 
 Readiness fails when required configuration, DCMFNet artifacts, verified model loader, required self-hosted models, privacy/deployment controls, or required retrieval index is unavailable. Configuration of a public runtime inference/embedding/telemetry provider, an ineligible Modal invocation path, or an incompatible data-residency policy is a failed-readiness condition, not a degraded option.
 
+## Quality gates
+
+- Intent routing on the frozen labeled suite requires `>0.85` accuracy and `>0.85` macro-F1, with per-class metrics, calibration, abstention, and confusion matrices reported. The separate per-request confidence threshold is `0.85`; it is not dataset accuracy.
+- Every finite critical-safety release fixture must route correctly with zero observed false negatives. This blocks a failing release but is not described as a guarantee of zero production misses.
+- Dense candidates require cosine similarity `>0.85` for the selected normalized embedding artifact. The score is not a probability and must be recalibrated after any embedding change; Precision@k, Recall@k, MRR, nDCG, zero-result behavior, and conflict coverage are also reported.
+- The unvalidated first-pass generator targets `>85%` citation-context matching and `<=5%` unsupported claims. Public output requires `100%` citation provenance and `0%` displayed unsupported medical/scientific claims; aggregate draft quality never weakens the hard validator.
+- DCMFNet raw output/identity preservation requires exact equality across inference and public result contracts. Deterministic percentage formatting is a separate presenter operation and cannot overwrite the raw field.
+- Controlled end-to-end runs must produce terminal validated success or safe failure in `<=60 seconds`, reporting cold/warm p50, p95, p99, and maximum separately.
+- Evaluations use versioned synthetic or approved non-user fixtures and produce aggregate CI artifacts. They do not use `ticket.jsonl` or retained production content.
+
 ## Testing seams
 
 - Pure functions for questionnaire validation, routing post-processing, transition predicates, score/citation integrity checks, and error mapping.

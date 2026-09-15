@@ -216,6 +216,16 @@ Retryability is explicit rather than inferred from an HTTP status. Questionnaire
 
 Generated response content is a sequence of independently validated blocks. A citation/provenance failure invalidates its whole factual claim block; removing only the citation marker is prohibited. Remaining blocks may be returned only if they still form a coherent, complete, fully cited response with all mandatory limitations. Otherwise all generated blocks are discarded, one bounded regeneration may run, and a second failure returns `GENERATION_UNAVAILABLE` or the more specific dependency state.
 
+## Quality-contract invariants
+
+- Intent evaluation reports overall accuracy and macro-F1, both required to be strictly greater than `0.85`, plus per-class precision/recall/F1, calibration error, abstention coverage, and confusion matrices. `IntentDecision.confidence` uses a separate calibrated `0.85` runtime threshold.
+- Critical-safety fixtures require zero observed false negatives in the versioned release suite. This is a test-suite invariant, not a production guarantee or a field in a user response.
+- A dense `EvidenceItem` can enter context only when its cosine similarity is strictly greater than `0.85` under the pinned normalized embedding/threshold version. The numeric score cannot be compared across embedding versions without recalibration.
+- First-pass generator evaluation requires citation-context matching above `85%` and unsupported medical/scientific claims at or below `5%`. A `ValidatedAssistantResponse` nevertheless permits no missing citation identity and no unsupported displayed medical/scientific claim.
+- `InferenceResult` raw numeric and identity fields require exact equality through serialization. The display percentage is a separate deterministic derived field and cannot replace or mutate the raw value.
+- Public operations terminate with validated success or a safe typed error within the controlled `60-second` client deadline. Latency reports distinguish cold and warm p50/p95/p99/maximum.
+- Evaluation artifacts contain only approved non-user fixtures and aggregate results. `OperationalFailureEvent` and production user content are not quality-evaluation datasets.
+
 ## Zero-retention and India data-fence boundary
 
 Raw text, questionnaire values/tokens, vectors, prompts containing user data, inference inputs/results, probabilities, personalized responses, and session history are prohibited from every persistent store, browser store/cache, standard log, trace, metric event, analytics event, public error, backup, and crash dump. `prototype_demo` has no sensitive audit port or database. Exact invalid values may exist only in a protected volatile failure object until request teardown.

@@ -498,6 +498,52 @@ These references record the basis for architecture review and do not enter the s
 - RAG/LLM tests distinguish no evidence, retrieval outage, generation outage, valid-result preservation, and standalone-query behavior. Response tests prove claim-level rejection, no orphaned claims after citation failure, bounded regeneration, pre-stream validation, and no universal risk fallback.
 - Privacy tests fail if `ticket.jsonl` or another runtime failure file is created, if raw exception stacks or queries reach logs, or if any failure event contains a session/user/model-input/result value.
 
+## 11. Quality targets — approved for portfolio MVP
+
+### Measurement rules
+
+- Quality gates are evaluated on versioned, frozen, labeled test sets using synthetic or explicitly approved non-user fixtures. Dataset version, class distribution, sample count, model/artifact/corpus versions, threshold configuration, random seed where relevant, environment, and evaluation code revision are recorded with each report.
+- Per-request classifier confidence, dataset-level classifier accuracy, retrieval similarity, citation validity, and clinical/model probabilities are different measurements and must never be labeled interchangeably.
+- A finite test result establishes performance on that evaluation set; it does not prove that production will have zero errors. Production readiness requires the hard runtime interceptors in addition to evaluation targets.
+
+### Intent routing and safety
+
+- On the frozen intent-routing evaluation set, the fine-tuned English classifier must achieve strictly greater than `85%` overall accuracy and strictly greater than `0.85` macro-F1. Per-class precision, recall, F1, support, confusion matrix, calibration error, and abstention coverage must also be reported so class imbalance cannot hide a weak intent.
+- The separate per-request routing rule remains: a maximum calibrated intent confidence below `0.85`, an out-of-distribution result, or unresolved incompatible intents produces clarification. The `0.85` confidence threshold does not mean the classifier has `85%` accuracy.
+- Safety routing is evaluated separately from ordinary intent routing. Every versioned release-blocking critical fixture for explicit self-harm, immediate danger, overdose/emergency, minor age, and prohibited clinical requests must take its required deterministic route, with zero observed false negatives in that finite suite. Any miss blocks release.
+- The system must not claim that “zero false negatives” is guaranteed in production, and production telemetry alone cannot measure missed events that were never labeled. Safety monitoring uses privacy-safe aggregate route counts, controlled red-team/regression testing, and reviewed incident reports containing no user payload.
+
+### Citation correctness and unsupported claims
+
+- At least `85%` of citation references produced by the **unvalidated first-pass generator** on the evaluation set must map to eligible evidence in that request's active RAG context. This is a model-quality diagnostic only; it does not authorize display.
+- The public response validator requires `100%` citation-key provenance precision: every displayed citation key must map to an eligible, active, non-retracted DOI/PMID evidence item actually retrieved for that generation cycle. One missing or fabricated identifier rejects its entire factual claim block under Section 10.
+- The unvalidated first-pass generator's unsupported medical/scientific claim rate must be at most `5%`, measured at claim level, with the sentence-level rate also reported for traceability. The displayed-response target is `0%`: every medical/scientific claim must be supported and cited, and any unsupported claim is blocked regardless of aggregate rate.
+- If claim/citation validation cannot yield a coherent, complete response after the single bounded regeneration, use the specific Section 10 no-evidence or generation-unavailable response. Never use a generic risk summary to replace a failed educational answer.
+
+### Retrieval relevance
+
+- The initial dense-retrieval candidate gate is strict cosine similarity `>0.85` for the selected, normalized embedding configuration. A score equal to `0.85` does not pass. Sparse/hybrid candidates must satisfy their separately calibrated relevance gate before context inclusion.
+- Cosine values are embedding-model- and normalization-specific. The `0.85` threshold cannot be transferred to a new embedding model or treated as an `85%` probability; changing the embedding artifact requires recalibration, a new threshold/version, and retrieval regression testing.
+- Threshold compliance alone is insufficient. The frozen relevance-labeled evaluation must report Precision@k, Recall@k, MRR, nDCG, zero-result rate, conflict-position coverage, and performance by query category. Exact release thresholds for those additional metrics require the selected embedding/retrieval benchmark; no model may ship merely because its returned chunks exceed `0.85` cosine similarity.
+
+### Probability integrity
+
+- The exact validated DCMFNet numeric output and target/artifact identity must survive inference-port return, backend state/context construction, and public result serialization with `100%` equality to the canonical inference result. The LLM never receives authority to derive, round, scale, weight, or modify it.
+- The raw value is not printed as an unrestricted debug field. Framer displays the separately contracted deterministic percentage representation derived from the validated raw value. Percentage scaling and rounding are permitted only in that presenter; they do not overwrite the immutable raw field.
+- Contract and end-to-end fixtures require exact equality for the raw value and exact expected formatting for the display value. Any mismatch blocks the response rather than repairing it.
+
+### Latency budget
+
+- The application enforces a maximum `60-second` client-visible deadline from accepted Framer submission to a terminal `done` or safe `error` state. The interval includes Modal cold start, backend validation, retrieval, generation, validation, and delivery of the terminal event.
+- If successful completion cannot occur within the deadline, the client cancels the request and renders the appropriate typed availability response; no partial unvalidated generation is exposed. The 60-second requirement is therefore a bounded user outcome, not a guarantee that every request succeeds within a minute or that an unreachable network can deliver a server response.
+- Evaluation reports end-to-end p50, p95, p99, and maximum latency; cold and warm runs are separated. A release test run fails if any controlled end-to-end case lacks a terminal UI state by 60 seconds. The existing sub-second warm validation/first-status objective is measured separately and does not satisfy the completion gate.
+
+### Monitoring and release evidence
+
+- Quality compliance is computed by dedicated evaluation jobs and stored as versioned aggregate reports/CI artifacts containing only approved synthetic or non-user fixtures. Reports include metric definitions, denominators, confidence intervals where meaningful, failures, and pass/fail outcomes.
+- `ticket.jsonl` is not a quality-monitoring source and remains prohibited. Runtime user queries, questionnaire data, predictions, raw exceptions, and session identifiers cannot be copied into evaluation artifacts.
+- Production telemetry may contribute only the sanitized aggregate counters and `OperationalFailureEvent` fields approved in Sections 8 and 10. Production content quality is assessed through approved synthetic probes and controlled review, not retained user conversations.
+
 ## Pending product decisions
 
-11. Quality targets
+No numbered product-policy section remains pending. Concrete model selection, questionnaire semantics, access-control details, and metric-specific benchmark thresholds identified elsewhere remain implementation or release gates rather than permission to weaken Sections 1–11.
