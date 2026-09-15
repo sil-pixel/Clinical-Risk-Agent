@@ -13,11 +13,14 @@ Architecture scope: ARCH-01 and ARCH-02 initial baseline
 
 ## Decisions implementation agents must preserve
 
-- Modular monolith: FastAPI backend plus API-only Streamlit frontend.
+- Modular monolith: Framer presentation layer plus a Modal-hosted FastAPI-compatible backend. Framer is API-only and contains no model code or credentials.
 - Explicit LangGraph workflow with injected ML, RAG, and LLM ports.
 - AI Architect design ownership for the detailed LLM/LangGraph and RAG architecture; RAG and AI Engineers retain implementation ownership.
 - One canonical shared contract package; no private duplicate score/citation/questionnaire schemas.
-- In-memory-only, bounded MVP session state with exact 15-minute inactivity expiry and explicit reset; raw text, questionnaire data, model inputs/results, probabilities, personalized responses, and history have no persistent destination or external-provider route.
+- Conversational RAG uses validated SSE blocks, never raw unvalidated model tokens. Conversational risk-calculation intent redirects to the structured questionnaire; chat cannot invoke DCMFNet.
+- Offline mode is display/reset only and must state that no calculation was performed.
+- Modal user-bearing transport uses only a currently documented no-payload-storage Server/Endpoint path with Mumbai compute/routing, server-side secrets, and no ordinary function/async payloads, sensitive logs/snapshots, or persistent user-data stores.
+- In-memory-only, bounded MVP session state with exact 30-minute inactivity expiry and explicit reset; raw text, questionnaire data, model inputs/results, probabilities, personalized responses, and history have no persistent destination or external-provider route.
 - Structured validation before and after the LLM; immutable model and evidence results.
 - New agent-generated documentation under `agent_docs/`.
 
@@ -55,7 +58,7 @@ These are blockers to concrete inference and questionnaire contracts, not permis
 - Identical validated input produces identical finite output for each supported artifact.
 - Feature order/preprocessing is tested, including missing, extra, malformed, non-finite, and wrong-shape inputs.
 - Model evaluation/no-gradient settings and supported device/dtype behavior are explicit.
-- Standard logs, traces, metrics, public errors, browser stores, caches, backups, and crash artifacts contain no raw probabilities, feature vectors, questionnaire tokens/values, conversation content, or personalized responses. No sensitive audit database exists in `prototype_demo`; models execute locally or inside the operator-controlled isolated India-fenced boundary.
+- Standard logs, traces, metrics, public errors, browser stores, caches, backups, and crash artifacts contain no raw probabilities, feature vectors, questionnaire tokens/values, conversation content, or personalized responses. No sensitive audit database exists in `prototype_demo`; models execute inside the approved Modal backend using the restricted endpoint and Mumbai routing/compute controls.
 - Model limitations clearly state synthetic-data provenance and prohibit diagnostic interpretation.
 
 ## Blockers and feedback path

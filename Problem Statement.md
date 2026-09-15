@@ -17,7 +17,11 @@ It is **not** intended to diagnose schizophrenia, provide medical advice, or rep
 
 The current prototype is intended for portfolio evaluation and informal testing by invited users such as friends, developers, and researchers. It is a public-facing demonstration, not a patient product, and no user should act on a DCMFNet output. Results must be accompanied by uncertainty and limitations and must not replace qualified professional judgment.
 
-The portfolio MVP supports English free-text interaction only. Safety interception runs before language validation. After safety permits normal processing, a local language gate blocks unsupported or uncertain language before intent classification, RAG, LLM generation, or DCMFNet and displays: `This prototype currently supports English only. Please enter your question in English.` Rephrased English intent is classified by a project-fine-tuned `distilbert/distilbert-base-uncased` encoder with calibrated confidence and abstention; the base checkpoint is not used zero-shot.
+The portfolio MVP supports English free-text interaction only. Safety interception runs before language validation. After safety permits normal processing, a local language gate blocks unsupported or uncertain language before intent classification, RAG, LLM generation, or DCMFNet and displays: `Input error: Language unsupported. Please resubmit your query in English.` Rephrased English intent is classified by a project-fine-tuned `distilbert/distilbert-base-uncased` encoder with calibrated confidence and abstention; the base checkpoint is not used zero-shot.
+
+The public portfolio uses a decoupled Framer presentation layer and Modal-hosted FastAPI-compatible Python backend. Deterministic gates, LangGraph, RAG, locally hosted language/intent/generation models, and DCMFNet run in the backend; the browser calls no model provider directly and contains no infrastructure credentials. Conversational RAG uses typed SSE progress and validated content blocks, never raw unvalidated model tokens. User-bearing Modal transport must use a currently documented no-payload-storage Server/Endpoint path pinned to Mumbai compute/routing; ordinary function/async payloads, sensitive logs/snapshots, and persistent runtime user-data stores are prohibited.
+
+Offline mode is display and reset only. It blocks RAG, LLM, questionnaire submission, and DCMFNet and states that no calculation was performed; it never creates a cached, simulated, generic-profile, or client-side estimate. Zero idle compute and sub-second warm validation/first-progress latency are deployment targets, not absolute zero-cost or sub-second full-answer guarantees.
 
 The longer-term startup direction is an India-first, clinician-only hospital product for silent research validation. It will never be patient-facing. During silent validation, outputs must not influence diagnosis, treatment, triage, or other care decisions. Hospital research mode requires separate clinical, regulatory, privacy, security, data-provenance, and model-validation approval and must not inherit demonstration-only assumptions automatically.
 
@@ -120,7 +124,7 @@ For the portfolio MVP's manual questionnaire, PRS and batch-by-genetic-PC intera
 
 The generic genetic profile is demonstration-only behavior. A future hospital research mode must reject it unless separately justified and approved through its research protocol, model contract, and regulatory process. The fail-closed out-of-range rule applies in every mode. The two modes must be distinguishable in configuration, state, results, telemetry, and tests so demonstration behavior cannot enter hospital workflows accidentally.
 
-For the portfolio MVP, raw conversational text, questionnaire fields/tokens/vectors, inference inputs/results, probabilities, personalized responses, and session history have no permitted persistent destination, including an encrypted audit database. They exist only in volatile client/backend memory and are wiped after exactly 15 minutes of explicit-user inactivity, reset, relevant failure/crisis purge, or process restart. They never enter browser persistent storage/cache, logs, traces, analytics events, backups, or crash dumps. Runtime payloads cannot be sent to public LLM, embedding, moderation, tracing, or analytics APIs; models run locally or in an operator-controlled isolated India-fenced VPC with technical and contractual zero retention. Only pre-aggregated unlinkable product counters may persist. The MVP exposes no research-record or file-upload surface.
+For the portfolio MVP, raw conversational text, questionnaire fields/tokens/vectors, inference inputs/results, probabilities, personalized responses, and session history have no permitted persistent destination, including an encrypted audit database. They exist only in volatile client/backend memory and are wiped after exactly 30 minutes of explicit-user inactivity, reset, relevant failure/crisis purge, or process restart. They never enter browser persistent storage/cache, logs, traces, analytics events, backups, or crash dumps. Runtime payloads cannot be sent to public LLM, embedding, moderation, tracing, or analytics APIs; models run inside the approved Modal backend over the restricted no-payload-storage endpoint path. Only pre-aggregated unlinkable product counters may persist. Provider edge processing and platform metadata residency remain disclosed compliance constraints. The MVP exposes no research-record or file-upload surface.
 
 The Clinical Risk AI Agent treats DCMFNet as a black-box inference service.
 
@@ -277,7 +281,7 @@ Medication and treatment information is limited to general evidence summaries re
 
 Unrelated general medical questions are out of scope. The assistant provides at most a one- or two-line high-level response and directs the user to an appropriate doctor or healthcare professional. It does not invoke DCMFNet or the full RAG workflow for these questions.
 
-DCMFNet may be invoked only for an explicit request to calculate positive/psychotic-symptom risk or negative/depressive-symptom risk, after `risk_assessment` routing, safety handling, and complete deterministic questionnaire validation. Discussion or education about psychosis, depression, schizophrenia, genetics, diet, lifestyle, diabetes, medication, treatment, or other health topics never authorizes inference by itself. Explaining an existing result uses the stored immutable result and RAG without rerunning DCMFNet unless a new assessment is explicitly requested.
+Conversational risk-calculation intent never invokes DCMFNet. It returns fixed `ASSESSMENT_REDIRECTION` content and a `Launch Research Questionnaire Router` action. Only a complete valid submission from the structured assessment view, after session, route, safety, and questionnaire validation, may invoke DCMFNet. Discussion or education about psychosis, depression, schizophrenia, genetics, diet, lifestyle, diabetes, medication, treatment, or other health topics never authorizes inference. Explaining an existing result uses the stored immutable result and RAG without rerunning DCMFNet; a new calculation requires another structured assessment submission.
 
 ---
 
@@ -421,6 +425,7 @@ The AI Architect designs the AI and RAG subsystems. The AI Engineer and RAG Engi
 Responsible for:
 
 - FastAPI
+- Modal deployment adapter, server-side secrets, scaling, region, and streaming configuration
 - API integration
 - model serving
 - routing
@@ -467,9 +472,10 @@ Responsible for:
 
 Responsible for:
 
-- Streamlit interface
+- Framer interface and code components
 - questionnaire UI
 - visualization
+- validated SSE rendering, assessment redirection, and offline no-calculation state
 
 ---
 

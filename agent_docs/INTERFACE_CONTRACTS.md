@@ -34,7 +34,8 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | `LocalFeatureImportanceResult` | Validated SHAP port → context/API | ML Engineer (method), AI Architect (use) | **Blocked:** the planned SHAP adapter is not validated or approved |
 | `StructuredExplanationContext` | Context builder → LLM port | AI Architect (design), AI Engineer (implementation) | Must compose immutable validated results; finalized after ML/RAG contracts |
 | `ValidatedAssistantResponse` | Response validator → API/UI | AI Architect (design), AI Engineer (implementation) | Envelope below; content blocks finalized with Backend/Frontend |
-| Public session transport | FastAPI ↔ Streamlit | Backend Engineer | Architecture baseline below; finalized only after workflow contracts stabilize |
+| `AssessmentRedirection` | Conversational router → API/Framer | AI Architect / Frontend Engineer | **Architecture-approved:** fixed text and action; no inference permission |
+| Public session transport | Modal-hosted FastAPI ↔ Framer | Backend Engineer | Architecture baseline below; JSON plus validated SSE |
 | `ServiceError` | All components → API/tests | Software Architect / Backend Engineer | Minimum taxonomy approved |
 
 ## Approved intent values
@@ -54,9 +55,11 @@ The exact spelling is the canonical machine representation. Adding an intent req
 
 The proposed baseline is a project-fine-tuned `distilbert/distilbert-base-uncased`. The base checkpoint is not approved for zero-shot routing. The selected artifact must be pinned and integrity checked, operate locally, and pass the approved English routing, calibration, adversarial, memory, and CPU-latency gates.
 
-`LanguageDecision` is evaluated after `SafetyDecision=ALLOW_NORMAL_PROCESSING` and before `IntentDecision`. It contains `SUPPORTED_ENGLISH`, `UNSUPPORTED_LANGUAGE`, or `UNCERTAIN_LANGUAGE`, plus detector/version and a non-sensitive rationale code. Unsupported and uncertain outcomes return `This prototype currently supports English only. Please enter your question in English.` with all tool permissions false. The concrete local detector and thresholds require separate evaluation; the intent classifier must not be reused as an implicit language detector.
+`LanguageDecision` is evaluated after `SafetyDecision=ALLOW_NORMAL_PROCESSING` and before `IntentDecision`. It contains `SUPPORTED_ENGLISH`, `UNSUPPORTED_LANGUAGE`, or `UNCERTAIN_LANGUAGE`, plus detector/version and a non-sensitive rationale code. Unsupported and uncertain outcomes return `Input error: Language unsupported. Please resubmit your query in English.` with all tool permissions false. The concrete local detector and thresholds require separate evaluation; the intent classifier must not be reused as an implicit language detector.
 
-`risk_assessment` alone does not authorize inference. The graph may invoke DCMFNet only when the user explicitly requests positive/psychotic-symptom or negative/depressive-symptom risk calculation, safety permits processing, and deterministic questionnaire validation reports complete valid input. Scientific or educational discussion of those symptoms routes to RAG without inference. `explain_my_risk` consumes a stored immutable result and does not rerun the model unless a new assessment is explicitly requested.
+`risk_assessment` in a conversational message produces `ASSESSMENT_REDIRECTION` and never authorizes inference. Only a complete valid submission from the separately initialized structured assessment view, with safety and route authorization, may invoke DCMFNet. Scientific or educational discussion of symptoms routes to RAG without inference. `explain_my_risk` consumes a stored immutable result and does not rerun the model; a new calculation requires another structured assessment submission.
+
+`AssessmentRedirection` contains `response_kind=ASSESSMENT_REDIRECTION`, fixed-content ID/version, the exact approved redirection text, `action_id=launch_research_questionnaire_router`, an internal Framer route target, and `allow_inference=false`, `allow_rag=false`, `allow_llm=false`. Activating the action initializes volatile questionnaire state but does not call DCMFNet.
 
 General mental health, genetics/environmental factors, diet/lifestyle/diabetes/physical health, and non-drug-specific, non-personalized treatment research may use RAG under the approved source policy. Any drug-specific question, medication selection, suitability, dosing, start/stop/change, or individualized treatment evaluation takes `PRESCRIPTIVE_REFUSAL` without RAG or DCMFNet. Unrelated general medical questions use the minimal out-of-scope response contract and do not invoke full RAG or DCMFNet.
 
@@ -144,9 +147,11 @@ The MVP API is versioned and session-oriented:
 
 | Operation | Method and path | Purpose |
 | --- | --- | --- |
-| Create session | `POST /v1/sessions` | Return an opaque ephemeral session ID, state/API version, and fixed 15-minute inactivity expiry |
-| Submit turn | `POST /v1/sessions/{session_id}/messages` | Validate one user message/structured answer update and advance the workflow once |
-| Reset session | `DELETE /v1/sessions/{session_id}` | Cancel active work, remove all in-memory state, and acknowledge completion idempotently |
+| Create session | `POST /v1/session` | Return one opaque signed ephemeral session credential, state/API version, and fixed 30-minute inactivity expiry |
+| Submit turn | `POST /v1/messages` | Authenticate from the in-memory bearer credential, validate one user message, and advance the workflow once |
+| Stream turn | `POST /v1/messages:stream` | Authenticate from the in-memory bearer credential and return typed SSE progress/validated response events |
+| Submit assessment | `POST /v1/assessments` | Authenticate, validate a structured assessment submission, and invoke DCMFNet only when authorized and complete |
+| Reset session | `DELETE /v1/session` | Authenticate, cancel active work, remove all in-memory state, and acknowledge completion idempotently |
 | Liveness | `GET /health/live` | Confirm the API process is running |
 | Readiness | `GET /health/ready` | Report required artifact/index/configuration readiness without secrets |
 
@@ -156,7 +161,7 @@ The response envelope must include:
 
 - API/schema version
 - deployment mode
-- session ID
+- session state version and expiry metadata; the session credential is returned only by session creation and is never echoed in later bodies
 - workflow status/response kind
 - safe assistant message or structured display blocks with claim-level inline citation IDs
 - missing-questionnaire information only when supplied by the questionnaire contract
@@ -166,6 +171,26 @@ The response envelope must include:
 - limitations and safe typed error, if any
 
 The Backend Engineer may refine transport names during implementation but must preserve these semantics and record any public-contract change. HTTP status mapping must distinguish invalid transport, missing/expired session, policy rejection, internal dependency failure, and successful workflow responses that request more information.
+
+The Framer client calls only these Modal-hosted backend routes. It sends the opaque credential in the `Authorization` header from volatile memory, never in a URL, cookie, browser store, response replay, or log. The backend requires narrow CORS/origin configuration, request-size and rate limits, and short-lived signed session credentials; an `Origin` header is not an authentication mechanism. Infrastructure or model credentials never cross this contract.
+
+### Streaming envelope
+
+The SSE endpoint emits only these event types:
+
+- `status`: non-sensitive phase/progress code; never user text or model output;
+- `validated_content`: a response block that has passed safety, citation, score-integrity, and causal-language validation;
+- `evidence`: retrieval-owned expandable metadata records for citations already referenced by validated content;
+- `done`: terminal response metadata and policy/model/corpus versions; or
+- `error`: a safe typed `ServiceError` with no partial unvalidated generation.
+
+Raw LLM tokens are not a public event type. Event sequence numbers are scoped to volatile memory and are not a persistent replay log. `Cache-Control: no-store` is mandatory, heartbeats do not renew the inactivity TTL, disconnects cancel pending work where possible, and a reconnect creates a new request rather than replaying sensitive content.
+
+Fixed safety/refusal responses, the English-language error, and `ASSESSMENT_REDIRECTION` may return typed JSON or a terminal SSE result because they use zero LLM generation.
+
+### Offline client state
+
+Offline is not an API execution mode. When disconnected, Framer blocks message/assessment submission and renders `You're offline. Research estimates and evidence-based answers require a connection. No calculation has been performed.` No cached, generic-profile, simulated, or client-side `InferenceResult` is valid under this contract.
 
 ## Error contract
 
@@ -183,9 +208,9 @@ Minimum error families are defined in the architecture: validation/safety, sessi
 
 Raw text, questionnaire values/tokens, vectors, prompts containing user data, inference inputs/results, probabilities, personalized responses, and session history are prohibited from every persistent store, browser store/cache, standard log, trace, metric event, analytics event, public error, backup, and crash dump. `prototype_demo` has no sensitive audit port or database. Exact invalid values may exist only in a protected volatile failure object until request teardown.
 
-The session contract expires after exactly 15 minutes of explicit-user inactivity. Polling does not renew it. Expiry and reset invalidate the session, cancel active work where possible, and wipe client/server memory. Sensitive responses carry `Cache-Control: no-store`; the frontend receives no provider credential and stores payload state only in memory.
+The session contract expires after exactly 30 minutes of explicit-user inactivity. Polling does not renew it. Expiry and reset invalidate the session, cancel active work where possible, and wipe client/server memory. Sensitive responses carry `Cache-Control: no-store`; the frontend receives no provider credential and stores payload state only in memory.
 
-The submit-turn union contains no upload/attachment variant and multipart/file payloads are rejected. Runtime model and telemetry adapters cannot transmit user/session payloads to externally operated services. Portfolio state/consent objects enforce the India processing fence in memory and fail closed on an unauthorized route. Only pre-aggregated unlinkable product counters may persist, never session-level event records.
+The submit-turn union contains no upload/attachment variant and multipart/file payloads are rejected. Runtime model and telemetry adapters cannot transmit user/session payloads to public inference or telemetry APIs. Modal transport must use a currently documented no-payload-storage Server/Endpoint path, pinned Mumbai compute/routing, and no ordinary function/async invocation, user-bearing logs/snapshots, or persistent Modal stores. Portfolio state/consent objects enforce the India processing fence in memory and fail closed on an unauthorized route. Provider edge processing and non-sensitive platform-metadata residency remain disclosed constraints. Only pre-aggregated unlinkable product counters may persist, never session-level event records.
 
 ## Contract change process
 

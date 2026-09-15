@@ -4,21 +4,21 @@ Status: Accepted architecture decisions for the initial MVP baseline
 
 Owner: Software Architect
 
-## ADR-001 — Use a modular monolith for the local MVP
+## ADR-001 — Use a modular monolith for the hosted MVP
 
-**Decision:** Run one FastAPI backend containing the application workflow and injected ML/RAG/LLM adapters, plus a separate Streamlit UI process.
+**Decision:** Run one FastAPI-compatible Modal backend containing the application workflow and injected ML/RAG/LLM adapters, plus a separate Framer UI.
 
-**Why:** The repository is a local portfolio prototype with no demonstrated scaling or organizational need for independent services. A modular monolith minimizes deployment and network failure modes while typed ports preserve future extraction boundaries.
+**Why:** The portfolio needs a public UI but has no demonstrated scaling or organizational need for independent backend services. A modular monolith minimizes deployment and network failure modes while typed ports preserve future extraction and provider replacement boundaries.
 
 **Consequences:** DCMFNet is a logical inference service boundary, not a separate MVP process. Modules may not bypass ports simply because they share a process. Independent services can be introduced only with an evidenced need and an ADR.
 
 ## ADR-002 — Make FastAPI the composition and trust boundary
 
-**Decision:** FastAPI validates transport, creates dependencies/adapters, manages session access, maps typed errors, and invokes application use cases. Streamlit calls only the public API.
+**Decision:** FastAPI validates transport, creates dependencies/adapters, manages session access, maps typed errors, and invokes application use cases. Framer calls only the public API through typed JSON or validated SSE.
 
 **Why:** This prevents UI-specific logic and alternate inference paths and provides one observable safety boundary.
 
-**Consequences:** Route handlers stay thin; the frontend cannot import workflow, inference, or RAG internals.
+**Consequences:** Route handlers stay thin; the frontend cannot import workflow, inference, RAG internals, model artifacts, or infrastructure credentials.
 
 ## ADR-003 — Use ports and adapters for model, retrieval, embeddings, and LLMs
 
@@ -30,7 +30,7 @@ Owner: Software Architect
 
 ## ADR-004 — Keep MVP conversational state ephemeral
 
-**Decision:** Use cryptographically random opaque session IDs, an exact 15-minute inactivity expiry, explicit reset, and bounded process-memory-only state. Questionnaire data, conversation content, model inputs/results, and probabilities have no persistent destination, including an encrypted audit database. Multi-instance hosting uses session affinity rather than a durable shared state adapter.
+**Decision:** Use cryptographically random opaque session IDs, an exact 30-minute inactivity expiry, explicit reset, and bounded process-memory-only state. Questionnaire data, conversation content, model inputs/results, and probabilities have no persistent destination, including an encrypted audit database. Multi-instance hosting uses session affinity rather than a durable shared state adapter.
 
 **Why:** Questionnaire content is sensitive, while invited concurrent testers and multiple application instances require consistent ephemeral session state. Durable health-record persistence has no approved prototype requirement.
 
@@ -142,22 +142,30 @@ This does not authorize durable health records.
 
 **Why:** Exact keyword rules do not reliably recognize paraphrased scope and intent, while a general generative router adds unnecessary output freedom and provider dependence. The MVP supports English only, so an English DistilBERT avoids multilingual model cost and evaluation scope that the product does not need.
 
-**Consequences:** Safety remains upstream of language rejection. A distinct typed `LanguageDecision` prevents unsupported/uncertain free text from reaching the classifier or tools; its local implementation and thresholds require evaluation. The classifier emits logits only, while deterministic code owns the fixed label mapping, confidence calibration, out-of-distribution/abstention rules, and typed `IntentDecision`. Low-confidence English input clarifies or takes the minimal unsupported path and never authorizes DCMFNet. The base checkpoint is not used zero-shot. Intent evaluation covers English paraphrases, misspellings, indirect/multi-intent prompts, out-of-scope cases, and prompt injection; non-English and code-mixed samples are language-gate rejection fixtures, not intent training targets. Model downloads require license review, immutable revision/checksum pinning, integrity verification, and a reproducible local artifact process.
+**Consequences:** Safety remains upstream of language rejection. A distinct typed `LanguageDecision` prevents unsupported/uncertain free text from reaching the classifier or tools and returns `Input error: Language unsupported. Please resubmit your query in English.` Its local implementation and thresholds require evaluation. The classifier emits logits only, while deterministic code owns the fixed label mapping, confidence calibration, out-of-distribution/abstention rules, and typed `IntentDecision`. Low-confidence English input clarifies or takes the minimal unsupported path and never authorizes DCMFNet. The base checkpoint is not used zero-shot. Intent evaluation covers English paraphrases, misspellings, indirect/multi-intent prompts, out-of-scope cases, and prompt injection; non-English and code-mixed samples are language-gate rejection fixtures, not intent training targets. Model downloads require license review, immutable revision/checksum pinning, integrity verification, and a reproducible local artifact process.
 
 ## ADR-018 — Enforce zero persistent user-data retention in the portfolio MVP
 
-**Decision:** User text, questionnaire and slider state, tokens/vectors, inference inputs/results, probabilities, personalized prompts/responses, and conversation history exist only in volatile client/backend memory and are destroyed after exactly 15 minutes of inactivity, explicit reset, relevant failure/crisis purge, or process restart. They never enter a database, filesystem, browser persistent store/cache, backup, crash dump, analytics event, model cache, or external provider. This supersedes ADR-004/ADR-013's earlier encrypted sensitive-audit-store allowance.
+**Decision:** User text, questionnaire and slider state, tokens/vectors, inference inputs/results, probabilities, personalized prompts/responses, and conversation history exist only in volatile client/backend memory and are destroyed after exactly 30 minutes of inactivity, explicit reset, relevant failure/crisis purge, or process restart. They never enter a database, filesystem, browser persistent store/cache, backup, crash dump, analytics event, model cache, or external provider. This supersedes ADR-004/ADR-013's earlier encrypted sensitive-audit-store allowance.
 
 **Why:** The portfolio demonstration does not need a health record or sensitive debugging archive. Eliminating retention and public-provider payload transmission reduces privacy, consent, breach, and India data-fence exposure.
 
-**Consequences:** Client and server enforce independent non-renewable-by-polling TTLs. Reset clears the UI synchronously and invokes an idempotent backend purge. Models run locally or in an operator-controlled isolated India-fenced VPC with technical and contractual zero retention; public inference and live-user tracing APIs are forbidden. Observability is allowlist-based. Only pre-aggregated unlinkable product counters may persist, with no session/event rows and thresholded crisis counts. Upload schemas/routes do not exist and multipart payloads are rejected. Release testing inspects browser storage, logs/traces, network egress, crash dumps, swap/hibernation, expiry, reset, and upload rejection.
+**Consequences:** Client and server enforce independent non-renewable-by-polling TTLs. Reset clears the UI synchronously and invokes an idempotent backend purge. Models run inside the approved backend; public inference and live-user tracing APIs are forbidden. The Modal deployment uses only documented no-payload-storage Server/Endpoint transport and prohibits ordinary function calls, async/spawn payloads, user-bearing logs/snapshots, and persistent Modal stores. Observability is allowlist-based. Only pre-aggregated unlinkable product counters may persist, with no session/event rows and thresholded crisis counts. Upload schemas/routes do not exist and multipart payloads are rejected. Release testing inspects browser storage, logs/traces, provider transport, network egress, crash dumps, expiry, reset, and upload rejection. Modal's edge processing and non-sensitive platform-metadata location remain explicit compliance constraints, so the product cannot claim absolute provider invisibility or guaranteed DPDP compliance.
+
+## ADR-019 — Deploy Framer over a Modal-hosted backend with validated streaming
+
+**Decision:** Host the presentation layer in Framer and the provider-neutral Python modular monolith on Modal. Use a Modal Server or another currently documented zero-payload-storage endpoint, pin compute and routing to `ap-south`, inject secrets with `modal.Secret`, and stream conversational RAG through SSE. Emit only validated content blocks, never raw unvalidated model tokens. Chat risk-calculation intent returns a fixed assessment redirect; only the structured questionnaire route can invoke DCMFNet. Offline mode is display/reset only and performs no calculation.
+
+**Why:** Framer provides the public portfolio surface and Modal provides scale-to-zero Python execution without coupling domain contracts to the host. Validated streaming improves perceived responsiveness while preserving citation and safety validation. A client-side simulated estimate would be unverifiable and could mislead users.
+
+**Consequences:** The Framer bundle contains no infrastructure/model credentials and calls only the backend. Public transport uses narrow CORS, signed ephemeral sessions, rate/concurrency/request-size controls, and `Cache-Control: no-store`. SSE has typed `status`, `validated_content`, `evidence`, `done`, and `error` events; disconnects cancel work and no persistent replay exists. Zero idle compute and sub-second warm validation/first-status latency are objectives, not absolute zero-cost or full-RAG latency guarantees. Modal-specific code stays in the deployment adapter. Provider-documented payload retention, data residency, and endpoint behavior are reverified before release; an incompatible India data fence fails readiness. Offline UI states exactly that no calculation was performed.
 
 ## Deferred decisions
 
-- Exact Python, PyTorch, LangGraph, FastAPI, Streamlit, vector-store, embedding, and LLM package versions.
+- Exact Python, PyTorch, LangGraph, FastAPI, Modal SDK, Framer integration, vector-store, embedding, and locally hosted LLM package/model versions.
 - Concrete retrieval adapter and quality-appraisal instruments; the scientific source/corpus eligibility policy is approved in ADR-012.
 - DCMFNet input feasibility and provenance.
 - Final questionnaire presentation.
-- Exact inactivity TTL and request/state size bounds.
+- Exact request/state size bounds. The inactivity TTL is approved at 30 minutes.
 
 Deferred items remain owned by the roles and gates identified in the product plan and interface registry; deferral is not permission for downstream agents to guess.

@@ -28,7 +28,9 @@ Every volatile request, graph state, and inference result, plus every non-user c
 ![Clinical Risk AI Agent query flow](images/clinical-risk-ai-query-flow.png)
 
 ```text
-User
+User in Framer
+  ↓
+Modal Server / eligible no-payload-storage endpoint
   ↓
 Deterministic transport validation and safety policy
   ├── terminal safety/refusal result → fixed local UI content → User
@@ -41,6 +43,7 @@ English-language gate
 Hybrid Intent Router
   ├── deterministic rules for explicit structured/content cases
   └── local fine-tuned encoder classification for ambiguous cases
+  ├── conversational risk intent → fixed questionnaire redirection → User
   ↓
 LangGraph Supervisor
   ├── Assessment subgraph
@@ -51,11 +54,11 @@ LangGraph Supervisor
   ↓
 Structured Context Builder
   ↓
-Provider-neutral LLM with structured output
+Locally hosted, provider-neutral LLM adapter with structured output
   ↓
 Deterministic response validator
   ↓
-User
+validated JSON/SSE → Framer → User
 ```
 
 LangGraph is proposed for typed state, explicit conditional routing, resumable questionnaire interactions, bounded retries, and inspectable transitions. Its documentation distinguishes predetermined workflows from dynamic agents and supports checkpoint-based persistence and interrupts: [workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents), [persistence](https://docs.langchain.com/oss/python/langgraph/persistence).
@@ -102,6 +105,8 @@ initialize assessment
 
 `generic_genetic_profile_v1` reads artifact-provided training medians for the 16 PRS and four batch-by-PC fields. Its generic/unmeasured provenance travels through state, context, UI, and response validation. It is never adjusted from family history or population descriptors.
 
+Conversational `risk_assessment` intent does not enter this subgraph. It returns deterministic `ASSESSMENT_REDIRECTION` with the fixed approved copy and `Launch Research Questionnaire Router` action. Only that action can initialize the structured assessment state, and only a later complete form submission can reach the subgraph's inference node.
+
 The two raw model values remain immutable inside the protected volatile inference boundary. Before presentation or LLM context construction, a deterministic gate requires each value to be finite and within inclusive `[0.0, 1.0]`. A value below `0.0` or above `1.0` triggers a typed fail-closed internal-system-variance event; it is not clamped or displayed as an estimate. The UI displays exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The raw failing value exists only in the protected request object until teardown and never reaches persistence, standard logs, or the public response.
 
 Every valid result view includes the required synthetic-data indicator. The system performs prediction, not causal inference. Until validated feature importance exists, the application inserts: `This is a prediction, not a causal explanation. The model evaluates all 105 inputs together; no single answer can be identified as the cause of the result. Validated feature importance is not available for this result.`
@@ -143,7 +148,7 @@ Unrelated general medical questions take a minimal out-of-scope path: at most on
 
 ### DCMFNet authorization gate
 
-Only the LangGraph assessment subgraph can invoke DCMFNet, and only after an explicit request to calculate positive/psychotic-symptom or negative/depressive-symptom risk, an approved `risk_assessment` intent, successful safety handling, and complete deterministic questionnaire validation. Educational discussion of the same symptoms does not authorize inference. Risk explanation uses the stored immutable result and RAG without rerunning the model unless the user explicitly requests a new assessment.
+Only the structured-assessment route in the LangGraph assessment subgraph can invoke DCMFNet, and only after the user launches the questionnaire, submits a complete valid form, and passes route, session, safety, and questionnaire validation. Chat intent alone never authorizes inference; the conversational graph has no DCMFNet tool binding. Educational discussion does not authorize inference. Risk explanation uses the stored immutable result and RAG without rerunning the model; a new calculation requires another structured submission.
 
 ### Unsupported or urgent-content subgraph
 
@@ -248,7 +253,7 @@ A future SHAP adapter remains disabled until locally validated and approved for 
 
 ## LLM and prompt architecture
 
-Use a provider-neutral gateway with explicit capabilities for structured output, tool calling when required inside a bounded node, timeouts, retry classification, model/version metadata, and deterministic offline fakes.
+Use a provider-neutral gateway around an English-capable model hosted inside the approved backend, with explicit capabilities for structured output, bounded tool calling, timeouts, retry classification, and model/version metadata. Deterministic fakes are test fixtures only; offline user mode never generates an answer or estimate.
 
 Prompts contain behavior and formatting instructions, not hidden scientific facts. Structured response fields include prose claims with explicit inline citation IDs, positive-probability explanation, negative-probability explanation, limitations, deterministic causal block when required, disclaimer, and safe follow-up options. Evidence-display records remain retrieval-owned UI data and are not generated into the response prose.
 
@@ -285,15 +290,25 @@ Subjective evidence-support checking may use a bounded secondary model-assisted 
 
 ## State, privacy, and observability
 
-Use cryptographically random opaque session IDs behind a memory-only state port. The inactivity TTL is exactly 15 minutes and is independently enforced by client and server; background polling and keep-alives do not renew it. Expiry, explicit reset, process restart, and crisis context clearing invalidate the ID, cancel active work where possible, wipe all volatile questionnaire/conversation/result state, clear the short-lived application session credential, and return the UI to `/`. The UI clears synchronously and sends an idempotent backend purge without waiting to reset its view. Multi-instance hosting may use session affinity but cannot add a persistent shared session store.
+Use cryptographically random opaque session IDs behind a memory-only state port. The inactivity TTL is exactly 30 minutes and is independently enforced by client and server; background polling and keep-alives do not renew it. Expiry, explicit reset, process restart, and crisis context clearing invalidate the ID, cancel active work where possible, wipe all volatile questionnaire/conversation/result state, clear the short-lived application session credential, and return the UI to `/`. The UI clears synchronously and sends an idempotent backend purge without waiting to reset its view. Multi-instance hosting may use session affinity but cannot add a persistent shared session store.
 
 Raw text, questionnaire/token/vector data, model inputs/results, probabilities, personalized prompts/responses, and session history exist only in volatile client/backend memory. They never enter databases, files, browser storage/cache, URLs, cookies, backups, crash dumps, APM, logs, traces, analytics, or caches. Sensitive HTTP responses use `Cache-Control: no-store`; deployment disables body capture and core dumps and prevents plaintext swap/hibernation recovery.
 
 Runtime observability uses allowlisted non-sensitive status/version fields, latency/coarse-time buckets, and aggregate counters only. No sensitive audit database exists in `prototype_demo`. Product analytics, if enabled, persist only pre-aggregated unlinkable counters and duration buckets; no session-level event row is retained, and crisis counts use minimum aggregation/disclosure thresholds.
 
-Raw runtime payloads never go to public LLM, embedding, moderation, tracing, or analytics APIs. Models run locally or in an operator-controlled isolated single-tenant VPC satisfying the India data fence and technical plus contractual zero retention. Bibliographic APIs receive only system-generated non-sensitive search terms, never raw user queries. LangSmith and external analytics are permitted only for synthetic/offline evaluation fixtures, never live user runtime data.
+Raw runtime payloads never go to public LLM, embedding, moderation, tracing, or analytics APIs. Models run in the approved Modal backend. User-bearing requests use only a Modal Server or another endpoint type whose current documentation states that payloads are not stored; ordinary Modal Function invocation, `.remote`/`.spawn`/`.map` user payloads, request-body logs, user-state snapshots, and Modal Dict/Queue/Volume persistence are prohibited. Compute and routing are pinned to `ap-south`, payloads stay below the provider's regional-routing limit, and provider behavior is reverified before release. Modal edge processing and non-sensitive platform-log/metadata residency remain explicit limitations; incompatible India data-fencing fails readiness. Bibliographic APIs receive only system-generated non-sensitive search terms, never raw user queries. LangSmith and external analytics are permitted only for synthetic/offline evaluation fixtures, never live user runtime data.
 
 The public schema has no attachment/file-upload variant and backend routes reject multipart payloads. Scientific corpus ingestion remains an operator-only offline process.
+
+## Framer and Modal deployment behavior
+
+Framer owns presentation only. It calls the Modal-hosted FastAPI contract using typed JSON and validated SSE, holds questionnaire/session state only in volatile memory, and never contains model/provider credentials. The backend applies narrow CORS/origin policy, short-lived signed session credentials, request-size/rate/concurrency controls, and server-side secrets through `modal.Secret`. Modal-specific code remains in a deployment adapter so changing hosts does not change domain contracts or the Framer payload schema.
+
+For conversational RAG, SSE emits `status`, `validated_content`, `evidence`, `done`, and `error`. Raw LLM tokens never cross the public boundary: complete output or claim-sized blocks pass response validation before emission. Fixed safety, language, and questionnaire-redirection results need no model generation and may return typed JSON or a terminal SSE event. Responses use `Cache-Control: no-store`; heartbeats do not renew the 30-minute TTL, disconnects cancel work where possible, and sensitive replay storage is prohibited.
+
+The Modal deployment sets zero minimum containers and a short measured scale-down window. This targets zero idle compute, not an absolute `$0/month`; active use, Framer, Mumbai-region multipliers, egress, and non-user corpus storage may cost money. Warm deterministic validation and the first progress event target sub-second latency. Cold starts and full retrieval/generation are independently benchmarked and are not described as sub-second guarantees.
+
+When offline or when the backend is unreachable, Framer permits static viewing, volatile form preservation, navigation, and reset only. It blocks RAG, LLM, assessment submission, and DCMFNet and displays `You're offline. Research estimates and evidence-based answers require a connection. No calculation has been performed.` No generic-profile, cached, approximate, or browser-side estimate is permitted.
 
 ## Evaluation architecture
 
@@ -318,8 +333,11 @@ Current evaluation guidance supports separating correctness, relevance, grounded
 | Concern | Proposal |
 | --- | --- |
 | Workflow orchestration | LangGraph `StateGraph` |
-| Public API | FastAPI |
-| Portfolio UI | Streamlit |
+| Public API | FastAPI-compatible ASGI app on Modal Server/eligible no-payload-storage endpoint |
+| Portfolio UI | Framer code components |
+| Streaming | Validated SSE blocks; no raw-token streaming |
+| Deployment region | Modal compute and routing pinned to `ap-south` (Mumbai) |
+| Secrets | `modal.Secret` or equivalent server-side secret manager |
 | Local vector/search engine | Qdrant |
 | Sparse retrieval | BM25-compatible sparse vectors |
 | Dense retrieval | Benchmark-selected biomedical embedding model |
@@ -351,10 +369,10 @@ These can be reconsidered only with evidence that they improve an approved requi
 
 The following answers remain required before this proposal becomes the approved AI architecture:
 
-1. Exact English-capable local/private-VPC LLM and embedding model selection, cost, latency, and offline constraints within the approved no-external-payload boundary
+1. Exact English-capable self-hosted LLM and embedding model selection and benchmarked resource profile inside Modal
 2. User-visible non-safety failure behavior and retry budgets
 3. Measurable quality and performance thresholds
 4. Reviewed wording, encodings, units, and valid ranges for manual questionnaire fields
-5. Hosted-prototype access control, concurrency target, India-fenced hosting implementation, and operating budget
+5. Hosted-prototype access-control mechanism beyond signed ephemeral sessions, concurrency target, and operating budget
 
 Approval requires reconciling these decisions into this document, the interface registry, the AI/RAG decision record, and implementation handoffs for the RAG Engineer, AI Engineer, and Testing Agent.

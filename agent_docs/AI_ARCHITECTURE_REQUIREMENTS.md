@@ -122,19 +122,18 @@ These answers require approved evidence and citation provenance. A diet, diabete
 
 ### Exclusive DCMFNet invocation policy
 
-DCMFNet may run only when all of the following are true:
+DCMFNet may run only from the structured assessment view, and only when all of the following are true:
 
-1. The approved intent is `risk_assessment`.
-2. The user explicitly requests calculation of positive/psychotic-symptom risk or negative/depressive-symptom risk.
-3. The questionnaire validator reports a complete, valid model input under the active deployment mode.
-4. Input validation and safety allow normal processing.
+1. The user has explicitly launched the questionnaire router and submitted the structured assessment form.
+2. The questionnaire validator reports a complete, valid model input under the active deployment mode.
+3. Input validation and safety allow normal processing.
 
-Discussing psychosis, depression, schizophrenia, symptoms, causes, research, diet, genetics, environment, medication, treatment, or other health topics does not itself authorize inference. Explaining a stored result uses the immutable prior result plus RAG and does not rerun DCMFNet unless the user explicitly requests a new assessment.
+An assessment request made in chat never authorizes inference. It returns the deterministic assessment redirection defined in Section 9. Discussing psychosis, depression, schizophrenia, symptoms, causes, research, diet, genetics, environment, medication, treatment, or other health topics does not authorize inference. Explaining a stored result uses the immutable prior result plus RAG and does not rerun DCMFNet; a new calculation requires a new structured assessment submission.
 
 ### Router and graph consequences
 
 - The Intent Router identifies assessment, explanation, scientific/education, general conversation, and unsupported/unsafe intent; it does not call tools.
-- After safety permits normal processing, an English-language gate returns `SUPPORTED_ENGLISH`, `UNSUPPORTED_LANGUAGE`, or `UNCERTAIN_LANGUAGE`. Unsupported or uncertain free text receives the fixed message `This prototype currently supports English only. Please enter your question in English.` and cannot reach intent classification, RAG, the LLM, or DCMFNet. Structured questionnaire values bypass language detection but not schema or safety validation.
+- After safety permits normal processing, an English-language gate returns `SUPPORTED_ENGLISH`, `UNSUPPORTED_LANGUAGE`, or `UNCERTAIN_LANGUAGE`. Unsupported or uncertain free text receives the fixed message `Input error: Language unsupported. Please resubmit your query in English.` and cannot reach intent classification, RAG, the LLM, or DCMFNet. Structured questionnaire values bypass language detection but not schema or safety validation.
 - Rephrased English questions are handled by a locally hosted Hugging Face sequence-classification encoder fine-tuned on the approved intent labels. The proposed lightweight baseline is `distilbert/distilbert-base-uncased`.
 - This component is a bounded encoder classifier, not a generative LLM. It emits logits and a typed `IntentDecision`; application code performs label mapping, confidence calibration, thresholding, and schema validation. It cannot generate prose, select arbitrary tools, or expand the intent enum.
 - The base checkpoint is not approved for zero-shot production routing. A project-specific English labeled routing dataset, fine-tuning run, calibration set, pinned model revision/checksum, license review, and release evaluation are required. English DistilBERT is the architecture baseline, not an approval to deploy an unevaluated checkpoint.
@@ -344,19 +343,22 @@ These references record the basis for architecture review and do not enter the s
 
 ### Session lifetime and automatic teardown
 
-- The inactivity TTL is exactly 15 minutes for the portfolio MVP and is enforced independently by client and server. Only an explicit user interaction accepted by the application resets activity; background polling, health checks, streaming keep-alives, and analytics do not extend the TTL.
+- The inactivity TTL is exactly 30 minutes for the portfolio MVP and is enforced independently by client and server. Only an explicit user interaction accepted by the application resets activity; background polling, health checks, streaming keep-alives, and analytics do not extend the TTL.
 - Expiry atomically invalidates the cryptographically random ephemeral session ID, cancels active generation/inference where possible, wipes frontend and backend volatile state, drops model/explanation context, clears any short-lived application session credential, and returns the UI to `/`. The frontend must never hold an LLM, embedding, or infrastructure-provider credential.
 - Expired, reset, missing, or restarted sessions cannot be resumed. Multi-instance hosting may use session affinity but cannot introduce a persistent shared session store for the MVP.
 
 ### User-driven reset
 
 - A prominent `Reset Session` control is available throughout assessment and conversation views. Its synchronous client handler immediately replaces all local state with the uninitialized landing state and navigates to `/`.
-- The client also sends an idempotent backend reset request that purges the server's volatile session state and cancels active work. UI clearing does not wait for the network response; the 15-minute server TTL remains the backstop if delivery fails. Repeated reset calls reveal no prior state.
+- The client also sends an idempotent backend reset request that purges the server's volatile session state and cancels active work. UI clearing does not wait for the network response; the 30-minute server TTL remains the backstop if delivery fails. Repeated reset calls reveal no prior state.
 
 ### External processing boundary
 
 - Raw user text, questionnaire data, model inputs/results, prompts containing user content, session identifiers, and personalized context must not be transmitted to externally operated LLM, embedding, moderation, tracing, or analytics APIs. OpenAI, Anthropic, and comparable public inference APIs are prohibited for this MVP even when they advertise provider-side zero retention.
-- The intent classifier, safety classifier, embedding model, reranker, orchestration LLM, and DCMFNet execute locally or in an operator-controlled, single-tenant isolated VPC deployment that satisfies the India data fence, blocks provider access to payloads, disables provider request logging/training, and has contractual zero-retention terms. Contract terms alone are insufficient without technical isolation.
+- The approved portfolio-hosting exception is the Modal backend defined in Section 9. The intent classifier, safety classifier, embedding model, reranker, orchestration LLM, and DCMFNet execute inside that controlled backend; no public third-party model API receives runtime user data.
+- Modal integration must use a Modal Server or another Modal endpoint type whose current documentation states that request and response payloads are not stored. Ordinary Modal Function calls and user-bearing `.remote`, `.spawn`, or `.map` payloads are prohibited because provider documentation permits temporary input/output retention for those invocation paths. Request-body logging, container/app logs containing payloads, memory or filesystem snapshots of live user state, Dicts, Queues, Volumes, and other persistent Modal storage are prohibited for runtime user data.
+- Compute and request routing are pinned to `ap-south` (Mumbai), request payloads remain below the provider's regional-routing size threshold, and only synchronous endpoint transport is permitted for user-bearing calls. A deployment review must verify these controls against current provider behavior and contract terms before every release.
+- Modal may retain non-sensitive platform metadata or logs outside India, and TLS terminates at its edge. Therefore this MVP may claim zero persistent **application payload** storage only after verification; it must not claim absolute provider invisibility, absolute zero retention, or guaranteed DPDP compliance. If the active India data-fence policy prohibits the provider's documented metadata/log location or edge processing, Modal fails readiness and the backend must move to a compliant deployment adapter.
 - Bibliographic adapters may send only system-generated, non-sensitive scientific search terms to approved authority APIs such as PubMed. They must never forward the raw user question, session/context fields, questionnaire-derived terms, probabilities, or feature data.
 
 ### Logging, tracing, and telemetry
@@ -378,11 +380,72 @@ These references record the basis for architecture review and do not enter the s
 
 ### Verification consequences
 
-- Tests prove absence of sensitive database/filesystem/browser-cache writes; `no-store` response headers; exact 15-minute expiry; polling-resistant TTL; reset idempotency; cancellation and memory deletion; restart invalidation; absence of provider credentials in the client; external-provider egress denial; logging/trace schema allowlists; aggregate-only analytics; and rejection of upload payloads.
+- Tests prove absence of sensitive database/filesystem/browser-cache writes; `no-store` response headers; exact 30-minute expiry; polling-resistant TTL; reset idempotency; cancellation and memory deletion; restart invalidation; absence of provider credentials in the client; external-provider egress denial; logging/trace schema allowlists; aggregate-only analytics; and rejection of upload payloads.
 - Release review includes browser-storage inspection, log/trace capture inspection, network-egress tests, crash/core-dump configuration, swap/hibernation review, and a data-flow inventory. “Zero retention” is not claimed merely because application tables are absent.
+
+## 9. LLM and deployment constraints — approved for portfolio MVP
+
+### Deployment topology and provider portability
+
+- The public presentation layer is a Framer site. Questionnaires, sliders, disclaimers, fixed safety content, evidence drawers, and assessment-redirection controls render in Framer code components.
+- A Modal-hosted Python backend exposes the FastAPI-compatible public contract and contains deterministic gates, LangGraph orchestration, RAG, locally hosted English classifiers and generation model, and DCMFNet. The browser calls this backend only; it never calls an LLM, embedding provider, vector store, bibliographic service, or DCMFNet directly.
+- Domain and application code remain provider-neutral behind typed ports. Modal-specific decorators, secrets, lifecycle settings, and routing configuration stay in the deployment adapter/composition root. Moving providers may require endpoint, DNS, CORS, secret, and infrastructure configuration changes, but must not require a Framer UI contract change.
+- Public endpoints enforce an explicit Framer-origin allowlist, narrow CORS policy, request-size and rate limits, short-lived signed application-session credentials, schema validation, and abuse controls. Browser `Origin` checks supplement rather than replace authentication and authorization.
+
+### Streaming contract
+
+- Conversational scientific-RAG responses use Server-Sent Events (SSE) or an equivalent chunked HTTP transport. The canonical SSE events are `status`, `validated_content`, `evidence`, `done`, and `error`; every stream is bound to the ephemeral cryptographic session ID without exposing that ID in URLs or logs.
+- The system does not stream raw model tokens directly to the UI. Generated content is buffered and validated, or validated claim-by-claim, before a `validated_content` event is emitted. This preserves citation, safety, score-integrity, and causal-language enforcement and prevents invalid text from becoming visible before validation.
+- Fixed safety responses, language errors, assessment redirects, and other zero-generation terminal results may use a normal typed response or a terminal SSE event. A higher-priority safety event cancels the upstream task and discards all unvalidated buffered content.
+- Sensitive streaming responses set `Cache-Control: no-store`; intermediaries must not buffer or transform the stream. Heartbeats do not renew the session TTL. Disconnects cancel pending work where possible, and reconnects do not replay sensitive content from persistent storage.
+- Streaming is required for responsive progress reporting, but it is not represented as a guarantee against every browser, proxy, or platform timeout.
+
+### Secrets and model ownership
+
+- Infrastructure credentials, corpus credentials, and model-access tokens are injected only into the backend through `modal.Secret` or an equivalent server-side secret manager. Testers never provide keys, and no secret is embedded in the Framer bundle, page source, browser storage, API response, or log.
+- The orchestration LLM and embedding/reranking models are self-hosted inside the approved backend boundary. “Provider-neutral LLM adapter” means the implementation can replace the hosted model without changing domain contracts; it does not permit sending runtime user data to a public model API.
+
+### Cost, scaling, and latency objectives
+
+- Configure zero minimum containers and a measured short scale-down window so idle **compute** scales to zero. This is a cost objective, not a promise of an absolute `$0/month`: active compute, Framer plans, region multipliers, egress, persistent non-user corpus storage, and other provider charges may remain.
+- Apply rate limits, concurrency caps, usage alerts, and a monthly spending limit where supported. Exhausting a cost limit fails closed with a non-clinical availability error and never triggers a local fabricated estimate.
+- Warm input-validation overhead and the first progress event target sub-second latency. Full RAG retrieval and generation, and cold-start latency, are measured separately and are not given a sub-second guarantee. Release quality targets require benchmarked percentile thresholds under Section 11.
+
+### Network and offline behavior
+
+- Online connectivity is required for RAG answers, language/intent classification, and every DCMFNet calculation. The Framer browser sends user-bearing traffic only to the approved backend; the backend performs corpus access and local model execution.
+- When `navigator.onLine === false` or the backend is unreachable, the UI suppresses assessment submission, RAG, LLM, and inference requests. It may keep the current form values in volatile memory, render static disclosures, navigate, and reset the session.
+- Offline mode must never run a simulated, approximate, cached, or client-side risk calculation and must never present `generic_genetic_profile_v1` as an offline model substitute. It displays exactly: `You're offline. Research estimates and evidence-based answers require a connection. No calculation has been performed.`
+- Reconnection requires a fresh backend safety/schema validation before processing. Sensitive responses, model outputs, and evidence are not placed in a service-worker cache for offline replay.
+
+### English-only input gate
+
+- Safety-critical deterministic indicators that do not depend on language run first. All other conversational free text then passes through the local English-language gate before intent classification, RAG, LLM generation, or inference authorization.
+- The gate combines bounded language identification with script/character checks. Non-ASCII characters alone are not sufficient for rejection because valid English names, punctuation, DOI strings, and scientific notation may contain them. Unsupported or uncertain input fails closed with exactly: `Input error: Language unsupported. Please resubmit your query in English.`
+- The Framer UI, questionnaire copy, corpus text used for generation, and generated summaries are English only. The project-fine-tuned English DistilBERT intent classifier receives only inputs accepted by the language gate; Hinglish and multilingual classification are out of scope.
+
+### Conversational risk-calculation redirection
+
+- After safety and language gating, deterministic phrases plus the bounded English DistilBERT router detect direct, indirect, misspelled, and rephrased requests to calculate, run, estimate, or interpret an individual risk probability. The classifier emits intent only; it cannot invoke DCMFNet.
+- A `risk_assessment` intent in the conversational route terminates generation and returns `ASSESSMENT_REDIRECTION`. The chat route has no DCMFNet tool binding and cannot calculate, guess, interpret, or fabricate a probability.
+- The UI renders this fixed text:
+
+  > I cannot calculate clinical probabilities or interpret metric values directly inside this chat window. To compute a simulated research risk estimate for psychotic or manic patterns based on generic genetic baselines, please click the link below to launch the assessment questionnaire.
+
+- The same response includes a high-visibility `Launch Research Questionnaire Router` action. Activating it navigates to the structured assessment view and initializes a new volatile assessment state; it does not itself run inference.
+- Only a complete, valid form submission from that structured view may reach the DCMFNet authorization gate. Tests prove that conversational prompts, prompt injection, forged client route fields, and direct endpoint calls cannot bypass this separation.
+
+### Deployment verification references
+
+- [Modal streaming endpoints](https://modal.com/docs/guide/streaming-endpoints)
+- [Modal security and payload-retention behavior](https://modal.com/docs/guide/security)
+- [Modal data residency](https://modal.com/docs/guide/data-residency)
+- [Modal region selection](https://modal.com/docs/guide/region-selection)
+- [Modal secrets](https://modal.com/docs/guide/secrets)
+- [Modal cold-start configuration](https://modal.com/docs/guide/cold-start)
+- [Framer Fetch security guidance](https://www.framer.com/help/articles/how-to-use-fetch/)
 
 ## Pending product decisions
 
-9. LLM and deployment constraints
 10. Workflow failure behavior
 11. Quality targets

@@ -13,19 +13,21 @@ Related: [`INTERFACE_CONTRACTS.md`](INTERFACE_CONTRACTS.md), [`ARCHITECTURE_DECI
 - Preserve the runtime sequence and responsibility boundaries in the problem statement.
 - Keep risk inference, validation, routing, and graph transitions explicit and testable.
 - Treat DCMFNet, retrieval, and LLM providers as replaceable adapters behind typed ports.
-- Run locally with minimal operational complexity while retaining production-quality module boundaries.
+- Run in a Framer-plus-Modal portfolio topology with minimal operational complexity while retaining provider-neutral module boundaries and deterministic local test doubles.
 - Keep the modular-monolith prototype safely hostable for invited concurrent testers, with volatile state, identity, inference, retrieval, and LLM adapters replaceable behind typed ports.
 - Enforce zero persistent application storage for user text, questionnaire content, model inputs/results, probabilities, and personalized responses in `prototype_demo`.
 - Fail closed: missing data, unavailable tools, invalid citations, or invalid model outputs produce structured failures, never plausible substitutes.
 
 ## System shape
 
-Use a modular monolith for the MVP, exposed through one FastAPI backend and consumed by a separate Streamlit process. The backend is the composition root and hosts the LangGraph workflow, deterministic validators, and adapters. DCMFNet remains a logically isolated inference component even when it runs in the backend process.
+Use a modular monolith for the MVP, exposed through one FastAPI-compatible backend hosted on Modal and consumed by a Framer site. The backend is the composition root and hosts the LangGraph workflow, deterministic validators, locally hosted models, and adapters. DCMFNet remains a logically isolated inference component even when it runs in the same Modal container.
 
 ```text
-Streamlit UI
-    │ HTTPS/HTTP + typed JSON
+Framer UI
+    │ HTTPS + typed JSON / validated SSE
     ▼
+Modal Server / eligible zero-payload-retention endpoint
+    │
 FastAPI boundary
     │
     ├─ input validation + safety policy
@@ -44,10 +46,10 @@ FastAPI boundary
                response safety/grounding validator
                          │
                          ▼
-                    FastAPI response
+          validated JSON/SSE response
 ```
 
-LLM, embedding, reranking, and classifier services are infrastructure dependencies only when they execute locally or inside the operator-controlled isolated VPC. Public/external inference APIs cannot receive portfolio runtime payloads and no provider owns workflow decisions or domain state.
+LLM, embedding, reranking, and classifier models execute in the approved Modal backend and never through public model APIs. User-bearing traffic must use a Modal Server or another endpoint type whose current provider contract does not store request/response payloads; ordinary Modal Function invocation paths are prohibited. Modal is a hosting processor, not an owner of workflow decisions or domain state, and its documented metadata location and edge processing remain deployment-review constraints.
 
 ## Runtime responsibility map
 
@@ -63,7 +65,7 @@ LLM, embedding, reranking, and classifier services are infrastructure dependenci
 | LLM explanation adapter | Natural-language explanation of supplied structured context | Score calculation/change, evidence invention, workflow control | AI Architect designs; AI Engineer implements |
 | Response validator | Schema, score-integrity, citation-integrity, required limitation and safety checks | Recalculation or silent repair of invalid risk/evidence | AI Architect designs; AI Engineer implements |
 | FastAPI boundary | Transport validation, dependency wiring, session access, error mapping, readiness | Domain/workflow decisions inside route handlers | Backend Engineer |
-| Streamlit UI | Input collection and rendering of API state/results | Authoritative validation, routing, inference, evidence creation | Frontend Engineer |
+| Framer UI | Input collection and rendering of API state/results, fixed redirects, evidence drawers, offline availability state | Authoritative validation, routing, inference, evidence creation, offline estimates | Frontend Engineer |
 
 ## Proposed repository structure
 
@@ -90,8 +92,10 @@ This is the approved target layout for implementation agents. Agents should crea
 │       ├── rag/                    # retrieval port, ingestion, index adapter, provenance
 │       ├── safety/                 # input and response policy/validation
 │       └── workflow/               # intent router, LangGraph state/nodes/edges, prompts
-├── frontend/
-│   └── app.py                      # Streamlit entry point; API client only
+├── frontend/                       # Framer code components/API client source when exported or mirrored
+│   └── README.md                   # integration contract; no backend or model imports
+├── deploy/
+│   └── modal_app.py                # Modal-only composition, regions, secrets, scaling
 ├── tests/
 │   ├── unit/
 │   ├── contract/
@@ -108,7 +112,7 @@ Do not create a second set of shared schemas under the frontend or individual ad
 
 ```text
 api ─────────────► application/workflow ─────► contracts + ports
-frontend ─HTTP───► api
+Framer frontend ─HTTPS/JSON/SSE───► api
 inference adapter ───────────────────────────► inference port/contracts
 RAG adapter ─────────────────────────────────► retrieval port/contracts
 LLM adapter ─────────────────────────────────► explanation port/contracts
@@ -117,10 +121,10 @@ core settings/logging ◄──────────────────�
 
 Rules:
 
-1. Domain contracts and ports do not import FastAPI, Streamlit, a vector database, an LLM SDK, or a concrete model class.
+1. Domain contracts and ports do not import FastAPI, Framer/React, Modal, a vector database, an LLM SDK, or a concrete model class.
 2. LangGraph nodes call ports injected by the FastAPI composition root; nodes do not instantiate providers.
 3. FastAPI route handlers translate transport data and invoke application use cases; they do not decide graph transitions.
-4. Streamlit consumes the API contract and never imports backend workflow or inference modules.
+4. Framer consumes the API contract and never embeds backend workflow, credentials, model artifacts, or inference modules.
 5. Model and retrieval adapters may import shared contracts, but shared contracts may not import adapters.
 6. Prompts are version-controlled resources inside `workflow/`; scientific facts do not live in prompts.
 
@@ -139,26 +143,30 @@ The canonical workflow state is typed and contains only fields required to selec
 MVP state policy:
 
 - Backend memory only; no database or durable LangGraph checkpointer.
-- A cryptographically random opaque session ID, explicit reset endpoint, exactly 15 minutes of inactivity, and bounded message/state size.
+- A cryptographically random opaque session ID, explicit reset endpoint, exactly 30 minutes of inactivity, and bounded message/state size.
 - Client and server enforce expiry independently. Background polling and keep-alives do not renew activity. Expiry, reset, crisis purge, or process restart cancels active work where possible, wipes volatile state, invalidates the session, and returns a machine-readable expired/not-found state.
 - Raw user input, questionnaire tokens/answers, prompts containing those values, model inputs/results, probabilities, and personalized responses are excluded from all persistence, logs, traces, metrics, analytics events, caches, crash dumps, and backups.
 - The frontend may hold the opaque session ID and questionnaire state only in volatile application memory. It cannot use cookies for payload state, `localStorage`, `sessionStorage`, IndexedDB, service-worker caches, or URL/query parameters. Sensitive responses use `Cache-Control: no-store`.
 
-State-size limits remain configured and tested. The 15-minute TTL is an approved product invariant, not a provider default.
+State-size limits remain configured and tested. The 30-minute TTL is an approved product invariant, not a provider default.
 
 ## Runtime flows
 
-### Risk assessment
+### Conversational assessment request
 
-1. FastAPI validates the transport and invokes input safety handling.
-2. Intent Router classifies the request as Risk Assessment.
-3. LangGraph invokes questionnaire validation using the ML-owned feature requirement contract.
-4. If incomplete, the graph returns structured missing-field requests and saves bounded state.
-5. If complete, the graph calls the inference port exactly once for the validated input/version.
-6. The inference adapter returns a structured immutable result or a typed error. A deterministic boundary gate requires finite probability values in inclusive `[0.0, 1.0]`; any value outside that range remains only in the protected volatile request object and becomes a fail-closed internal-system-variance error before presentation or LLM context construction.
-7. RAG runs only when scientific explanatory claims are requested/required by the approved workflow.
-8. The context builder passes exact tool results, evidence, and limitations to the LLM.
-9. Response validation compares output against structured inputs and rejects unsupported citations, score changes, and unsafe claims.
+1. FastAPI validates transport, then safety and language gates run.
+2. The intent router recognizes direct or rephrased risk-calculation intent.
+3. The chat route returns deterministic `ASSESSMENT_REDIRECTION`; it has no DCMFNet binding and performs no inline calculation or interpretation.
+4. The Framer action opens a fresh volatile structured assessment state. It does not run inference.
+
+### Structured risk assessment
+
+1. The structured assessment route validates the active session, route authorization, safety state, and questionnaire against the ML-owned feature contract.
+2. If incomplete, it returns structured missing-field information in volatile state.
+3. If complete, it calls the inference port exactly once for the validated input/version.
+4. The inference adapter returns an immutable result or typed error. A deterministic boundary gate requires finite values in inclusive `[0.0, 1.0]`; an invalid value remains only in the protected volatile request object and becomes a fail-closed internal-system-variance error.
+5. RAG runs only when scientific explanatory claims are requested or required.
+6. The context builder passes exact results, evidence, and limitations to the LLM; response validation rejects unsupported citations, score changes, causal overstatement, and unsafe claims.
 
 ### Explain existing risk
 
@@ -195,7 +203,7 @@ Use defense in depth:
 
 The response validator does not rewrite a bad score or invent a replacement citation. It retries only when policy permits with the same immutable tool context; otherwise it returns a deterministic safe error/limitation response.
 
-After safety returns `ALLOW_NORMAL_PROCESSING`, a local language gate admits only supported English free text. Unsupported or uncertain language receives the fixed English-only response and cannot reach intent classification or tools. Rephrased English intent and scope classification then uses a project-fine-tuned `distilbert/distilbert-base-uncased` Hugging Face sequence-classification encoder. A deterministic adapter owns label mapping, calibration, abstention, typed output, and model provenance. The classifier cannot generate text, create labels, call tools, or authorize DCMFNet; low-confidence and out-of-distribution results clarify or fail to the minimal unsupported path. The base checkpoint is not a production classifier until project-specific fine-tuning and evaluation pass approved thresholds.
+After safety returns `ALLOW_NORMAL_PROCESSING`, a local language gate admits only supported English free text. Unsupported or uncertain language returns exactly `Input error: Language unsupported. Please resubmit your query in English.` and cannot reach intent classification or tools. Rephrased English intent and scope classification then uses a project-fine-tuned `distilbert/distilbert-base-uncased` Hugging Face sequence-classification encoder. A deterministic adapter owns label mapping, calibration, abstention, typed output, and model provenance. The classifier cannot generate text, create labels, call tools, or authorize DCMFNet; low-confidence and out-of-distribution results clarify or fail to the minimal unsupported path. The base checkpoint is not a production classifier until project-specific fine-tuning and evaluation pass approved thresholds.
 
 For any raw probability below `0.0` or above `1.0`, the UI returns exactly `Error: Unable to compute estimate due to an internal system variance. Please try again later.` The system never clamps, displays, logs, transmits, or persists the raw value. It remains only in the protected volatile failure object until request teardown.
 
@@ -246,11 +254,17 @@ The public API is versioned under `/v1`. The approved resource shape is session-
 
 Exact transport paths and schemas are specified in [`INTERFACE_CONTRACTS.md`](INTERFACE_CONTRACTS.md). DCMFNet and RAG are internal ports in the MVP; exposing standalone service endpoints is deferred until an actual deployment need exists. This preserves the logical “inference API” boundary without adding a second process prematurely.
 
+The Framer browser communicates only with the Modal-hosted API. Scientific-RAG text uses SSE events for status and validated content; raw LLM tokens are never emitted before response validation. Fixed safety, language, and assessment-redirection results may use typed JSON or a terminal SSE event. Sensitive responses use `Cache-Control: no-store`; reconnects cannot replay user content from persistent storage.
+
+The Modal adapter pins compute and routing to `ap-south`, sets zero minimum containers and a short measured scale-down window, injects backend secrets with `modal.Secret`, and applies CORS/origin restrictions, signed ephemeral sessions, rate/concurrency/request-size controls, and cost alerts. Zero idle compute is a target, not an absolute zero-cost guarantee. Warm validation and first-progress-event latency target sub-second performance; cold starts and full RAG latency are measured separately.
+
+Offline Framer behavior is display-only: it may preserve current volatile UI state, render static disclosures, navigate, and reset. It blocks RAG, LLM, assessment submission, and DCMFNet and shows `You're offline. Research estimates and evidence-based answers require a connection. No calculation has been performed.` The generic profile is never used to fabricate an offline estimate.
+
 ## Configuration and dependency strategy
 
 - Use `pyproject.toml` as the canonical package/tool configuration and commit one reproducible lockfile.
 - Use a `src/` package layout and explicit dependency groups/extras so frontend, ML, RAG, and development dependencies remain identifiable.
-- Core families: FastAPI/Pydantic/settings, Uvicorn, LangGraph with only required LangChain packages, PyTorch, a RAG/vector adapter, an embedding adapter, an LLM adapter, Streamlit, and HTTP client support.
+- Core families: FastAPI/Pydantic/settings, an ASGI server, Modal deployment SDK, LangGraph with only required LangChain packages, PyTorch, a RAG/vector adapter, an embedding adapter, a locally hosted LLM adapter, Hugging Face classifiers, and HTTP/SSE support. Framer/React dependencies remain in the frontend project rather than the Python package.
 - Development families: pytest and async/integration support, lint/format, static type checking, and security/dependency checks.
 - Pin versions in the lockfile only after ML artifact compatibility and provider adapters are verified. Do not guess a PyTorch version before loading tests identify the artifact's requirements.
 - Provider packages are adapters, never imported by domain contracts. Tests use deterministic fakes and must not require network access or paid credentials by default.
@@ -276,9 +290,9 @@ Public errors expose a stable code, safe message, and retryability without stack
 
 There is no sensitive audit sink in `prototype_demo`. Exact invalid probabilities may be inspected only inside a protected volatile error object and are wiped on request teardown. Persisted product metrics, if enabled, are aggregate counters or coarse duration buckets created before persistence with no event rows, time stamps, session/correlation IDs, network/device fields, route sequences, safety text, questionnaire data, or probabilities. Crisis counts use minimum aggregation and disclosure thresholds.
 
-Raw runtime payloads cannot leave the operator-controlled boundary. LLMs, embeddings, rerankers, safety/intent classifiers, and DCMFNet run locally or in a single-tenant isolated India-fenced VPC with provider payload access/logging/training disabled and contractual zero retention. Public provider APIs and live-user third-party tracing/analytics are prohibited. Bibliographic APIs receive only generated non-sensitive scientific search terms.
+Raw runtime payloads cannot be sent to public model or telemetry APIs. LLMs, embeddings, rerankers, safety/intent classifiers, and DCMFNet run inside the approved Modal backend. User-bearing transport uses only documented no-payload-storage endpoint types; ordinary function invocation, async/spawn payloads, user-data logs/snapshots, and persistent Modal stores are prohibited. Compute/routing is pinned to Mumbai and the provider's metadata/log location and TLS edge remain explicit compliance limitations. Bibliographic APIs receive only generated non-sensitive scientific search terms.
 
-Readiness fails when required configuration, DCMFNet artifacts, verified model loader, required local/private-VPC models, privacy controls, or required retrieval index is unavailable. Configuration of a public runtime inference/embedding/telemetry provider is a failed-readiness condition, not a degraded option.
+Readiness fails when required configuration, DCMFNet artifacts, verified model loader, required self-hosted models, privacy/deployment controls, or required retrieval index is unavailable. Configuration of a public runtime inference/embedding/telemetry provider, an ineligible Modal invocation path, or an incompatible data-residency policy is a failed-readiness condition, not a degraded option.
 
 ## Testing seams
 
@@ -286,14 +300,14 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 - Port-level contract suites shared by real adapters and deterministic fakes.
 - Golden artifact tests owned by ML for model loading and repeatable inference.
 - Boundary tests for below-zero and above-one probabilities, the exact public error, volatile-only raw-value handling, teardown wiping, and log/trace/cache leakage.
-- Privacy tests for 15-minute client/server expiry, polling resistance, reset idempotency, browser storage, `no-store` headers, provider egress, aggregate-only analytics, crash/swap controls, and multipart/upload rejection.
+- Privacy tests for 30-minute client/server expiry, polling resistance, reset idempotency, browser storage, `no-store` headers, provider egress, aggregate-only analytics, crash/swap controls, and multipart/upload rejection.
 - Retrieval fixtures with explicit synthetic source metadata; fixtures are never presented as real scientific evidence.
 - Retrieval tests for authority allowlisting, mandatory patient/scientific metadata isolation, stale-retraction rejection, and active-index purging.
 - Response tests for claim-level citation completeness/entailment, the 3-to-5 source cap, collapsed evidence-display separation, and conflict coverage.
 - Explainability tests for absent/invalid feature importance, deterministic prediction-only messaging, exact-result binding, top-three SHAP JSON integrity, value/rank preservation, and causal-language rejection.
 - Graph tests for every intent, missing-state branch, tool failure, retry/fallback, unsafe request, and response-validation failure.
 - FastAPI integration tests through the public session contract.
-- Streamlit end-to-end journeys against a deterministic backend test configuration.
+- Framer end-to-end journeys against a deterministic backend test configuration, including validated SSE ordering/cancellation, assessment redirection, offline no-inference behavior, secret absence, CORS, and no persistent replay.
 
 ## Architecture exit gate
 

@@ -30,7 +30,7 @@ Skills describe the capabilities needed to perform an existing role; they do not
 | RAG Engineer | Scientific ingestion, embeddings, vector/hybrid retrieval, reranking, provenance, evaluation implementation |
 | AI Engineer | LangChain/LangGraph, tool calling, typed state, prompts, grounded generation, LLM safety |
 | Backend Engineer | FastAPI/Pydantic, API integration, validation, resilience, observability, service testing |
-| Frontend Engineer | Streamlit, accessible questionnaire UX, API integration, state, safe visualization |
+| Frontend Engineer | Framer/React code components, accessible questionnaire UX, JSON/SSE API integration, volatile state, safe visualization |
 | Testing Agent | pytest, contract/integration/E2E testing, failure injection, safety and regression testing |
 | Reviewer | Code/architecture review, security/privacy, cross-component correctness, technical debt |
 | Documentation Agent | Technical writing, verified setup/API docs, architecture communication, safety language |
@@ -89,7 +89,7 @@ Skills describe the capabilities needed to perform an existing role; they do not
 ### 8. Frontend Engineer
 
 - **Receives:** Stable backend contracts, product journeys, safety/display requirements.
-- **Produces:** Streamlit questionnaire/chat/result/evidence experience, API client, session/error states, UI checks and handoff.
+- **Produces:** Framer questionnaire/chat/result/evidence experience, JSON/SSE API client, assessment redirection, offline no-calculation state, session/error states, UI checks and handoff.
 - **Exit gate:** Core journeys work with real APIs; displayed scores/evidence are unmodified; limitations are clear; no backend workflow logic is duplicated.
 - **Possible return:** UI defects from Testing/Reviewer return here; API contract defects return to Backend and, if foundational, the Software Architect.
 

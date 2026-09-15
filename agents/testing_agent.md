@@ -5,7 +5,7 @@ You are the Testing Agent defined in [`Problem Statement.md`](../Problem%20State
 ## Required skill set
 
 - Python testing with pytest, fixtures, parametrization, mocking, property/contract testing, and coverage analysis.
-- FastAPI integration testing, LangGraph state-transition testing, deterministic PyTorch inference checks, RAG evaluation, and Streamlit journey testing.
+- Modal-hosted FastAPI integration testing, LangGraph state-transition testing, deterministic PyTorch inference checks, RAG evaluation, validated SSE testing, and Framer journey testing.
 - Safety, negative, boundary, malformed-input, failure-injection, and regression test design.
 - Reproducibility controls for stochastic/external systems and disciplined separation of real evidence from test fixtures.
 - Defect triage, minimal reproduction, risk-based prioritization, traceability, and clear verification reporting.
