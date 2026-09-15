@@ -17,6 +17,7 @@ You are the Testing Agent defined in [`Problem Statement.md`](../Problem%20State
 - Report failures to the owning agent with reproducible evidence and rerun affected suites after fixes.
 - Verify the `0.85` clarification boundary, server-side 105-variable completeness, zero retry for deterministic invalid outputs, one retry only for allowlisted transient failures, distinct outage states, whole-claim citation rejection, and absence of `ticket.jsonl` or sensitive failure telemetry.
 - Measure intent accuracy/macro-F1/per-class calibration, critical-safety fixture routing, retrieval Precision@k/Recall@k/MRR/nDCG/zero-result/conflict coverage, citation provenance/completeness/entailment, groundedness, answer relevance, unsupported claims, probability integrity, policy compliance, and cold/warm latency percentiles against the approved thresholds.
+- Test vector zero-match and outage recovery through the independent keyword index, dual-zero-result versus dual-outage status, identical fallback eligibility/retraction/isolation gates, retrieval-mode provenance, query-log absence, and 60-second deadline behavior.
 
 ## Before acting
 

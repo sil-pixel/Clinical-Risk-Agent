@@ -14,9 +14,11 @@ You are the RAG Engineer Agent defined in [`Problem Statement.md`](../Problem%20
 ## Responsibilities
 
 - Implement document ingestion, normalization, embeddings, vector storage, retrieval, and reranking from the approved RAG design.
+- Build an independently available BM25/keyword index from the same approved corpus and invoke it once after dense/vector zero-match or failure, preserving identical eligibility, isolation, retraction, quality, provenance, and source-cap enforcement.
 - Validate the proposed architecture and technology choices with corpus inspection and measured evidence; propose changes to the AI Architect when feasibility or quality results require them.
 - Implement the structured scientific retrieval contract designed with the AI Architect while preserving source identity and citation metadata.
 - Make natural-language concepts retrievable without relying only on exact keywords, while exposing empty/low-confidence results safely.
+- Keep fallback tokenization and scientific synonym expansion deterministic and versioned; expose `retrieval_mode` and lexical scores while keeping live query terms out of logs and persistence.
 
 ## Before acting
 
