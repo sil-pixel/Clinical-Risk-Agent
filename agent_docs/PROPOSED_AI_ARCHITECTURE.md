@@ -131,7 +131,9 @@ No feature importance is reported unless the separately validated SHAP contract 
 ```text
 classify query scope and recency need
 → normalize/expand scientific query
-→ retrieve local candidates
+→ retrieve local dense/hybrid candidates
+   ├── eligible candidates → continue
+   └── zero match or vector failure → deterministic BM25/keyword fallback over independent lexical index
 → fuse and rerank
 → grade evidence
    ├── sufficient → context builder
@@ -179,7 +181,7 @@ approved bibliographic discovery adapter
 
 Eligible material is limited to peer-reviewed journal articles, PubMed-indexed literature, DOI/PMID-bearing publications discovered through the configured authority allowlist, and DOI/PMID-bearing clinical guidelines. Every source must fall inside the rolling 20-year window and have a resolvable DOI or PMID. Preprints, theses/dissertations, curated local PDFs, general websites, retracted material, and studies that fail the versioned design-appropriate quality appraisal are hard-excluded before indexing. Authority domain or a locally available file is not an eligibility signal.
 
-Incremental ingestion runs every two weeks and publishes a new corpus/index version plus an audit report for additions, changes, exclusions, and deduplication decisions. An automated bi-weekly (every-two-weeks) retraction-scrubbing job checks the entire active DOI/PMID set through PubMed retraction/correction metadata and/or another approved active retraction index. On detection it immediately deactivates deprecated or retracted records, purges their chunks/vectors from active retrieval and the context window, invalidates related caches, publishes a new corpus version, and retains a non-retrievable audit tombstone. Records with retraction verification older than 14 days become ineligible for new answers until rechecked; job failures alert operators rather than recording a successful check.
+Incremental ingestion runs every two weeks and publishes new corpus, vector-index, and lexical-index versions plus an audit report for additions, changes, exclusions, and deduplication decisions. An automated bi-weekly (every-two-weeks) retraction-scrubbing job checks the entire active DOI/PMID set through PubMed retraction/correction metadata and/or another approved active retraction index. On detection it immediately deactivates deprecated or retracted records, purges their chunks/vectors and lexical/BM25 postings from active retrieval and the context window, invalidates related caches, publishes new index versions, and retains a non-retrievable audit tombstone. Records with retraction verification older than 14 days become ineligible for new answers until rechecked; job failures alert operators rather than recording a successful check.
 
 Use child passages for precise retrieval and larger parent sections for generation context. Prefer scientific section boundaries—abstract, methods, results, discussion, limitations, and recommendations—over blind fixed-character chunks.
 
@@ -195,9 +197,13 @@ Metadata reranking prioritizes relevant candidates in this order: clinical guide
 
 The scientific corpus is disconnected from patient-specific state. Questionnaire tokens, the 105-input token matrix, feature vectors, inference payloads, session identifiers, and user identity are never embedded or stored in the document vector index. General mental-health publications occupy an isolated collection or namespace. Before vector search, mandatory metadata filtering requires `data_class=scientific_publication`, `document_scope=general_mental_health`, and `contains_patient_data=false`; absent or mismatched metadata fails closed. Retrieval queries use only the minimum approved non-sensitive context.
 
-The index lifecycle includes automated retraction scrubbing every two weeks. It verifies every active PMID/DOI through PubMed and/or another approved active retraction index, immediately purges a newly deprecated or retracted record from the active vector namespace and context window when detected, invalidates caches, versions the index, and preserves only a non-retrievable audit tombstone.
+The index lifecycle includes automated retraction scrubbing every two weeks. It verifies every active PMID/DOI through PubMed and/or another approved active retraction index, immediately purges a newly deprecated or retracted record from active vector and lexical/BM25 namespaces and the context window when detected, invalidates caches, versions both indexes, and preserves only a non-retrievable audit tombstone.
 
 Qdrant is the proposed local search engine because it supports dense and sparse vectors, hybrid fusion, metadata payloads, and reranking-oriented multivectors. Its documented pipeline combines dense and BM25-style sparse retrieval before reranking: [Qdrant hybrid search and reranking](https://qdrant.tech/documentation/tutorials-basics/reranking-hybrid-search/).
+
+Resilience requires a lexical path that does not share the vector service's availability boundary. A versioned BM25/keyword index is built from the same eligible corpus and exposed through the retrieval port. When dense/vector retrieval fails or returns no eligible match, deterministic English tokenization plus an approved synonym/abbreviation map queries this independent lexical index once. The fallback repeats all scientific/non-patient metadata, DOI/PMID, date, quality, retraction, authority, relevance, conflict, and source-cap gates. Raw or derived query terms remain volatile and are not logged.
+
+A successful fallback returns normal `EvidenceResult` items with `retrieval_mode=keyword_fallback`, lexical scores, corpus/index versions, and full citation provenance. Only dual success-with-zero-results becomes `NO_ELIGIBLE_EVIDENCE`; failure of both approved paths becomes `RETRIEVAL_UNAVAILABLE`. Keyword matching is a retrieval mechanism, not permission to use general websites, bypass eligibility, cite model memory, or generate without evidence.
 
 Embedding and reranking models are not selected yet. The RAG Engineer should benchmark at least two biomedical embedding candidates and two reranking configurations against a labeled project dataset instead of selecting by popularity.
 
@@ -295,7 +301,7 @@ Subjective evidence-support checking may use a bounded secondary model-assisted 
 - `INTENT_CLARIFICATION_REQUIRED` renders `I didn't quite catch that. Please select what you would like to do:` plus `Submit Risk Assessment Questionnaire` and `Ask About Schizophrenia & Clinical Associations`. The first launches but does not submit the questionnaire; the second requests a new English scientific question. Neither reuses the ambiguous text or authorizes a tool.
 - Out-of-range/non-finite predictions, input/schema errors, and artifact/configuration failures are never retried. The invalid-probability path immediately returns the existing internal-system-variance message. Only an allowlisted transient worker/execution failure before a result exists may retry once with the same volatile validated vector, target, artifact, and idempotency key.
 - After two transient execution failures, return `System Note: The model failed to compute your specific risk estimation at this time. You may attempt to re-submit your parameters if you wish.` with no estimate or generated explanation.
-- `NO_ELIGIBLE_EVIDENCE`, `RETRIEVAL_UNAVAILABLE`, and `GENERATION_UNAVAILABLE` are separate terminal states with the fixed messages defined in the requirements. No-evidence and outage states never authorize pretrained-knowledge synthesis.
+- Dense/vector zero-match or failure first invokes the independent deterministic keyword/BM25 fallback. `NO_ELIGIBLE_EVIDENCE` follows only when both paths complete with no eligible evidence; `RETRIEVAL_UNAVAILABLE` follows only when no approved retrieval path can complete. These and `GENERATION_UNAVAILABLE` remain separate terminal states and never authorize pretrained-knowledge synthesis.
 - If a valid result already exists when RAG or generation fails, the UI may retain the deterministic result and show the target-aware assessment fallback. A standalone scientific question never receives a risk-result fallback.
 - `ticket.jsonl` and other user-bearing failure files are prohibited. Only sanitized `OperationalFailureEvent` fields—coarse time/latency buckets, component/operation/error codes, retry count, deployment mode, and version identifiers—may reach standard operational telemetry. Raw stacks, locals, query strings, questionnaire/target metrics, probabilities, evidence, and session/user/network identifiers remain excluded.
 
@@ -335,7 +341,7 @@ Compare these retrieval configurations using the same corpus and queries:
 | Hybrid plus reranker | Precision comparison |
 | Adaptive hybrid plus bounded live search | Proposed deployed architecture |
 
-Measure Recall@k, Precision@k, MRR, nDCG, citation precision/recall, answer groundedness, unsupported-claim rate, router accuracy/macro-F1/per-class metrics, calibration, abstention, graph-path accuracy, latency, token usage, and dependency-failure behavior. On frozen versioned fixtures, intent accuracy and macro-F1 must each exceed `0.85`; every critical safety fixture must take its required route with zero observed false negatives. The dense candidate gate is cosine similarity strictly above `0.85` for the selected normalized embedding artifact, but this model-specific score never substitutes for relevance-labeled evaluation and must be recalibrated when the embedding changes.
+Measure Recall@k, Precision@k, MRR, nDCG, citation precision/recall, answer groundedness, unsupported-claim rate, router accuracy/macro-F1/per-class metrics, calibration, abstention, graph-path accuracy, latency, token usage, and dependency-failure behavior. Retrieval metrics are reported for primary retrieval, keyword-only fallback cases, and the combined cascade, together with fallback activation, recovery, dual-zero-result, and added-latency rates. On frozen versioned fixtures, intent accuracy and macro-F1 must each exceed `0.85`; every critical safety fixture must take its required route with zero observed false negatives. The dense candidate gate is cosine similarity strictly above `0.85` for the selected normalized embedding artifact, but this model-specific score never substitutes for relevance-labeled evaluation and must be recalibrated when the embedding changes.
 
 Unvalidated first-pass citation-context matching must exceed `85%`, and its unsupported-claim rate must be at most `5%`. Public output remains stricter: citation provenance precision, citation membership, displayed medical/scientific claim support, probability identity, and prohibited-branch checks require a perfect pass rate. One failure is blocked regardless of aggregate model quality. Human review and optional LLM-as-judge are limited to subjective clarity, relevance, and groundedness.
 
@@ -357,6 +363,7 @@ Current evaluation guidance supports separating correctness, relevance, grounded
 | Secrets | `modal.Secret` or equivalent server-side secret manager |
 | Local vector/search engine | Qdrant |
 | Sparse retrieval | BM25-compatible sparse vectors |
+| Failure-resilient lexical fallback | Independently available BM25/keyword index built from the same approved corpus |
 | Dense retrieval | Benchmark-selected biomedical embedding model |
 | Fusion | Reciprocal Rank Fusion |
 | Reranking | Benchmark-selected biomedical cross-encoder or late-interaction model |

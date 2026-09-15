@@ -223,12 +223,14 @@ A future local SHAP adapter may report which inputs most influenced a specific p
 - The per-generation distinct-source cap is configurable from 3 through 5 and defaults to 5. Fewer sources are allowed; weak evidence is never added to fill the cap. Conflict-aware selection represents each supported position within the cap or returns a limitation.
 - Matched evidence text never appears raw in response prose. The API/UI carries separate retrieval-owned display records so collapsed tooltips or side drawers can show the exact matched string, DOI/PMID, and source metadata.
 - Feature associations may be discussed only when current matched text explicitly states them and the claim is inline-cited. Literature provides clinical context; SHAP provides model feature importance. Neither is causal inference.
-- A provider-neutral retrieval port permits a local vector store for MVP and replacement later.
+- A provider-neutral retrieval port permits a local vector store plus a separately available lexical/BM25 index for MVP and replacement later.
 - General web sources are prohibited. Authority discovery uses a versioned allowlist initially covering `*.who.int`, `*.cdc.gov`, `*.nih.gov`, `*.nhs.uk`, and configured Indian health-ministry/public-health domains under `*.gov.in`; URL canonicalization and redirects are revalidated, and DOI/PMID plus all quality gates remain mandatory.
 - The scientific vector collection is disconnected from patient-specific data. Questionnaire tokens/matrices, feature vectors, inference payloads, session IDs, and identities are never embedded or indexed. Mandatory pre-search metadata filters require the scientific-publication/general-mental-health/non-patient data class and fail closed if absent or mismatched.
-- Every two weeks, automated retraction scrubbing verifies all active PMIDs/DOIs against PubMed and/or another approved active retraction index. Newly deprecated/retracted vectors are immediately purged from active retrieval and context, caches are invalidated, the index is versioned, and only a non-retrievable tombstone remains.
+- Every two weeks, automated retraction scrubbing verifies all active PMIDs/DOIs against PubMed and/or another approved active retraction index. Newly deprecated/retracted vector chunks and lexical/BM25 postings are immediately purged from active retrieval and context, caches are invalidated, all indexes are versioned, and only a non-retrievable tombstone remains.
 
 The initial preferred local adapter is a persistent local vector store with metadata filtering and deterministic test doubles. The AI Architect defines selection criteria and the RAG Engineer supplies measured feasibility evidence before the concrete store is approved; architecture does not pre-approve a vendor-specific result schema.
+
+If dense/vector retrieval errors or returns no eligible match, the retrieval orchestrator runs one deterministic BM25/keyword query against an independently available lexical index built from the same approved corpus. Deterministic English tokenization and a versioned scientific synonym/abbreviation map produce the query; raw and derived terms remain volatile and unlogged. The fallback repeats every eligibility, data-isolation, retraction-freshness, quality, relevance, reranking, conflict-coverage, and source-cap gate. Successful evidence records `retrieval_mode=keyword_fallback` and lexical provenance. A dual successful zero-match returns `NO_ELIGIBLE_EVIDENCE`; failure of every approved local path returns `RETRIEVAL_UNAVAILABLE`.
 
 ## DCMFNet architecture constraints
 
@@ -293,7 +295,7 @@ Failure routing is typed and deterministic:
 
 - `INTENT_CLARIFICATION_REQUIRED` renders the approved two-button clarification; each button opens a new bounded flow and neither executes a tool.
 - invalid/non-finite DCMFNet values, schema errors, and artifact/configuration failures are non-retryable; transient execution failures alone may retry once with immutable inputs and idempotency.
-- `NO_ELIGIBLE_EVIDENCE`, `RETRIEVAL_UNAVAILABLE`, and `GENERATION_UNAVAILABLE` have distinct fixed messages and never fall back to uncited model knowledge.
+- A vector zero-match or failure invokes the independent keyword/BM25 fallback before terminal routing. `NO_ELIGIBLE_EVIDENCE`, `RETRIEVAL_UNAVAILABLE`, and `GENERATION_UNAVAILABLE` then have distinct fixed messages and never fall back to uncited model knowledge.
 - A valid existing result may remain visible when only explanation dependencies fail, with a deterministic target-aware limitation. A standalone RAG request never receives a risk summary.
 - Citation failure rejects the associated factual claim block rather than deleting its citation. If the remaining response is incomplete or incoherent, reject the whole response; one bounded regeneration is allowed before the fixed failure response.
 
@@ -308,6 +310,7 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 - Intent routing on the frozen labeled suite requires `>0.85` accuracy and `>0.85` macro-F1, with per-class metrics, calibration, abstention, and confusion matrices reported. The separate per-request confidence threshold is `0.85`; it is not dataset accuracy.
 - Every finite critical-safety release fixture must route correctly with zero observed false negatives. This blocks a failing release but is not described as a guarantee of zero production misses.
 - Dense candidates require cosine similarity `>0.85` for the selected normalized embedding artifact. The score is not a probability and must be recalibrated after any embedding change; Precision@k, Recall@k, MRR, nDCG, zero-result behavior, and conflict coverage are also reported.
+- Retrieval metrics are segmented for primary, keyword-fallback-only, and combined-cascade results; reports include fallback activation, recovery, dual-zero-result, and added-latency rates.
 - The unvalidated first-pass generator targets `>85%` citation-context matching and `<=5%` unsupported claims. Public output requires `100%` citation provenance and `0%` displayed unsupported medical/scientific claims; aggregate draft quality never weakens the hard validator.
 - DCMFNet raw output/identity preservation requires exact equality across inference and public result contracts. Deterministic percentage formatting is a separate presenter operation and cannot overwrite the raw field.
 - Controlled end-to-end runs must produce terminal validated success or safe failure in `<=60 seconds`, reporting cold/warm p50, p95, p99, and maximum separately.
@@ -325,7 +328,7 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 - Response tests for claim-level citation completeness/entailment, the 3-to-5 source cap, collapsed evidence-display separation, and conflict coverage.
 - Explainability tests for absent/invalid feature importance, deterministic prediction-only messaging, exact-result binding, top-three SHAP JSON integrity, value/rank preservation, and causal-language rejection.
 - Graph tests for every intent, missing-state branch, tool failure, retry/fallback, unsafe request, and response-validation failure.
-- Failure tests for the calibrated `0.85` boundary, two-action clarification, zero retry on invalid outputs, single retry on allowlisted transient failures, no-evidence/outage separation, claim-level citation rejection, and absence of `ticket.jsonl` or sensitive exception telemetry.
+- Failure tests for the calibrated `0.85` boundary, two-action clarification, zero retry on invalid outputs, single retry on allowlisted transient failures, vector failure/zero-match keyword recovery, dual-index no-evidence/outage separation, claim-level citation rejection, and absence of query logging, `ticket.jsonl`, or sensitive exception telemetry.
 - FastAPI integration tests through the public session contract.
 - Framer end-to-end journeys against a deterministic backend test configuration, including validated SSE ordering/cancellation, assessment redirection, offline no-inference behavior, secret absence, CORS, and no persistent replay.
 

@@ -109,7 +109,11 @@ Each evidence result must distinguish:
 - no sufficiently relevant evidence
 - unavailable/failed retrieval
 
+It also records `retrieval_mode` as `primary_hybrid`, `keyword_fallback`, or another separately approved/versioned mode, plus primary/fallback attempt status. A dense/vector zero-match or failure triggers one deterministic fallback against an independently available BM25/keyword index over the same approved corpus. `NO_ELIGIBLE_EVIDENCE` requires both primary and fallback searches to complete with no eligible result; `RETRIEVAL_UNAVAILABLE` means no approved path completed successfully.
+
 Each evidence item must preserve a stable internal source/document ID, title, source authorship when available, publication/source name, required DOI or PMID, publication date, the retrieval-owned exact matched text string, source type, study design/evidence-hierarchy tier, peer-review/indexing status, issuing authority when applicable, quality-appraisal result and rubric version, retraction/correction state and verification time, and retrieval/reranking scores whose relevance, hierarchy, recency, and quality semantics are documented. Corpus and index versions are required at result level.
+
+Keyword-fallback items additionally retain lexical index/version, deterministic tokenizer and synonym-map versions, and BM25/lexical score. Query terms and hashes derived from live user terms are absent from telemetry and persistence. The identical eligibility and metadata-isolation filters apply before any fallback item can enter context.
 
 Missing optional bibliographic fields remain explicitly absent; they are never generated. Missing DOI/PMID, publication date, eligibility, quality, or current retraction-verification metadata makes an item ineligible for return. Citation display is derived only from eligible source metadata in the current retrieval result.
 
@@ -221,6 +225,7 @@ Generated response content is a sequence of independently validated blocks. A ci
 - Intent evaluation reports overall accuracy and macro-F1, both required to be strictly greater than `0.85`, plus per-class precision/recall/F1, calibration error, abstention coverage, and confusion matrices. `IntentDecision.confidence` uses a separate calibrated `0.85` runtime threshold.
 - Critical-safety fixtures require zero observed false negatives in the versioned release suite. This is a test-suite invariant, not a production guarantee or a field in a user response.
 - A dense `EvidenceItem` can enter context only when its cosine similarity is strictly greater than `0.85` under the pinned normalized embedding/threshold version. The numeric score cannot be compared across embedding versions without recalibration.
+- Retrieval reports Precision@k, Recall@k, MRR, nDCG, zero-result rate, and conflict coverage separately for primary, keyword-fallback-only, and combined results, plus fallback activation, recovery, dual-zero-result, and latency impact.
 - First-pass generator evaluation requires citation-context matching above `85%` and unsupported medical/scientific claims at or below `5%`. A `ValidatedAssistantResponse` nevertheless permits no missing citation identity and no unsupported displayed medical/scientific claim.
 - `InferenceResult` raw numeric and identity fields require exact equality through serialization. The display percentage is a separate deterministic derived field and cannot replace or mutate the raw value.
 - Public operations terminate with validated success or a safe typed error within the controlled `60-second` client deadline. Latency reports distinguish cold and warm p50/p95/p99/maximum.

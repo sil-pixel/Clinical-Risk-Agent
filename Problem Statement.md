@@ -333,7 +333,7 @@ Embeddings enable semantic retrieval.
 
 Users should be able to ask natural questions such as:
 
-> Why did weed increase my score?
+> What does the research say about cannabis and psychosis?
 
 and retrieve literature discussing:
 
@@ -342,6 +342,10 @@ and retrieve literature discussing:
 - schizophrenia risk
 
 without relying on exact keyword matches.
+
+If dense/vector retrieval fails or produces no eligible result, the system performs one deterministic keyword/BM25 search over an independently available lexical index built from the same approved corpus. The fallback uses deterministic English tokenization and a versioned scientific synonym/abbreviation map. It must preserve every DOI/PMID, authority, publication-date, quality, retraction, scientific/non-patient isolation, relevance, hierarchy, conflict, citation, and source-cap rule. Raw and derived query terms remain volatile and are never logged.
+
+A successful keyword fallback proceeds through the normal reranker, context builder, and response validator with explicit retrieval-mode provenance. `NO_ELIGIBLE_EVIDENCE` is returned only when both approved paths complete with no eligible evidence; `RETRIEVAL_UNAVAILABLE` is returned when neither path can complete. Keyword fallback never authorizes general websites, pretrained-knowledge answers, or a relaxation of citation requirements.
 
 ---
 

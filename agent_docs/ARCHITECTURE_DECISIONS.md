@@ -102,7 +102,7 @@ This does not authorize durable health records.
 
 **Why:** Scientific answers require reproducible provenance and ongoing validity. Ingestion-time retraction checks alone cannot detect a later retraction, while authority domains and local files alone do not establish publication identity or quality.
 
-**Consequences:** DOI or PMID, publication date, source class, quality state, evidence tier, and retraction verification no older than 14 days are mandatory eligibility metadata. Relevant evidence is metadata-reranked as clinical guidelines, systematic reviews/meta-analyses, RCTs, observational studies, then expert opinion, with recency and quality applied within tiers. Material conflicts produce a controversy response representing both sides without selecting a conclusion. Bi-weekly scrubbing immediately deactivates newly detected deprecated/retracted sources, purges affected vectors/chunks and caches, versions the corpus, and records a non-retrievable tombstone. The scientific vector namespace is metadata-isolated from questionnaire tokens, patient matrices, inference state, session IDs, and identities. Citations can refer only to eligible evidence retrieved for the current answer.
+**Consequences:** DOI or PMID, publication date, source class, quality state, evidence tier, and retraction verification no older than 14 days are mandatory eligibility metadata. Relevant evidence is metadata-reranked as clinical guidelines, systematic reviews/meta-analyses, RCTs, observational studies, then expert opinion, with recency and quality applied within tiers. Material conflicts produce a controversy response representing both sides without selecting a conclusion. Bi-weekly scrubbing immediately deactivates newly detected deprecated/retracted sources, purges affected vector chunks, lexical/BM25 postings, and caches, versions every retrieval index, and records a non-retrievable tombstone. Scientific retrieval namespaces are metadata-isolated from questionnaire tokens, patient matrices, inference state, session IDs, and identities. Citations can refer only to eligible evidence retrieved for the current answer.
 
 ## ADR-013 — Fail closed on invalid probabilities without retaining sensitive values
 
@@ -175,6 +175,14 @@ This does not authorize durable health records.
 **Why:** Accuracy, confidence, cosine similarity, and citation validity have different denominators and meanings. Aggregate model targets cannot authorize a known bad citation, unsupported claim, altered probability, or unsafe route. Embedding scores are not portable across models, and zero observed errors on a finite suite is not proof of zero production error.
 
 **Consequences:** Reports include dataset/component versions, class distribution, per-class metrics, calibration, abstention, retrieval metrics, cold/warm latency percentiles, denominators, and confidence intervals where meaningful. Changing the embedding requires similarity recalibration. Raw model values remain immutable while the presenter deterministically formats percentages. Evaluation evidence comes from synthetic or approved non-user fixtures and aggregate CI artifacts, never `ticket.jsonl` or retained production conversations.
+
+## ADR-022 — Fall back from vector retrieval to independent lexical search
+
+**Decision:** If dense/vector retrieval fails or returns no eligible match, execute one deterministic BM25/keyword search against a separately available lexical index built from the same approved scientific corpus. Successful fallback evidence enters the normal reranking/context/validation path with `retrieval_mode=keyword_fallback`. Return `NO_ELIGIBLE_EVIDENCE` only after both paths complete with zero eligible evidence and `RETRIEVAL_UNAVAILABLE` only when no approved retrieval path completes.
+
+**Why:** Lexical retrieval can recover exact terminology, acronyms, PMID/DOI strings, and service availability without allowing the LLM to answer from memory. An independent availability boundary is necessary; a sparse index hosted only inside the failed vector service would not be a real outage fallback.
+
+**Consequences:** Deterministic English tokenization and a versioned scientific synonym/abbreviation map create fallback terms. The same DOI/PMID, allowlist, date, quality, retraction, scientific/non-patient isolation, relevance, evidence hierarchy, conflict, and source-cap rules apply. Query terms remain volatile and unlogged. Evaluation segments primary, fallback-only, and combined results and reports activation, recovery, dual-zero-result, and added latency. Keyword search does not authorize general-web retrieval or bypass the 60-second terminal deadline.
 
 ## Deferred decisions
 
