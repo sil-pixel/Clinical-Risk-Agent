@@ -13,8 +13,8 @@ This document defines the approved user-facing English questions for the manuall
 3. These questions are written as adult retrospective self-report because this MVP excludes minors. That use differs from the validated parent interview. It must not be described as a validated ADHD or ASD screen, diagnostic questionnaire, or clinical assessment.
 4. The product-approved group ranges and source-derived option descriptions are documented below. Their numeric bounds match the available training evidence, but the authoritative column codebook must still verify field-specific integer mappings before inference.
 5. Numeric range and UI option rendering may be implemented now. The backend must still fail closed rather than send questionnaire values to DCMFNet until every visible option has a verified training-column mapping.
-6. The supplied feature groups contain **84 manual fields**. Adding the artifact's `SEX` field produces **85 manual fields**. The remaining sixteen PRS fields and four batch-by-PC fields are supplied by the approved versioned generic profile, producing the complete 105-input matrix.
-7. All 85 manual fields are visible, required controls. The 20 generic-profile fields are derived server-side, hidden from editing, and disclosed as generic unmeasured assumptions in the assessment and result views.
+6. The supplied feature groups contain **84 manual model fields**. Adding the artifact's `SEX` field produces **85 manual model fields**. Three additional age-15 abuse questions are supplemental and must not enter the model matrix. The remaining sixteen PRS fields and four batch-by-PC fields are supplied by the approved versioned generic profile, producing the complete 105-input matrix.
+7. All 85 manual model fields and three supplemental fields are visible, required controls. The 20 generic-profile fields are derived server-side, hidden from editing, and disclosed as generic unmeasured assumptions in the assessment and result views.
 8. The approved machine ranges are `SUD15=0..5`, `SCZ15=0..3`, `ADHD9=0..2`, `ASD9=0..2`, `ACE15=1..6`, `ACE18=0|1`, `SUD18=0..7`, `SES=0..5`, and `SEX=1|2`. Source-derived and product-owner-supplied option descriptions appear below. They may be used for review and disabled prototyping, but must not be represented as training-codebook-verified mappings.
 9. `I do not remember` is a visible non-scored UI state with no machine encoding. Selecting it makes the questionnaire incomplete and prevents submission; it is never imputed, coerced, or sent as a model value.
 
@@ -178,6 +178,14 @@ Use the A-TAC response labels for D1–D17:
 
 ## E. Bullying experiences at age 15 (`ACE15`)
 
+### Supplemental abuse context — excluded from the trained model
+
+The public questionnaire also asks three retrospective questions about emotional, physical, and sexual abuse by around age 15. These fields are **not present in either model artifact** and must never be inserted into the 105-variable matrix or treated as `ACE15` model features without retraining and revalidation.
+
+Use the internal-only keys `SUPPLEMENTAL_emotional_abuse15`, `SUPPLEMENTAL_physical_abuse15`, and `SUPPLEMENTAL_sexual_abuse15`. Their six ordered descriptive responses encode `1..6` only for storage and future evaluation; the current inference adapter must discard them. The public UI uses opaque IDs and never exposes these keys or numeric codes.
+
+The three domains follow established ACE categories, but the wording is independently written for this research prototype rather than copied from a source instrument. CDC materials support emotional, physical, and sexual abuse as ACE domains; they do not validate this project's wording, six-level scale, or use at an age-15 boundary.
+
 Use these Revised Olweus questionnaire frequency labels for E1–E5 (`1..5`):
 
 - **1 — Not during the past few months**
@@ -223,10 +231,10 @@ Use these source-derived occurrence labels for F1–F4:
 - **0 — No**
 - **1 — Yes**
 
-1. **F1 —** `ACE18_other_abuse18`**:** By age 18, had you ever experienced another serious or abusive event not covered by the other questions in this section?
-2. **F2 —** `ACE18_hate_crime18`**:** By age 18, had you ever experienced violence that you understood to be motivated by prejudice against your race, ethnicity, sex, sexual orientation, religion, or another part of your identity?
-3. **F3 —** `ACE18_emotional_abuse18`**:** By age 18, had you ever experienced emotional abuse, such as frequently being shouted at, humiliated, ignored, or told that you were not good enough?
-4. **F4 —** `ACE18_witness_crime18`**:** By age 18, had you ever directly witnessed a threatening or violent crime, excluding images, film, television, or internet content?
+1. **F2 —** `ACE18_hate_crime18`**:** By age 18, had you ever experienced violence that you understood to be motivated by prejudice against your race, ethnicity, sex, sexual orientation, religion, or another part of your identity?
+2. **F3 —** `ACE18_emotional_abuse18`**:** By age 18, had you ever experienced emotional abuse, such as frequently being shouted at, humiliated, ignored, or told that you were not good enough?
+3. **F4 —** `ACE18_witness_crime18`**:** By age 18, had you ever directly witnessed a threatening or violent crime, excluding images, film, television, or internet content?
+4. **F1 —** `ACE18_other_abuse18`**:** By age 18, had you ever experienced another serious or abusive event not covered by the other questions in this section?
 
 **Review note:** These concise descriptions are translated from the CATSS18 source survey. Translation and machine-code mapping still require data-owner verification before inference.
 
@@ -310,7 +318,7 @@ Product wording, required-field behavior, and visible/derived approval was recor
 - [x] Approve the group-level numeric ranges for `SUD15`, `SCZ15`, `ADHD9`, `ASD9`, `ACE15`, `SUD18`, and `SES`.
 - [x] Retain the verified `ACE18=0|1` and `SEX=1|2` machine ranges.
 - [x] Confirm 19 ADHD and 17 ASD fields for the current artifact.
-- [x] Approve 85 visible required manual fields and 20 hidden server-derived generic-profile fields.
+- [x] Approve 85 visible required model fields, three visible required supplemental fields excluded from inference, and 20 hidden server-derived generic-profile fields.
 - [x] Define `I do not remember` as a non-scored, submission-blocking state.
 - [x] Add a human-readable description for every visible response option.
 - [x] Review the official CATSS15/CATSS18 surveys and published A-TAC response anchors.

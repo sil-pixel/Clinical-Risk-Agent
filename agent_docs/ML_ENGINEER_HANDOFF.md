@@ -40,7 +40,7 @@ Design explicit workflow outcomes for `questionnaire_contract_unavailable`, inva
 
 ## Remaining questionnaire verification
 
-The Product Manager approved the wording, required-field behavior, 85-visible/20-derived split, and model-aligned group ranges in [`questionnaire.md`](../questionnaire.md). Numeric range validation may now be implemented. The exact code labels, field-specific `SES` subsets, time frames, transformations, and missing-value rules remain unavailable; see [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md). The UI may be prototyped only with inference disabled until the original codebook mapping is supplied or the model is retrained and revalidated.
+The Product Manager approved the wording, required-field behavior, 85-visible-model-field/3-visible-supplemental-field/20-derived split, and model-aligned group ranges in [`questionnaire.md`](../questionnaire.md). Numeric range validation may now be implemented. The three supplemental age-15 abuse fields must be excluded from the current model matrix. The exact code labels, field-specific `SES` subsets, time frames, transformations, and missing-value rules remain unavailable; see [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md). The UI may be prototyped only with inference disabled until the original codebook mapping is supplied or the model is retrained and revalidated.
 
 ## Verification and completion evidence
 

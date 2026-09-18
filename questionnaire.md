@@ -15,6 +15,8 @@ This document contains only user-visible questionnaire text. It is an independen
 
 ## Tobacco, alcohol, and other substance use around age 15
 
+Section introduction: **Thinking back now, choose the statement that best reflects what your substance use was like when you were around 15.**
+
 For the first two questions, use:
 
 - I had never used it
@@ -26,17 +28,17 @@ For the first two questions, use:
 
 For the remaining questions in this section, use:
 
-- I had never tried it
-- I had tried it, but not during the previous year
-- I had used it during the previous year, but not during the previous month
-- I had used it during the previous month
+- I had never tried it by that age
+- I had tried it before then, but not during the year before I was about 15
+- I had used it during the year before I was about 15, but not during the most recent month
+- I had used it during the month when I was about 15
 
-1. Which statement best matches your cigarette use when you were about 15?
-2. Which statement best matches your use of snuff or another smokeless tobacco product when you were about 15?
-3. By age 15, how recently had you consumed alcohol?
-4. By age 15, how recently had you used cannabis?
-5. By age 15, how recently had you used another recreational drug that was not cannabis or a pain medicine?
-6. By age 15, how recently had you taken a pain medicine or opioid for a reason other than the medical directions given to you?
+1. Thinking back to when you were about 15, which statement best describes how you used cigarettes at that time?
+2. Thinking back to when you were about 15, which statement best describes how you used snuff or another smokeless tobacco product at that time?
+3. Thinking back to when you were about 15, how recently had you consumed alcohol at that time?
+4. Thinking back to when you were about 15, how recently had you used cannabis at that time?
+5. Thinking back to when you were about 15, how recently had you used another recreational drug that was not cannabis or a pain medicine?
+6. Thinking back to when you were about 15, how recently had you taken a pain medicine or opioid for a reason other than the medical directions given to you?
 
 ## Unusual experiences and wellbeing around age 15
 
@@ -141,9 +143,24 @@ Think about yourself at around age 9 compared with other children of a similar a
 16. Did you focus intensely on individual details rather than the wider situation?
 17. Did unexpected changes to routines or plans cause strong discomfort?
 
-## Bullying experiences around age 15
+## Bullying and other harmful experiences around age 15
 
-For questions 1–5, use:
+The first three questions are supplemental context questions. They are visible and required in the prototype but are not inputs to the current trained research model.
+
+For questions 1–3, use:
+
+- It never happened
+- It happened once
+- It happened two or three times
+- It happened about once a month
+- It happened about once a week
+- It happened several times a week
+
+1. By the time you were around 15, how often had a parent, caregiver, or another adult repeatedly insulted, humiliated, threatened, rejected, or emotionally harmed you?
+2. By the time you were around 15, how often had a parent, caregiver, or another adult deliberately hit, kicked, pushed, or otherwise physically hurt you?
+3. By the time you were around 15, how often had an older person or a person in authority pressured, forced, or involved you in sexual touching or sexual activity that you did not want or could not consent to?
+
+For questions 4–8, use:
 
 - This did not happen during the previous few months
 - It happened once or twice
@@ -151,7 +168,7 @@ For questions 1–5, use:
 - It happened about once a week
 - It happened several times a week
 
-For question 6, use:
+For question 9, use:
 
 - I had not been bullied during the previous few months
 - Usually one person was involved
@@ -160,7 +177,7 @@ For question 6, use:
 - Usually more than nine people were involved
 - Different people or groups were involved at different times
 
-For question 7, use:
+For question 10, use:
 
 - I had not been bullied during the previous few months
 - It continued for one or two weeks
@@ -169,13 +186,13 @@ For question 7, use:
 - It continued for about one year
 - It continued for several years
 
-1. During the previous few months at age 15, how often were you bullied in a way not covered by the other examples in this section?
-2. During the previous few months at age 15, how often did repeated bullying happen to you?
-3. During the previous few months at age 15, how often did somebody mock you, use a hurtful nickname, or deliberately embarrass you?
-4. During the previous few months at age 15, how often were you deliberately excluded, ignored, or treated in another emotionally harmful way?
-5. During the previous few months at age 15, how often did somebody spread an untrue or harmful story about you?
-6. When bullying happened around age 15, how many people were usually involved?
-7. When bullying happened around age 15, for how long did it continue?
+4. During the previous few months at age 15, how often were you bullied in a way not covered by the other examples in this section?
+5. During the previous few months at age 15, how often did repeated bullying happen to you?
+6. During the previous few months at age 15, how often did somebody mock you, use a hurtful nickname, or deliberately embarrass you?
+7. During the previous few months at age 15, how often were you deliberately excluded, ignored, or treated in another emotionally harmful way?
+8. During the previous few months at age 15, how often did somebody spread an untrue or harmful story about you?
+9. When bullying happened around age 15, how many people were usually involved?
+10. When bullying happened around age 15, for how long did it continue?
 
 ## Difficult or harmful experiences reported at age 18
 
@@ -184,10 +201,10 @@ Use these options for every question in this section:
 - I had not experienced this
 - I had experienced this
 
-1. By age 18, had you experienced another serious or harmful event not covered by the other questions in this section?
-2. By age 18, had you experienced violence that you believed was motivated by prejudice about an aspect of who you are?
-3. By age 18, had somebody repeatedly humiliated, rejected, intimidated, or emotionally harmed you?
-4. By age 18, had you directly witnessed a threatening or violent crime in person rather than through media?
+1. By age 18, had you experienced violence that you believed was motivated by prejudice about an aspect of who you are?
+2. By age 18, had somebody repeatedly humiliated, rejected, intimidated, or emotionally harmed you?
+3. By age 18, had you directly witnessed a threatening or violent crime in person rather than through media?
+4. By age 18, had you experienced another serious or harmful event not covered by the other questions in this section?
 
 ## Tobacco, alcohol, and other substance use around age 18
 
