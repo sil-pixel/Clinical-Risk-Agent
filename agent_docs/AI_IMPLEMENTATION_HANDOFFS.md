@@ -34,7 +34,7 @@ Canonical architecture: [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE
 
 ## Frontend Engineer
 
-- Render the 85 visible required controls from [`questionnaire.md`](../questionnaire.md); never expose the 20 generic-profile fields as editable controls.
+- Prototype only the independently worded public copy in [`questionnaire.md`](../questionnaire.md), pending final product and legal review. Never render A-TAC identifiers, feature keys, model groups, numeric machine codes, source-instrument identifiers, or the 20 generic-profile fields in visible text or accessibility labels. Use opaque public IDs; backend-only adapters may map them to stable internal variables and model feature keys. Internal codes also remain prohibited from URLs, analytics, logs, user-visible errors, and screenshots. The model-submission action remains unavailable with a clear “calculation not yet enabled” message until measurement-equivalence and ML mapping gates pass.
 - Treat `I do not remember` as non-scored and submission-blocking. Disable submission until every visible field is locally valid, while showing an accessible missing/invalid summary; backend validation remains authoritative.
 - Disclose the generic unmeasured genetic profile, synthetic training data, research-only status, no diagnosis/advice, and no personalized genetic-risk interpretation.
 - Support anonymous session, rate-limit, capacity, offline, budget-exhausted, no-evidence, dependency, and timeout states. Never display raw unvalidated SSE tokens.
@@ -42,9 +42,9 @@ Canonical architecture: [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE
 
 ## ML Engineer
 
-- Implement `QuestionnaireRequirements` and `QuestionnaireValidationResult` from the approved questionnaire contract.
-- Verify every manual field's order, encoding, range, missing-state handling, time frame, and transformation against the authoritative training codebook before enabling public inference.
-- Fail readiness if the source codebook does not support the approved UI mapping. Do not privately remap the questionnaire; return the conflict to product and architecture review.
+- Keep public wording/options separate from private feature/range mappings in `QuestionnaireRequirements`; public payloads use opaque question and option IDs that reveal no model semantics. Do not implement an inference-authorizing `QuestionnaireValidationResult`. Return `questionnaire_contract_unavailable` until legal, measurement-equivalence, and column-code mapping reviews pass.
+- Obtain and verify every manual field's answer labels, order, encoding, range, missing-state handling, time frame, and transformation against the authoritative training codebook before enabling public inference.
+- Fail readiness if the source codebook does not support the approved ranges and eventual UI labels. Do not privately assign code meanings or remap the questionnaire; return discrepancies to product and architecture review.
 - Preserve generic-profile construction from artifact medians and the complete exact 105-feature validation already defined by the inference contract.
 
 ## Testing Agent

@@ -334,4 +334,4 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 
 ## Architecture exit gate
 
-ARCH-01 and ARCH-02 are complete. The ML Engineer has published verified inference contracts, the Product Manager has approved the questionnaire and generic genetic-input policy, and the AI Architect has published [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE.md). ML codebook verification, measured model selection, RAG implementation, and AI implementation are the next gated stages.
+ARCH-01 and ARCH-02 are complete. The ML Engineer has published verified inference contracts, the Product Manager has approved questionnaire copy, group-level numeric ranges, and the generic genetic-input policy, and the AI Architect has published [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE.md). The questionnaire machine contract remains blocked by missing authoritative code labels and field semantics. RAG implementation may proceed independently; assessment inference cannot.

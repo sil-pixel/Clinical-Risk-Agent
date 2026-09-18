@@ -1,6 +1,6 @@
 # ML Engineer Handoff
 
-Status: Deterministic inference ready; questionnaire requirements approved for implementation and awaiting codebook verification
+Status: Deterministic inference ready; code-free public questionnaire drafted, legal/equivalence/machine mapping blocked
 
 Date: 2026-08-16
 
@@ -20,8 +20,8 @@ Date: 2026-08-16
 | `ArtifactInspection` | Implemented | Readiness, identity, compatibility, and audit evidence |
 | `InferenceInputSchema` | Implemented | Machine-to-machine schema discovery only; not questionnaire copy |
 | `InferenceResult` | Implemented | Preserve exact target, raw output, artifact identity, and limitations |
-| `QuestionnaireRequirements` | Ready to implement | Use approved 85-visible/20-derived contract; verify training-codebook compatibility before release |
-| `QuestionnaireValidationResult` | Ready to implement | Fail closed on missing, invalid, non-scored, unknown, or codebook-unverified values |
+| `QuestionnaireRequirements` | Draft | Code-free public projection and private mapping projection must remain separated; product/legal review pending |
+| `QuestionnaireValidationResult` | Blocked for inference | Interactive UX and deterministic fixtures may be validated, but no questionnaire submission may authorize DCMFNet until machine mappings are verified |
 
 Canonical implementation is under `src/clinical_risk_agent/`. Do not copy these contracts into private AI, API, or UI schemas.
 
@@ -40,7 +40,7 @@ Design explicit workflow outcomes for `questionnaire_contract_unavailable`, inva
 
 ## Remaining questionnaire verification
 
-The Product Manager approved the wording, response options, ranges, required-field behavior, and 85-visible/20-derived split in [`questionnaire.md`](../questionnaire.md). The ML Engineer must verify each approved mapping, order, time frame, and transformation against the authoritative training codebook before public inference. A mismatch fails readiness and returns to product review; it must not be repaired with an undocumented local mapping. The UI must describe results as questionnaire-based simulated research estimates using generic, unmeasured genetic assumptions—not personalized genetic probabilities.
+The Product Manager approved the wording, required-field behavior, 85-visible/20-derived split, and model-aligned group ranges in [`questionnaire.md`](../questionnaire.md). Numeric range validation may now be implemented. The exact code labels, field-specific `SES` subsets, time frames, transformations, and missing-value rules remain unavailable; see [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md). The UI may be prototyped only with inference disabled until the original codebook mapping is supplied or the model is retrained and revalidated.
 
 ## Verification and completion evidence
 
@@ -53,4 +53,4 @@ NaN behavior matches training-fitted median imputation
 No output transform, combined probability, or questionnaire semantics were invented
 ```
 
-Next workflow owners: ML Engineer for questionnaire contract implementation/codebook verification, then RAG and AI Engineers under the approved AI architecture.
+Next workflow owner for assessment inference: Product Manager and data owner to supply/approve the source-faithful codebook mapping or authorize retraining. In parallel, the RAG Engineer may implement scientific retrieval because it does not depend on questionnaire scoring.

@@ -52,7 +52,7 @@ This does not authorize durable health records.
 
 **Why:** Metadata contains 11 feature groups/105 features despite `num_modalities: 9`, includes non-questionnaire-looking PRS and batch/PC inputs, and supplies positive/negative targets without a documented user-facing relationship.
 
-**Verification update (2026-09-17):** The user-designated Thesis implementation and report established the model construction, preprocessing, targets, and golden outputs. `InferenceInputSchema` and `InferenceResult` are implemented. The product owner defines the outputs as separate positive- and negative-symptom research risk probabilities, approved `generic_genetic_profile_v1`, and approved the 85-visible/20-derived questionnaire contract. `QuestionnaireRequirements` is ready to implement; public inference remains blocked until ML verifies the approved mappings against the authoritative training codebook.
+**Verification update (2026-09-18):** The user-designated Thesis implementation and report established the model construction, preprocessing, targets, and golden outputs. `InferenceInputSchema` and `InferenceResult` are implemented. The product owner defines the outputs as separate positive- and negative-symptom research risk probabilities and approved `generic_genetic_profile_v1`. Product questionnaire copy exists, but ML verification found that its response encodings conflict with source ranges; `QuestionnaireRequirements` remains blocked pending an authoritative mapping or retraining. See [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md).
 
 **Consequences:** AI and Backend may integrate the exact internal inference contract and generic-profile provenance. Agents cannot invent other questionnaire defaults, derive genetic values from family history or population descriptors, add risk bands or a combined probability, or claim factor attribution.
 
@@ -212,7 +212,7 @@ This does not authorize durable health records.
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Modal SDK, Framer integration, and benchmark-winning model revisions/checksums.
 - Concrete retrieval adapter and quality-appraisal instruments; the scientific source/corpus eligibility policy is approved in ADR-012.
-- Training-codebook compatibility evidence for the approved questionnaire encodings.
+- Resolution of questionnaire training-column mappings and transformations through the authoritative codebook or retraining/revalidation; group-level ranges and source-derived UI descriptions are documented.
 - Exact request/state size bounds. The inactivity TTL is approved at 30 minutes.
 
 Deferred items remain owned by the roles and gates identified in the product plan and interface registry; deferral is not permission for downstream agents to guess.

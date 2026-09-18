@@ -1,242 +1,257 @@
-# DCMFNet Questionnaire — Approved MVP Copy
-
-**Status:** **Approved by the product owner on 2026-09-17 for portfolio-MVP implementation.** The wording, visible/derived split, required-field policy, and listed response encodings may be implemented as written. This remains a research-only questionnaire and is not a validated clinical or diagnostic assessment. Public inference remains fail-closed until the ML owner verifies compatibility with the authoritative training codebook.
-
-This document defines the approved user-facing English questions for the manually collected DCMFNet features supplied by the model owner. It preserves the feature keys so each item can be verified against the training-data dictionary during implementation.
-
-## Approved questionnaire contract
-
-1. The supplied Python ranges create **19 ADHD fields** (`range(1, 20)`) and **17 ASD fields** (`range(1, 18)`), not 20 and 18. The model artifacts also contain 19 `ADHD9` and 17 `ASD9` fields. No twentieth ADHD question or eighteenth ASD question may be added to the inference payload without retraining or revising the model schema.
-2. The names recovered for the 19 ADHD and 17 ASD fields align with the domains and item counts of the **Autism–Tics, ADHD and other Comorbidities inventory (A-TAC)**. A-TAC is a parent/collateral interview, asks about childhood problems in a whole-life frame, and scores each item as `No = 0`, `Yes, to some extent = 0.5`, or `Yes = 1`. The approved five-point project UI scale is therefore **not a validated A-TAC scoring scheme**.
-3. These questions are written as adult retrospective self-report because this MVP excludes minors. That use differs from the validated parent interview. It must not be described as a validated ADHD or ASD screen, diagnostic questionnaire, or clinical assessment.
-4. Education, parental country of birth, sex, and bullying have the product-approved categorical encodings documented below. Their compatibility with the original training-data codes must still be verified before inference.
-5. Product-approved numeric encodings are documented for every visible field. The data owner must still verify every encoding against the original training codebook and provide source compatibility evidence. Until that verification is complete, the backend must fail closed rather than send questionnaire values to DCMFNet.
-6. The supplied feature groups contain **84 manual fields**. Adding the artifact's `SEX` field produces **85 manual fields**. The remaining sixteen PRS fields and four batch-by-PC fields are supplied by the approved versioned generic profile, producing the complete 105-input matrix.
-7. All 85 manual fields are visible, required controls. The 20 generic-profile fields are derived server-side, hidden from editing, and disclosed as generic unmeasured assumptions in the assessment and result views.
-8. Frequency responses are integer categorical codes in the inclusive range `1..5`. Education is an integer categorical code in `1..5`; parental country of birth is `0` or `1`; sex is `1` or `2`. No field has a physical measurement unit.
-9. `I do not remember` is a visible non-scored UI state with no machine encoding. Selecting it makes the questionnaire incomplete and prevents submission; it is never imputed, coerced, or sent as a model value.
-
-### Approved common frequency scale
-
-Use this scale only where an item asks how often something occurred:
-
-- **1 — Never**
-- **2 — Rarely**
-- **3 — Sometimes**
-- **4 — Often**
-- **5 — Very often**
-
-The interface includes **“I do not remember”** as a non-scored state. It makes the assessment incomplete, has no numeric encoding, and must not be imputed in the browser or backend.
-
-## A. Substance use at age 15 (`SUD15`)
-
-**Section prompt:** Thinking specifically about when you were 15 years old, how often did you do each of the following?
-
-Use the approved common frequency scale for A1–A6.
-
-1. **A1 — `SUD15_Cigarettes15`:** At age 15, how often did you smoke cigarettes?
-2. **A2 — `SUD15_Snuff15`:** At age 15, how often did you use snuff or another form of smokeless tobacco?
-3. **A3 — `SUD15_Alcohol15`:** At age 15, how often did you drink alcohol?
-4. **A4 — `SUD15_Cannabis15`:** At age 15, how often did you use cannabis or marijuana?
-5. **A5 — `SUD15_OtherDrugs15`:** At age 15, how often did you use recreational or non-prescribed drugs other than cannabis or painkillers/opioids?
-6. **A6 — `SUD15_Painkillers_opioids15`:** At age 15, how often did you use painkillers or opioids?
-
-**Review note:** Confirm whether A6 means any use or only non-medical use, and confirm exactly which substances belong in A5. The UI must not add examples that alter the source category.
-
-## B. Experiences and wellbeing (`SCZ15`)
-
-These neutral questions collect the named historical features. They do not diagnose or label an experience.
-
-Use the approved common frequency scale for B1–B23. Unless stated otherwise, the time frame is **at age 15**.
-
-1. **B1 — `SCZ15_PROD_seen_hallucinations9`:** At around age 9, how often did you see things that other people could not see?
-2. **B2 — `SCZ15_Spied15`:** At age 15, how often did you feel that someone was spying on you?
-3. **B3 — `SCZ15_Others_Read_thoughts15`:** At age 15, how often did you feel that other people could read your thoughts?
-4. **B4 — `SCZ15_Special_messages15`:** At age 15, how often did you feel that messages from television, radio, the internet, signs, or other sources were meant especially for you?
-5. **B5 — `SCZ15_Special_powers15`:** At age 15, how often did you feel that you had special powers that other people did not have?
-6. **B6 — `SCZ15_Under_control_special_power15`:** At age 15, how often did you feel that an outside or special power was controlling your thoughts or actions?
-7. **B7 — `SCZ15_Read_others_minds15`:** At age 15, how often did you feel that you could read other people's minds?
-8. **B8 — `SCZ15_Seen_hallucinations15`:** At age 15, how often did you see things that other people could not see?
-9. **B9 — `SCZ15_Extreme_excitement15`:** At age 15, how often did you experience unusually extreme excitement?
-10. **B10 — `SCZ15_Irritable15`:** At age 15, how often did you feel unusually irritable?
-11. **B11 — `SCZ15_Unrealistic_abilities15`:** At age 15, how often did you feel that your abilities were far greater than they realistically were?
-12. **B12 — `SCZ15_Not_tired15`:** At age 15, how often did you need much less sleep than usual without feeling tired?
-13. **B13 — `SCZ15_Too_much_energy15`:** At age 15, how often did you have an unusually high amount of energy?
-14. **B14 — `SCZ15_Racing_thoughts15`:** At age 15, how often did your thoughts seem to race very quickly?
-15. **B15 — `SCZ15_Talking_fast15`:** At age 15, how often did you speak much faster than usual?
-16. **B16 — `SCZ15_Sexual_inappropriate15`:** At age 15, how often did you behave sexually in a way that was inappropriate for the situation?
-17. **B17 — `SCZ15_Rage_attacks15`:** At age 15, how often did you experience sudden attacks of intense anger or rage?
-18. **B18 — `SCZ15_Hear_voices15`:** At age 15, how often did you hear voices that other people could not hear?
-19. **B19 — `SCZ15_headaches15`:** At age 15, how often did you have headaches?
-20. **B20 — `SCZ15_worry15`:** At age 15, how often did you feel worried?
-21. **B21 — `SCZ15_unhappy15`:** At age 15, how often did you feel unhappy?
-22. **B22 — `SCZ15_lose_confidence15`:** At age 15, how often did you lose confidence in yourself?
-23. **B23 — `SCZ15_easily_scared15`:** At age 15, how often were you easily scared?
-
-**Review note:** The original reference period and anchors must be verified. “Other people could not see/hear” is neutral wording, but a clinician and lived-experience reviewer should approve the sensitive-item copy.
-
-## C. Attention and activity around age 9 (`ADHD9`)
-
-**Section prompt:** Thinking about yourself at around age 9, compared with other children of the same age, how often did each statement describe you?
-
-Use the approved common frequency scale for C1–C19.
-
-1. **C1 — `ADHD9_var_1` (`fail_close_attention9`):** At around age 9, how often did you make careless mistakes or have difficulty paying close attention to details?
-2. **C2 — `ADHD9_var_2` (`difficulty_with_attention9`):** At around age 9, how often did you have difficulty keeping your attention on tasks or activities?
-3. **C3 — `ADHD9_var_3` (`not_listening9`):** At around age 9, how often did you seem not to listen when someone spoke directly to you?
-4. **C4 — `ADHD9_var_4` (`difficulty_following_instructions9`):** At around age 9, how often did you have difficulty following instructions or completing tasks?
-5. **C5 — `ADHD9_var_5` (`difficulty_organizing_tasks9`):** At around age 9, how often did you have difficulty organizing tasks and activities?
-6. **C6 — `ADHD9_var_6` (`avoid_mental_effort_tasks9`):** At around age 9, how often did you avoid or dislike tasks that required sustained mental effort?
-7. **C7 — `ADHD9_var_7` (`often_lose_things9`):** At around age 9, how often did you lose things needed for tasks or activities?
-8. **C8 — `ADHD9_var_8` (`easily_distracted9`):** At around age 9, how often were you easily distracted by things around you?
-9. **C9 — `ADHD9_var_9` (`often_forgetful9`):** At around age 9, how often were you forgetful in everyday activities?
-10. **C10 — `ADHD9_var_10` (`difficulty_hold_still9`):** At around age 9, how often did you have difficulty sitting or keeping still when expected to do so?
-11. **C11 — `ADHD9_var_11` (`often_move9`):** At around age 9, how often did you fidget or move your hands, feet, or body?
-12. **C12 — `ADHD9_var_12` (`often_run9`):** At around age 9, how often did you run about or climb in situations where it was not expected?
-13. **C13 — `ADHD9_var_13` (`difficulty_calm9`):** At around age 9, how often did you have difficulty playing or taking part in activities calmly or quietly?
-14. **C14 — `ADHD9_var_14` (`often_motor9`):** At around age 9, how often were you constantly on the go, as if driven by a motor?
-15. **C15 — `ADHD9_var_15` (`talk_excess9`):** At around age 9, how often did you talk excessively?
-16. **C16 — `ADHD9_var_16` (`often_blurt_out9`):** At around age 9, how often did you answer before a question had been completed or blurt out answers?
-17. **C17 — `ADHD9_var_17` (`difficulty_waiting9`):** At around age 9, how often did you have difficulty waiting for your turn?
-18. **C18 — `ADHD9_var_18` (`often_interrupt9`):** At around age 9, how often did you interrupt or intrude on other people?
-19. **C19 — `ADHD9_var_19` (`easily_bored9`):** At around age 9, how often did you become bored very easily?
-
-**Instrument note:** The 19-field count matches the A-TAC ADHD domain (nine concentration/attention items and ten impulsiveness/activity items). These are plain-language draft statements tied to the recovered feature semantics, not a claim of verbatim or validated digital A-TAC administration.
-
-## D. Communication, social interaction, and flexibility around age 9 (`ASD9`)
-
-**Section prompt:** Thinking about yourself at around age 9, compared with other children of the same age, how often did each statement describe you?
-
-Use the approved common frequency scale for D1–D17.
-
-1. **D1 — `ASD9_var_1` (`delay_language9`):** At around age 9, how often did delayed spoken-language development affect you?
-2. **D2 — `ASD9_var_2` (`difficulty_converse9`):** At around age 9, how often did you have difficulty starting or maintaining a back-and-forth conversation?
-3. **D3 — `ASD9_var_3` (`repeat_words9`):** At around age 9, how often did you repeat particular words or phrases?
-4. **D4 — `ASD9_var_4` (`difficulty_pretend_play9`):** At around age 9, how often did you have difficulty with imaginative or pretend play?
-5. **D5 — `ASD9_var_5` (`talk_too_high_low9`):** At around age 9, how often was your voice unusually high, low, loud, quiet, or otherwise different in tone?
-6. **D6 — `ASD9_var_6` (`difficulty_on_track9`):** At around age 9, how often did you have difficulty staying on track during a conversation?
-7. **D7 — `ASD9_var_7` (`difficulty_express9`):** At around age 9, how often did you have difficulty expressing your thoughts, feelings, or needs to other people?
-8. **D8 — `ASD9_var_8` (`difficulty_socialize9`):** At around age 9, how often did you have difficulty socializing with other children?
-9. **D9 — `ASD9_var_9` (`uninterested_sharing9`):** At around age 9, how often did you show little interest in sharing enjoyment, interests, or achievements with other people?
-10. **D10 — `ASD9_var_10` (`own_terms9`):** At around age 9, how often did you want contact or activities with other people mainly on your own terms?
-11. **D11 — `ASD9_var_11` (`difficulty_expect_behavior9`):** At around age 9, how often did you have difficulty understanding what other people expected you to do in social situations?
-12. **D12 — `ASD9_var_12` (`easily_influenced9`):** At around age 9, how often were you easily influenced or persuaded by other people?
-13. **D13 — `ASD9_var_13` (`absorbed_own9`):** At around age 9, how often did you become deeply absorbed in your own interests or activities?
-14. **D14 — `ASD9_var_14` (`absorbed_problems9`):** At around age 9, how often did you become so absorbed in particular problems or topics that it was difficult to shift your attention?
-15. **D15 — `ASD9_var_15` (`strange_movements9`):** At around age 9, how often did you make unusual or repetitive movements?
-16. **D16 — `ASD9_var_16` (`absorbed_details9`):** At around age 9, how often did you focus strongly on details, sometimes more than on the overall situation?
-17. **D17 — `ASD9_var_17` (`dislike_change9`):** At around age 9, how often did you become upset or uncomfortable when routines or plans changed?
-
-**Instrument note:** The 17-field count matches the A-TAC ASD domain (six language, six social-interaction, and five flexibility items). The meanings of `difficulty_express9`, `easily_influenced9`, and `absorbed_problems9` especially require confirmation against the original study codebook.
-
-## E. Bullying experiences at age 15 (`ACE15`)
-
-Use this approved bullying-frequency scale for E1–E7:
-
-- **1 — Never**
-- **2 — Once a month**
-- **3 — Once a week**
-- **4 — More than once a week**
-- **5 — More than once a day**
-
-1. **E1 — `ACE15_other_bullying15`:** At age 15, how often did you experience a form of bullying not covered by the other questions in this section?
-2. **E2 — `ACE15_bullied_often15`:** At age 15, how often were you bullied repeatedly?
-3. **E3 — `ACE15_tease_bullying15`:** At age 15, how often were you teased, mocked, or called hurtful names?
-4. **E4 — `ACE15_emotional_bullying15`:** At age 15, how often did you experience emotional bullying?
-5. **E5 — `ACE15_rumours_bullying15`:** At age 15, how often did someone spread hurtful rumours about you?
-6. **E6 — `ACE15_bullying_by_num15`:** At age 15, how often were you bullied by one or more people?
-7. **E7 — `ACE15_bullying_time15`:** At age 15, how often did bullying continue or recur over time?
-
-**Review note:** E1 needs the original preceding categories to make “other” meaningful. The approved answer labels measure occurrence frequency rather than a literal number of people or duration. The data owner must confirm that this interpretation matches `bullying_by_num15` and `bullying_time15`; otherwise these two fields require source-faithful controls before inference.
-
-## F. Adverse experiences at age 18 (`ACE18`)
-
-**Section prompt:** Thinking specifically about when you were 18 years old, how often did you experience each of the following?
-
-Use the approved common frequency scale for F1–F4.
-
-1. **F1 — `ACE18_other_abuse18`:** At age 18, how often did you experience another form of abuse not covered by the other questions in this section?
-2. **F2 — `ACE18_hate_crime18`:** At age 18, how often did you experience abuse, threats, or violence that you understood to be motivated by prejudice against a part of your identity?
-3. **F3 — `ACE18_emotional_abuse18`:** At age 18, how often did you experience emotional abuse?
-4. **F4 — `ACE18_witness_crime18`:** At age 18, how often did you witness a crime or serious violence?
-
-**Review note:** The exact source definitions of “other abuse,” “hate crime,” and “witness crime” are required before these labels can be approved.
-
-## G. Substance use at age 18 (`SUD18`)
-
-**Section prompt:** Thinking specifically about when you were 18 years old, how often did you do each of the following?
-
-Use the approved common frequency scale for G1–G4.
-
-1. **G1 — `SUD18_cigarettes18`:** At age 18, how often did you smoke cigarettes?
-2. **G2 — `SUD18_snuff18`:** At age 18, how often did you use snuff or another form of smokeless tobacco?
-3. **G3 — `SUD18_alcohol_often18`:** At age 18, how often did you drink alcohol?
-4. **G4 — `SUD18_drugs_often18`:** At age 18, how often did you use recreational or non-prescribed drugs?
-
-**Review note:** Confirm whether frequency refers to a typical week/month, the full year, or another reference period, and define which drugs G4 includes.
-
-## H. Parental socioeconomic variables (`SES`)
-
-These are not frequency questions. Education uses the numbered 1–5 categorical encoding below, not the common frequency scale.
-
-Use this education encoding for H1 and H3:
-
-- **1 — Primary**
-- **2 — Secondary**
-- **3 — High school**
-- **4 — Bachelor's**
-- **5 — Master's and above**
-
-Use this country-of-birth encoding for H2 and H4:
-
-- **1 — India**
-- **0 — Elsewhere**
-
-1. **H1 — `SES_education_father`:** What was the highest level of education completed by your father?
-2. **H2 — `SES_birth_country_father`:** Was your father born in India or elsewhere?
-3. **H3 — `SES_education_mother`:** What was the highest level of education completed by your mother?
-4. **H4 — `SES_birth_country_mother`:** Was your mother born in India or elsewhere?
-
-**Privacy and fairness review:** Country of birth is a sensitive population descriptor and must never be used to derive PRS, ethnicity, race, or genetic ancestry. Product, privacy, fairness, and ML owners must confirm that the approved binary encoding matches the trained model and is necessary and lawful in the India portfolio context. More inclusive parent/guardian wording may be preferable, but it cannot replace the trained construct without validation.
-
-## I. Sex (`SEX`)
-
-Use this approved binary encoding:
-
-- **1 — Male**
-- **2 — Female**
-
-1. **I1 — `SEX`:** What is your sex?
-
-**Review note:** This is the exact binary model input requested for the current artifact. The UI should state that these are the only values supported by this research model and must not infer the answer from gender identity, name, language, appearance, or any other response.
-
-## J. Model inputs not entered by the user
-
-- **Sixteen PRS fields:** not user-entered in the portfolio MVP; populated only by the disclosed `generic_genetic_profile_v1` artifact medians.
-- **Four batch-by-PC interaction fields:** not user-entered; populated only by the same approved generic profile.
-
-## Approval checklist
-
-Product wording, response-option, required-field, and visible/derived approval was finalized on 2026-09-17. The remaining checks are implementation and release-verification tasks; findings that require changing the approved questionnaire must return to product review.
-
-- [x] Product owner approved the questionnaire wording and listed response options for MVP implementation.
-- [x] Confirm 19 ADHD and 17 ASD fields for the current artifact.
-- [x] Approve 85 visible required manual fields and 20 hidden server-derived generic-profile fields.
-- [x] Define `I do not remember` as a non-scored, submission-blocking state.
-- [ ] Provide the authoritative data dictionary and source questionnaire version for every feature.
-- [ ] Confirm exact time frame for each age-tagged field.
-- [ ] Confirm exact item order for `ADHD9_var_*` and `ASD9_var_*`.
-- [ ] Decide whether retrospective adult self-report is acceptable; otherwise obtain a compatible validated adult instrument and retrain/revalidate the model.
-- [ ] Verify approved response labels and encodings against the source codebook; do not change or remap them by assumption.
-- [ ] Verify that the approved bullying-frequency encoding matches the source meanings of `bullying_by_num15` and `bullying_time15`.
-- [ ] Verify that the approved education and India/elsewhere encodings match the training-data codebook; define missing/unknown handling.
-- [ ] Verify that the approved `SEX` values match the artifact's training encoding and document handling for users outside the model's supported binary categories.
-- [ ] Complete clinical, lived-experience, accessibility, privacy, fairness, and legal review of sensitive wording.
-- [ ] Validate the final electronic questionnaire and its scoring against the exact model training pipeline.
-
-## Scientific provenance for the ADHD/ASD draft
-
-- Larson T, et al. *The Autism–Tics, AD/HD and other Comorbidities inventory (A-TAC): further validation of a telephone interview for epidemiological research.* BMC Psychiatry. 2010;10:1. DOI: [10.1186/1471-244X-10-1](https://doi.org/10.1186/1471-244X-10-1). PMID: [20055988](https://pubmed.ncbi.nlm.nih.gov/20055988/).
-- Mårland C, et al. *The Autism–Tics, ADHD and other Comorbidities inventory (A-TAC): previous and predictive validity.* BMC Psychiatry. 2017;17:403. DOI: [10.1186/s12888-017-1563-0](https://doi.org/10.1186/s12888-017-1563-0). PMID: [29258473](https://pubmed.ncbi.nlm.nih.gov/29258473/).
-
-The publications describe A-TAC as a screening/research inventory rather than a diagnostic assessment and establish the 19-item ADHD and 17-item ASD domains and their original three-category scoring. Final implementation must use the authorized instrument/version and its usage terms, or clearly remain a separately validated project-specific questionnaire.
+# Research Risk Questionnaire — Public UI Copy
+
+**Status:** Product-directed original wording prepared on 2026-09-18; final copy review required before public release.
+
+This document contains only user-visible questionnaire text. It is an independently worded project questionnaire, not a validated clinical instrument. It must not be presented as diagnostic or as equivalent to any established assessment.
+
+## Public UI rules
+
+- Never display source-instrument identifiers, internal feature names, model group names, database columns, numeric machine codes, or scoring details in the rendered UI.
+- Backend code may assign each question and option to stable internal variables for validation and model-data assembly. The frontend displays only the independently worded question and descriptive option text.
+- Browser-to-backend requests use opaque public question and option IDs. The backend owns the mapping from those IDs to internal feature keys and numeric values.
+- All questions are required. **I do not remember** is available for every question, carries no score, and prevents model submission.
+- Keep questionnaire answers in volatile memory only. Do not place answers in URLs, browser storage, analytics, logs, traces, or error reports.
+- The interface must state that this is a research demonstration and does not provide a diagnosis or medical advice.
+
+## Tobacco, alcohol, and other substance use around age 15
+
+For the first two questions, use:
+
+- I had never used it
+- I had only experimented with it
+- I had used it before but had stopped
+- I used it occasionally
+- I used it on most days
+- I used it every day
+
+For the remaining questions in this section, use:
+
+- I had never tried it
+- I had tried it, but not during the previous year
+- I had used it during the previous year, but not during the previous month
+- I had used it during the previous month
+
+1. Which statement best matches your cigarette use when you were about 15?
+2. Which statement best matches your use of snuff or another smokeless tobacco product when you were about 15?
+3. By age 15, how recently had you consumed alcohol?
+4. By age 15, how recently had you used cannabis?
+5. By age 15, how recently had you used another recreational drug that was not cannabis or a pain medicine?
+6. By age 15, how recently had you taken a pain medicine or opioid for a reason other than the medical directions given to you?
+
+## Unusual experiences and wellbeing around age 15
+
+For questions 1–8, use:
+
+- This did not describe my experience
+- This described my experience to some degree
+- This clearly described my experience
+
+For questions 9–18, use:
+
+- Almost never
+- Occasionally
+- Frequently
+- Very frequently
+
+For questions 19–23, use:
+
+- This did not apply to me
+- This applied to me somewhat
+- This applied to me strongly
+
+1. At around age 9, did you experience seeing something that people near you did not seem to see?
+2. At around age 15, did you feel as though somebody was secretly watching or tracking you?
+3. At around age 15, did it seem possible that another person knew your thoughts without you telling them?
+4. At around age 15, did ordinary media, signs, or events appear to contain a message intended specifically for you?
+5. At around age 15, did you believe you had an ability or power that other people did not have?
+6. At around age 15, did it feel as though an outside force was directing your thoughts or actions?
+7. At around age 15, did you feel able to know another person's thoughts without being told?
+8. At around age 15, did you experience seeing something that other people present did not seem to see?
+9. At around age 15, how often did you have periods of feeling unusually excited or intensely upbeat?
+10. At around age 15, how often were you unusually irritable for an extended period?
+11. At around age 15, how often did you feel capable of things that were not realistically possible for you?
+12. At around age 15, how often did you sleep much less than usual and still feel rested?
+13. At around age 15, how often did you have a level of energy that was far above your usual level?
+14. At around age 15, how often did your thoughts move so quickly that they were difficult to slow down?
+15. At around age 15, how often did you speak so quickly that keeping to one topic became difficult?
+16. At around age 15, how often did your sexual words or actions not fit the situation?
+17. At around age 15, how often did you have intense and prolonged bursts of anger?
+18. At around age 15, how often did you hear speech or voices that nobody nearby appeared to hear?
+19. At around age 15, did you regularly experience headaches or similar physical discomfort?
+20. At around age 15, did worry affect you a great deal?
+21. At around age 15, did you regularly feel low, unhappy, or tearful?
+22. At around age 15, did you often feel less confident in yourself?
+23. At around age 15, were you easily frightened by many things?
+
+## Attention and activity during childhood
+
+Use these options for every question in this section:
+
+- This did not describe me
+- This described me to some degree
+- This clearly described me
+
+Think about yourself at around age 9 compared with other children of a similar age.
+
+1. Did you often overlook details or make mistakes because you had not noticed something important?
+2. Was it difficult for you to stay focused on an activity or task?
+3. Did people sometimes think you had not heard them even when they spoke directly to you?
+4. Was it difficult to carry instructions through to the end or finish assigned tasks?
+5. Did arranging tasks, belongings, or activities feel difficult?
+6. Did you strongly avoid activities that required concentration for a long time?
+7. Did you frequently misplace items you needed?
+8. Was your attention easily pulled away by things happening around you?
+9. Did you frequently forget ordinary activities or responsibilities?
+10. Was remaining seated or physically still especially difficult when it was expected?
+11. Did you frequently fidget or keep parts of your body moving?
+12. Did you run or climb in situations where other children usually remained still?
+13. Was taking part quietly in play or leisure activities difficult?
+14. Did you seem constantly active, as though it was hard to slow down?
+15. Did you speak much more than the situation called for?
+16. Did you often respond before somebody had finished asking a question?
+17. Was waiting for your turn particularly difficult?
+18. Did you frequently enter other people's conversations or activities without waiting?
+19. Did you lose interest and become bored very quickly?
+
+## Communication, social interaction, and flexibility during childhood
+
+Use these options for every question in this section:
+
+- This did not describe me
+- This described me to some degree
+- This clearly described me
+
+Think about yourself at around age 9 compared with other children of a similar age.
+
+1. Was the development of your spoken language noticeably later than expected?
+2. Was having a two-way conversation difficult for you?
+3. Did you repeatedly use the same words or expressions?
+4. Was make-believe or imaginative play difficult?
+5. Did your voice often sound unusually loud, quiet, high, low, or otherwise different?
+6. Was it hard to keep a conversation connected to its main topic?
+7. Was communicating your thoughts, feelings, or needs to other people difficult?
+8. Was joining in socially with other children difficult?
+9. Did you rarely invite other people to share your enjoyment, interests, or achievements?
+10. Did you usually want social contact to happen according to your own preferred conditions?
+11. Was understanding unspoken social expectations difficult?
+12. Were you more easily persuaded or led by other people than children of a similar age?
+13. Did your interests or activities sometimes absorb nearly all of your attention?
+14. Was it difficult to move away from a particular topic or problem once it held your attention?
+15. Did you make repeated or unusual body movements?
+16. Did you focus intensely on individual details rather than the wider situation?
+17. Did unexpected changes to routines or plans cause strong discomfort?
+
+## Bullying experiences around age 15
+
+For questions 1–5, use:
+
+- This did not happen during the previous few months
+- It happened once or twice
+- It happened two or three times a month
+- It happened about once a week
+- It happened several times a week
+
+For question 6, use:
+
+- I had not been bullied during the previous few months
+- Usually one person was involved
+- Usually two or three people were involved
+- Usually four to nine people were involved
+- Usually more than nine people were involved
+- Different people or groups were involved at different times
+
+For question 7, use:
+
+- I had not been bullied during the previous few months
+- It continued for one or two weeks
+- It continued for about one month
+- It continued for about six months
+- It continued for about one year
+- It continued for several years
+
+1. During the previous few months at age 15, how often were you bullied in a way not covered by the other examples in this section?
+2. During the previous few months at age 15, how often did repeated bullying happen to you?
+3. During the previous few months at age 15, how often did somebody mock you, use a hurtful nickname, or deliberately embarrass you?
+4. During the previous few months at age 15, how often were you deliberately excluded, ignored, or treated in another emotionally harmful way?
+5. During the previous few months at age 15, how often did somebody spread an untrue or harmful story about you?
+6. When bullying happened around age 15, how many people were usually involved?
+7. When bullying happened around age 15, for how long did it continue?
+
+## Difficult or harmful experiences reported at age 18
+
+Use these options for every question in this section:
+
+- I had not experienced this
+- I had experienced this
+
+1. By age 18, had you experienced another serious or harmful event not covered by the other questions in this section?
+2. By age 18, had you experienced violence that you believed was motivated by prejudice about an aspect of who you are?
+3. By age 18, had somebody repeatedly humiliated, rejected, intimidated, or emotionally harmed you?
+4. By age 18, had you directly witnessed a threatening or violent crime in person rather than through media?
+
+## Tobacco, alcohol, and other substance use around age 18
+
+For the first two questions, use:
+
+- I had never used it
+- I had only experimented with it
+- I had used it before but had stopped
+- I used it occasionally
+- I used it only at social events
+- I used it mainly on weekends
+- I used it on most days
+- I used it every day
+
+For the remaining questions in this section, use:
+
+- Never
+- Once a month or less
+- Two to four times a month
+- Two to three times a week
+- Four or more times a week
+
+1. Which statement best matches your cigarette use at around age 18?
+2. Which statement best matches your use of snuff or another smokeless tobacco product at around age 18?
+3. At around age 18, how frequently did you consume alcohol?
+4. At around age 18, how frequently did you use a recreational drug or medication for a non-medical reason?
+
+For the final question above, non-medical use includes taking more than directed, taking medication more often than directed, taking it to become intoxicated or explore its effects, or using medication obtained from somebody else or an unofficial source.
+
+## Family background
+
+For each parent's highest completed education, use:
+
+- Primary education
+- Secondary education
+- Upper-secondary or high-school education
+- Undergraduate degree
+- Postgraduate degree
+
+For each parent's birthplace, use:
+
+- Born in India
+- Born outside India
+
+1. What was the highest level of education completed by your father?
+2. Was your father born in India or outside India?
+3. What was the highest level of education completed by your mother?
+4. Was your mother born in India or outside India?
+
+## Sex supported by the current research model
+
+Use:
+
+- Male
+- Female
+
+1. What sex was recorded for you at birth?
+
+The interface must explain that the current research model supports only these two training categories. It must not infer this answer from gender identity, name, language, appearance, or any other response.
+
+## Release conditions
+
+- Product owner reviews and approves this independently worded public copy.
+- Legal/licensing review confirms that the product does not reproduce or market itself as any protected source instrument.
+- Clinical, lived-experience, accessibility, privacy, and fairness reviewers approve the sensitive wording and interaction design.
+- ML verification confirms the private mapping from each displayed option to the trained feature schema before model submission is enabled.
+- Until all release conditions pass, the UI may be interactive for testing but must state that no model calculation is available.

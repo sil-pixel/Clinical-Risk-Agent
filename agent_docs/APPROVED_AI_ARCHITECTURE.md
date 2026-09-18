@@ -80,7 +80,7 @@ LangGraph `StateGraph` is approved for typed state, explicit conditional routing
 - request metadata: deployment mode, request kind, monotonic deadline, policy/config versions, and volatile request ID;
 - authorization: signed-session validity, route origin, assessment-view authorization, allowed tool set, and remaining quota class;
 - safety/language/intent: one typed decision from each completed gate plus classifier/calibration provenance;
-- questionnaire: approved requirements version, volatile answer map, validation result, missing/invalid field IDs, and generic-profile provenance;
+- questionnaire: requirements availability/version, volatile answer map only when a compatible contract exists, validation result, missing/invalid field IDs, and generic-profile provenance;
 - inference: immutable positive and negative `InferenceResult` objects or one typed inference failure; never a mutable combined score;
 - retrieval: minimal normalized `RetrievalQuery`, attempt statuses, immutable `EvidenceResult`, and corpus/index versions;
 - context: `StructuredExplanationContext` assembled only from validated fields;
@@ -97,8 +97,8 @@ Raw HTTP headers, network addresses, credentials, model logits, complete feature
 3. `detect_language` handles free text only and returns supported, unsupported, or uncertain English. It has no other tool permission.
 4. `classify_intent` applies deterministic structured-route rules and the calibrated local intent classifier. It cannot inspect questionnaire completeness or call tools.
 5. `select_route` is deterministic and maps typed decisions plus request kind to one subgraph.
-6. `load_questionnaire_requirements` loads the approved versioned 85-visible/20-derived contract.
-7. `validate_questionnaire` validates all visible values; it cannot impute or infer answers.
+6. `load_questionnaire_requirements` loads a versioned ML-approved contract or returns `questionnaire_contract_unavailable`. The current product copy includes aligned ranges and source-derived UI descriptions, but is not yet an inference contract because the missing column codebook prevents verification of exact integer mappings and transformations.
+7. `validate_questionnaire` validates all visible values only after a compatible contract exists; it cannot impute, infer, or transform answers without an explicit source-codebook mapping.
 8. `apply_generic_profile` reads only the selected artifacts' approved medians for the 20 hidden fields and produces the exact 105-field machine input.
 9. `invoke_dcmfnet` calls only the positive and negative predictors after all assessment authorization invariants pass.
 10. `validate_and_present_results` checks finite inclusive `[0,1]` values and creates deterministic display percentages or the fixed internal-variance failure.
@@ -495,7 +495,7 @@ These can be reconsidered only with evidence that they improve an approved requi
 The product and architecture decisions in this document are approved. Public release still requires measured evidence, not preference-based substitution:
 
 1. Pin exact model revisions, checksums, runtime versions, and quantized artifacts after the benchmark matrix passes.
-2. Verify the approved questionnaire encodings against the authoritative training codebook; until then, questionnaire validation must fail closed before DCMFNet.
+2. Resolve the questionnaire machine-mapping gap documented in [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md) by supplying the authoritative column codebook or retraining/revalidating the model. Group-level ranges and source-derived UI descriptions are documented, but questionnaire validation returns `questionnaire_contract_unavailable` before DCMFNet until integer direction, recoding, transformations, and missing-value behavior are verified.
 3. Calibrate language, intent, safety, retrieval, and BERTScore thresholds on versioned project datasets.
 4. Demonstrate the 60-second terminal-state requirement, CPU-only resource ceiling, cold-start behavior, and `$0` spend-limit degradation path under the approved load profile.
 5. Reverify emergency-resource content manually every 30 days and automatically test configured links daily. Optional stale helplines are suppressed; the India emergency number and instruction to seek immediate local emergency help remain available from a separately verified fixed bundle.

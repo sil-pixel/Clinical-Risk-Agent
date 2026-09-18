@@ -33,7 +33,7 @@ Approved design: [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE.md). M
 
 ## 2. Assessment input journey — approved for portfolio MVP
 
-- The assessment experience uses a manual questionnaire for fields that have approved user-facing wording, encodings, ranges, and units.
+- The assessment experience may use a manual questionnaire only for fields whose user-facing wording and machine mappings are both approved. Wording and group-level numeric ranges are product-approved, but exact code labels and field-specific semantics remain blocked by the ML compatibility audit; assessment inference remains unavailable until they are verified.
 - The system must visibly report completion and validation errors and must not invoke DCMFNet until every required machine input has an approved provenance.
 - A family-history question may be collected only if its purpose and storage are approved, but it must not be converted into or used to increase a PRS value. Family history is not one of the exported model's 105 input fields.
 - Nationality, country of origin, ethnicity, race, or self-reported descent must not be converted into genetic principal components. The exported fields are batch-by-PC interaction terms (`batch_1_x_PC1`, `batch_2_x_PC1`, `batch_1_x_PC2`, and `batch_2_x_PC2`) that require the compatible genomic preprocessing and batch context.
@@ -562,4 +562,4 @@ These references record the basis for architecture review and do not enter the s
 
 ## Pending product decisions
 
-No product-policy decision remains pending. Questionnaire copy and encodings are approved in [`questionnaire.md`](../questionnaire.md); access control, operating envelope, corpus scope, live PubMed fallback, BERTScore policy, public limits, budget exhaustion behavior, and emergency-resource reverification are approved in the architecture. Exact model revisions and calibrated thresholds remain measured implementation/release gates rather than product decisions or permission to weaken Sections 1–11.
+No AI/RAG product-policy decision remains pending. Questionnaire wording, group-level ranges, and source-derived UI descriptions are documented, but exact training-column mappings and transformations remain blocked as documented in [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md); assessment inference requires source-codebook resolution or retraining approval. Access control, operating envelope, corpus scope, live PubMed fallback, BERTScore policy, public limits, budget exhaustion behavior, and emergency-resource reverification remain approved. Exact AI model revisions and calibrated thresholds remain measured implementation/release gates rather than permission to weaken Sections 1–11.
