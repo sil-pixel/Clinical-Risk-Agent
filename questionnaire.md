@@ -1,19 +1,22 @@
-# DCMFNet Questionnaire — Provisionally Approved MVP Copy
+# DCMFNet Questionnaire — Approved MVP Copy
 
-**Status:** **Provisionally approved by the product owner on 2026-09-15 for portfolio-MVP implementation.** The wording and listed response encodings may be implemented as written. This remains a research-only questionnaire and is not a validated clinical or diagnostic assessment. Any mismatch discovered during training-codebook verification must be brought back for review before public inference.
+**Status:** **Approved by the product owner on 2026-09-17 for portfolio-MVP implementation.** The wording, visible/derived split, required-field policy, and listed response encodings may be implemented as written. This remains a research-only questionnaire and is not a validated clinical or diagnostic assessment. Public inference remains fail-closed until the ML owner verifies compatibility with the authoritative training codebook.
 
-This document defines the provisionally approved user-facing English questions for the manually collected DCMFNet features supplied by the model owner. It preserves the feature keys so each item can be verified against the training-data dictionary during implementation.
+This document defines the approved user-facing English questions for the manually collected DCMFNet features supplied by the model owner. It preserves the feature keys so each item can be verified against the training-data dictionary during implementation.
 
-## Important contract decisions required before implementation
+## Approved questionnaire contract
 
 1. The supplied Python ranges create **19 ADHD fields** (`range(1, 20)`) and **17 ASD fields** (`range(1, 18)`), not 20 and 18. The model artifacts also contain 19 `ADHD9` and 17 `ASD9` fields. No twentieth ADHD question or eighteenth ASD question may be added to the inference payload without retraining or revising the model schema.
-2. The names recovered for the 19 ADHD and 17 ASD fields align with the domains and item counts of the **Autism–Tics, ADHD and other Comorbidities inventory (A-TAC)**. A-TAC is a parent/collateral interview, asks about childhood problems in a whole-life frame, and scores each item as `No = 0`, `Yes, to some extent = 0.5`, or `Yes = 1`. The five-point frequency scale requested here is therefore a proposed UI scale, **not a validated A-TAC scoring scheme**.
+2. The names recovered for the 19 ADHD and 17 ASD fields align with the domains and item counts of the **Autism–Tics, ADHD and other Comorbidities inventory (A-TAC)**. A-TAC is a parent/collateral interview, asks about childhood problems in a whole-life frame, and scores each item as `No = 0`, `Yes, to some extent = 0.5`, or `Yes = 1`. The approved five-point project UI scale is therefore **not a validated A-TAC scoring scheme**.
 3. These questions are written as adult retrospective self-report because this MVP excludes minors. That use differs from the validated parent interview. It must not be described as a validated ADHD or ASD screen, diagnostic questionnaire, or clinical assessment.
 4. Education, parental country of birth, sex, and bullying have the product-approved categorical encodings documented below. Their compatibility with the original training-data codes must still be verified before inference.
-5. Product-approved numeric encodings are now documented for sex, education, parental country of birth, and bullying frequency. The data owner must still verify every encoding against the original training codebook and provide valid ranges, missing-value rules, item order, and transformations. Until that verification is complete, the backend must fail closed rather than send questionnaire values to DCMFNet.
+5. Product-approved numeric encodings are documented for every visible field. The data owner must still verify every encoding against the original training codebook and provide source compatibility evidence. Until that verification is complete, the backend must fail closed rather than send questionnaire values to DCMFNet.
 6. The supplied feature groups contain **84 manual fields**. Adding the artifact's `SEX` field produces **85 manual fields**. The remaining sixteen PRS fields and four batch-by-PC fields are supplied by the approved versioned generic profile, producing the complete 105-input matrix.
+7. All 85 manual fields are visible, required controls. The 20 generic-profile fields are derived server-side, hidden from editing, and disclosed as generic unmeasured assumptions in the assessment and result views.
+8. Frequency responses are integer categorical codes in the inclusive range `1..5`. Education is an integer categorical code in `1..5`; parental country of birth is `0` or `1`; sex is `1` or `2`. No field has a physical measurement unit.
+9. `I do not remember` is a visible non-scored UI state with no machine encoding. Selecting it makes the questionnaire incomplete and prevents submission; it is never imputed, coerced, or sent as a model value.
 
-### Proposed common frequency scale
+### Approved common frequency scale
 
 Use this scale only where an item asks how often something occurred:
 
@@ -23,13 +26,13 @@ Use this scale only where an item asks how often something occurred:
 - **4 — Often**
 - **5 — Very often**
 
-The interface should include **“I do not remember”** as a non-scored state during drafting. Because every approved manual model field will ultimately be required, product and ML owners must decide whether this response makes the assessment ineligible or maps to a code supported by the original data dictionary. It must not be imputed in the browser.
+The interface includes **“I do not remember”** as a non-scored state. It makes the assessment incomplete, has no numeric encoding, and must not be imputed in the browser or backend.
 
 ## A. Substance use at age 15 (`SUD15`)
 
 **Section prompt:** Thinking specifically about when you were 15 years old, how often did you do each of the following?
 
-Use the proposed common frequency scale for A1–A6.
+Use the approved common frequency scale for A1–A6.
 
 1. **A1 — `SUD15_Cigarettes15`:** At age 15, how often did you smoke cigarettes?
 2. **A2 — `SUD15_Snuff15`:** At age 15, how often did you use snuff or another form of smokeless tobacco?
@@ -44,7 +47,7 @@ Use the proposed common frequency scale for A1–A6.
 
 These neutral questions collect the named historical features. They do not diagnose or label an experience.
 
-Use the proposed common frequency scale for B1–B23. Unless stated otherwise, the time frame is **at age 15**.
+Use the approved common frequency scale for B1–B23. Unless stated otherwise, the time frame is **at age 15**.
 
 1. **B1 — `SCZ15_PROD_seen_hallucinations9`:** At around age 9, how often did you see things that other people could not see?
 2. **B2 — `SCZ15_Spied15`:** At age 15, how often did you feel that someone was spying on you?
@@ -76,7 +79,7 @@ Use the proposed common frequency scale for B1–B23. Unless stated otherwise, t
 
 **Section prompt:** Thinking about yourself at around age 9, compared with other children of the same age, how often did each statement describe you?
 
-Use the proposed common frequency scale for C1–C19.
+Use the approved common frequency scale for C1–C19.
 
 1. **C1 — `ADHD9_var_1` (`fail_close_attention9`):** At around age 9, how often did you make careless mistakes or have difficulty paying close attention to details?
 2. **C2 — `ADHD9_var_2` (`difficulty_with_attention9`):** At around age 9, how often did you have difficulty keeping your attention on tasks or activities?
@@ -104,7 +107,7 @@ Use the proposed common frequency scale for C1–C19.
 
 **Section prompt:** Thinking about yourself at around age 9, compared with other children of the same age, how often did each statement describe you?
 
-Use the proposed common frequency scale for D1–D17.
+Use the approved common frequency scale for D1–D17.
 
 1. **D1 — `ASD9_var_1` (`delay_language9`):** At around age 9, how often did delayed spoken-language development affect you?
 2. **D2 — `ASD9_var_2` (`difficulty_converse9`):** At around age 9, how often did you have difficulty starting or maintaining a back-and-forth conversation?
@@ -150,7 +153,7 @@ Use this approved bullying-frequency scale for E1–E7:
 
 **Section prompt:** Thinking specifically about when you were 18 years old, how often did you experience each of the following?
 
-Use the proposed common frequency scale for F1–F4.
+Use the approved common frequency scale for F1–F4.
 
 1. **F1 — `ACE18_other_abuse18`:** At age 18, how often did you experience another form of abuse not covered by the other questions in this section?
 2. **F2 — `ACE18_hate_crime18`:** At age 18, how often did you experience abuse, threats, or violence that you understood to be motivated by prejudice against a part of your identity?
@@ -163,7 +166,7 @@ Use the proposed common frequency scale for F1–F4.
 
 **Section prompt:** Thinking specifically about when you were 18 years old, how often did you do each of the following?
 
-Use the proposed common frequency scale for G1–G4.
+Use the approved common frequency scale for G1–G4.
 
 1. **G1 — `SUD18_cigarettes18`:** At age 18, how often did you smoke cigarettes?
 2. **G2 — `SUD18_snuff18`:** At age 18, how often did you use snuff or another form of smokeless tobacco?
@@ -214,15 +217,17 @@ Use this approved binary encoding:
 
 ## Approval checklist
 
-Product wording and response-option approval was granted on 2026-09-15. The remaining checks are implementation and release-verification tasks; findings that require changing the approved questionnaire must return to product review.
+Product wording, response-option, required-field, and visible/derived approval was finalized on 2026-09-17. The remaining checks are implementation and release-verification tasks; findings that require changing the approved questionnaire must return to product review.
 
-- [x] Product owner approved the questionnaire wording and listed response options for provisional MVP implementation.
+- [x] Product owner approved the questionnaire wording and listed response options for MVP implementation.
 - [x] Confirm 19 ADHD and 17 ASD fields for the current artifact.
+- [x] Approve 85 visible required manual fields and 20 hidden server-derived generic-profile fields.
+- [x] Define `I do not remember` as a non-scored, submission-blocking state.
 - [ ] Provide the authoritative data dictionary and source questionnaire version for every feature.
 - [ ] Confirm exact time frame for each age-tagged field.
 - [ ] Confirm exact item order for `ADHD9_var_*` and `ASD9_var_*`.
 - [ ] Decide whether retrospective adult self-report is acceptable; otherwise obtain a compatible validated adult instrument and retrain/revalidate the model.
-- [ ] Approve response labels and source-faithful encodings; do not map the proposed 1–5 UI scale to model values by assumption.
+- [ ] Verify approved response labels and encodings against the source codebook; do not change or remap them by assumption.
 - [ ] Verify that the approved bullying-frequency encoding matches the source meanings of `bullying_by_num15` and `bullying_time15`.
 - [ ] Verify that the approved education and India/elsewhere encodings match the training-data codebook; define missing/unknown handling.
 - [ ] Verify that the approved `SEX` values match the artifact's training encoding and document handling for users outside the model's supported binary categories.

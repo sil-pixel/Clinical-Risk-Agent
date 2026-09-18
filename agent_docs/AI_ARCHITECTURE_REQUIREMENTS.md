@@ -1,16 +1,16 @@
 # AI Architecture Product Requirements
 
-Status: Product-owner input in progress
+Status: Product-owner decisions complete; implementation release gates remain
 
 Owner: Product Manager; consumed by AI Architect
 
-Date started: 2026-08-16
+Date approved: 2026-09-17
 
 Source of truth: [`Problem Statement.md`](../Problem%20Statement.md)
 
-This document records approved product decisions that constrain the AI, RAG, LangGraph, safety, context, LLM, and response-validation architecture. Pending topics remain open and are not permission for implementation agents to guess.
+This document records approved product decisions that constrain the AI, RAG, LangGraph, safety, context, LLM, and response-validation architecture. Unpassed implementation or release gates are not permission for implementation agents to guess.
 
-Working design proposal: [`PROPOSED_AI_ARCHITECTURE.md`](PROPOSED_AI_ARCHITECTURE.md). The proposal is non-binding until the pending decisions below are resolved and the AI Architect publishes an approved design.
+Approved design: [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE.md). Model artifacts and calibrated thresholds remain subject to the measured release gates in [`AI_MODEL_BENCHMARK_REPORT.md`](AI_MODEL_BENCHMARK_REPORT.md).
 
 ## 1. Intended users, product stages, and purpose — approved
 
@@ -146,6 +146,8 @@ An assessment request made in chat never authorizes inference. It returns the de
 
 ### Eligible sources
 
+The corpus topic boundary includes substance use, schizophrenia, depression, psychosis, mental abuse, emotional abuse, sexual abuse, physical abuse, bullying, ADHD, ASD, and scientifically supported associations within and among those topics. Nearby evidence is eligible only when it materially answers a question inside that boundary; this is not permission to expand into unrestricted general medicine.
+
 A source is eligible only when it was published within the rolling 20-year window measured on the ingestion or live-search date, has a resolvable DOI or PMID, passes the quality and retraction gates below, and belongs to at least one of these classes:
 
 - a peer-reviewed journal article;
@@ -156,6 +158,8 @@ A source is eligible only when it was published within the rolling 20-year windo
 General websites are prohibited. Authority discovery is restricted to a versioned domain allowlist; the initial allowed patterns are `*.who.int`, `*.cdc.gov`, `*.nih.gov`, `*.nhs.uk`, and approved Indian health-ministry or public-health domains under `*.gov.in`. A matching domain is necessary but not sufficient: the issuing organization must be recognized by configuration, and authority publications and clinical guidelines must still have a DOI or PMID and pass every other eligibility gate. Redirects and canonical URLs must be revalidated against the allowlist. DOI/PMID metadata must be retrieved and reconciled from the source or an approved bibliographic service; it must never be generated or inferred by the LLM.
 
 The following are ineligible: preprints, theses or dissertations, curated local PDFs, general websites, sources older than 20 years, retracted publications, and studies that fail the approved quality appraisal. A local file path, manually uploaded PDF, URL, or organization domain is not evidence of eligibility.
+
+PubMed title/abstract records are the default corpus representation. Full text may be ingested only when an explicit machine-readable license permits the intended storage and display; paywalled, unclear-license, or merely accessible full text is excluded. When the local dense and independent lexical paths cannot supply sufficient eligible evidence, one live PubMed retrieval escalation is allowed. Live records pass every eligibility, license, quality, date, and retraction gate before entering context.
 
 ### Quality, retraction, and provenance gates
 
@@ -410,6 +414,10 @@ These references record the basis for architecture review and do not enter the s
 - Configure zero minimum containers and a measured short scale-down window so idle **compute** scales to zero. This is a cost objective, not a promise of an absolute `$0/month`: active compute, Framer plans, region multipliers, egress, persistent non-user corpus storage, and other provider charges may remain.
 - Apply rate limits, concurrency caps, usage alerts, and a monthly spending limit where supported. Exhausting a cost limit fails closed with a non-clinical availability error and never triggers a local fabricated estimate.
 - Warm input-validation overhead and the first progress event target sub-second latency. Full RAG retrieval and generation, and cold-start latency, are measured separately and are not given a sub-second guarantee. Release quality targets require benchmarked percentile thresholds under Section 11.
+- GPU execution is not permitted. Development and hosted runtime use CPU execution only.
+- Modal's Workspace spend limit is `$0` out of pocket and usage is capped at available monthly credits. Exhaustion returns the approved usage-limit response and starts no new model-backed work.
+- Capacity planning assumes at most 50 active anonymous testers and approximately 1,000 users per day. The service may load-shed model-backed work to preserve cost, safety, and the 60-second terminal-state requirement.
+- Public access is anonymous with signed ephemeral sessions and rate limits. Shared invitation codes and individual tester accounts are not required.
 
 ### Network and offline behavior
 
@@ -548,7 +556,10 @@ These references record the basis for architecture review and do not enter the s
 - Quality compliance is computed by dedicated evaluation jobs and stored as versioned aggregate reports/CI artifacts containing only approved synthetic or non-user fixtures. Reports include metric definitions, denominators, confidence intervals where meaningful, failures, and pass/fail outcomes.
 - `ticket.jsonl` is not a quality-monitoring source and remains prohibited. Runtime user queries, questionnaire data, predictions, raw exceptions, and session identifiers cannot be copied into evaluation artifacts.
 - Production telemetry may contribute only the sanitized aggregate counters and `OperationalFailureEvent` fields approved in Sections 8 and 10. Production content quality is assessed through approved synthetic probes and controlled review, not retained user conversations.
+- Production operations must monitor stage-level and end-to-end p50/p95/p99/maximum latency; cold starts; queue wait; positive/negative DCMFNet execution time; timeouts; disconnects/cancellations; `429` rate limits; quota, capacity, budget, and `503` rejections; questionnaire, artifact, inference, invalid-output, retrieval, generation, and response-validation failures; concurrency; CPU; memory; containers; and restarts. Every rate includes its denominator and stable typed category.
+- Rate-limit, quota, capacity, and budget rejections are reported separately from accepted-request and model-inference failures. No dashboard may combine them into a misleading aggregate success/error rate.
+- A per-user `95%` interval is a prediction interval, not a production-monitoring confidence interval. It remains disabled until a held-out calibration dataset and approved method demonstrate target-specific coverage; production user predictions cannot be retained to construct or recalibrate it.
 
 ## Pending product decisions
 
-No numbered product-policy section remains pending. Concrete model selection, questionnaire semantics, access-control details, and metric-specific benchmark thresholds identified elsewhere remain implementation or release gates rather than permission to weaken Sections 1–11.
+No product-policy decision remains pending. Questionnaire copy and encodings are approved in [`questionnaire.md`](../questionnaire.md); access control, operating envelope, corpus scope, live PubMed fallback, BERTScore policy, public limits, budget exhaustion behavior, and emergency-resource reverification are approved in the architecture. Exact model revisions and calibrated thresholds remain measured implementation/release gates rather than product decisions or permission to weaken Sections 1–11.

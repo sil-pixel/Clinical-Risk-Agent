@@ -242,7 +242,7 @@ If dense/vector retrieval errors or returns no eligible match, the retrieval orc
 - Fail closed before presentation when a raw probability falls outside inclusive `[0.0, 1.0]`; do not clamp it or pass it to the LLM.
 - Publish an ML-owned contract before questionnaire, graph, API, or UI code binds to feature fields or results.
 
-ML verification against the user-designated Thesis implementation resolved the artifact structure: the 11 groups are one anchor, nine iteratively fused modalities, and one independent modality. Scalar versus list-valued layer configuration is supported by the verified constructor. The target-specific CPU inference adapter, preprocessing, immutable results, and golden tests are implemented under `src/clinical_risk_agent/`. For the portfolio MVP, `generic_genetic_profile_v1` supplies PRS and batch-by-PC fields from the selected artifact's training medians with explicit unmeasured/generic provenance. End-user questionnaire semantics remain blocked only until reviewed wording, encodings, units, and ranges exist for the manually collected fields.
+ML verification against the user-designated Thesis implementation resolved the artifact structure: the 11 groups are one anchor, nine iteratively fused modalities, and one independent modality. Scalar versus list-valued layer configuration is supported by the verified constructor. The target-specific CPU inference adapter, preprocessing, immutable results, and golden tests are implemented under `src/clinical_risk_agent/`. For the portfolio MVP, `generic_genetic_profile_v1` supplies PRS and batch-by-PC fields from the selected artifact's training medians with explicit unmeasured/generic provenance. End-user wording, encodings, units, ranges, and the visible/derived split are product-approved; public inference remains gated on ML verification against the authoritative training codebook.
 
 ## API and process boundaries
 
@@ -334,4 +334,4 @@ Readiness fails when required configuration, DCMFNet artifacts, verified model l
 
 ## Architecture exit gate
 
-ARCH-01 and ARCH-02 are complete. The ML Engineer has published verified inference contracts, and the Product Manager has approved the generic genetic-input policy. The AI Architect is next and must preserve its provenance and the exact ML result semantics while designing the detailed AI and RAG architecture before RAG and AI implementation. Reviewed definitions for manually collected questionnaire fields remain a downstream contract dependency.
+ARCH-01 and ARCH-02 are complete. The ML Engineer has published verified inference contracts, the Product Manager has approved the questionnaire and generic genetic-input policy, and the AI Architect has published [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE.md). ML codebook verification, measured model selection, RAG implementation, and AI implementation are the next gated stages.

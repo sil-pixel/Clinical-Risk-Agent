@@ -52,7 +52,7 @@ This does not authorize durable health records.
 
 **Why:** Metadata contains 11 feature groups/105 features despite `num_modalities: 9`, includes non-questionnaire-looking PRS and batch/PC inputs, and supplies positive/negative targets without a documented user-facing relationship.
 
-**Verification update (2026-08-16):** The user-designated Thesis implementation and report established the model construction, preprocessing, targets, and golden outputs. `InferenceInputSchema` and `InferenceResult` are now implemented. The product owner defines the outputs as separate positive- and negative-symptom research risk probabilities and approved `generic_genetic_profile_v1`, using artifact medians for PRS and batch-by-PC inputs in the portfolio MVP. `QuestionnaireRequirements` remains blocked only on reviewed user-facing definitions for manually collected fields.
+**Verification update (2026-09-17):** The user-designated Thesis implementation and report established the model construction, preprocessing, targets, and golden outputs. `InferenceInputSchema` and `InferenceResult` are implemented. The product owner defines the outputs as separate positive- and negative-symptom research risk probabilities, approved `generic_genetic_profile_v1`, and approved the 85-visible/20-derived questionnaire contract. `QuestionnaireRequirements` is ready to implement; public inference remains blocked until ML verifies the approved mappings against the authoritative training codebook.
 
 **Consequences:** AI and Backend may integrate the exact internal inference contract and generic-profile provenance. Agents cannot invent other questionnaire defaults, derive genetic values from family history or population descriptors, add risk bands or a combined probability, or claim factor attribution.
 
@@ -184,12 +184,35 @@ This does not authorize durable health records.
 
 **Consequences:** Deterministic English tokenization and a versioned scientific synonym/abbreviation map create fallback terms. The same DOI/PMID, allowlist, date, quality, retraction, scientific/non-patient isolation, relevance, evidence hierarchy, conflict, and source-cap rules apply. Query terms remain volatile and unlogged. Evaluation segments primary, fallback-only, and combined results and reports activation, recovery, dual-zero-result, and added latency. Keyword search does not authorize general-web retrieval or bypass the 60-second terminal deadline.
 
-## Deferred decisions
+## ADR-023 — Approve the CPU-only public operating envelope
 
-- Exact Python, PyTorch, LangGraph, FastAPI, Modal SDK, Framer integration, vector-store, embedding, and locally hosted LLM package/model versions.
+**Decision:** Permit anonymous public access through signed ephemeral sessions with no invitation code or individual account. Support at most 50 active testers, approximately 1,000 daily visitors, 50 simultaneous HTTP requests, and initially eight concurrent CPU-heavy model jobs. GPU execution is prohibited. Modal has a `$0` out-of-pocket spend limit and a usage budget no greater than available monthly credits; zero idle containers are required.
+
+**Why:** The portfolio should be publicly inspectable without collecting identity data, while the owner has not approved GPU spend or paid overage. Separating HTTP concurrency from CPU-heavy concurrency prevents a 50-user burst from multiplying LLM memory and cost beyond the free-credit envelope.
+
+**Consequences:** Apply signed-session, per-session, transient network-key, global daily, concurrency, and request-size controls. Load shed before the 60-second deadline rather than queue indefinitely. Budget or quota exhaustion returns the fixed usage-limit response and performs no calculation. Free operation is a target under light use, not an availability guarantee for every request from 1,000 daily visitors.
+
+## ADR-024 — Approve corpus scope, model candidates, and evaluation policy
+
+**Decision:** Scope scientific retrieval to substance use, schizophrenia, depression, psychosis, mental/emotional/sexual/physical abuse, bullying, ADHD, ASD, and scientifically supported associations among those topics. Index PubMed abstracts and eligible full text only when machine-readable licensing permits it; paywalled or unclear-license full text is not ingested. One live PubMed retrieval escalation is allowed after local and lexical retrieval cannot supply eligible evidence. Use MedCPT encoders and cross-encoder as primary biomedical retrieval candidates, Qwen2.5 1.5B Instruct GGUF Q4_K_M as the primary CPU generator candidate, fastText language identification as the primary language candidate, and project-fine-tuned DistilBERT artifacts for intent and safety. Exact revisions are release-approved only after measured comparison.
+
+**Why:** These candidates fit the CPU-only envelope and match PubMed retrieval better than an unqualified general-purpose stack, while preserving evidence-based selection. Licensing and live-search gates prevent corpus convenience from overriding source eligibility.
+
+**Consequences:** The benchmark report controls final artifact approval. The dense cosine `>0.85` rule is a hypothesis to calibrate for the selected embedding, not a portable release threshold. BERTScore is offline secondary evidence only, uses human-reviewed references, and has no assumed `0.85` gate or runtime authority.
+
+## ADR-025 — Approve public operations and emergency-resource maintenance
+
+**Decision:** Apply 10 model-backed turns per hour and 25 per day per signed session, three assessment submissions per day per session, five session creations per hour per transient network key, and an initial global ceiling of 1,000 model-backed operations per day. Reverify emergency-resource content manually every 30 days and run automated link/configuration checks daily.
+
+**Why:** These limits bound anonymous abuse and free-credit exposure while leaving normal portfolio evaluation usable. Emergency information is operational safety content and needs a much shorter verification cycle than ordinary documentation.
+
+**Consequences:** Rate-limit keys are one-way, short-lived, non-telemetry values. Stale optional helplines are suppressed until reverified; the separately verified national emergency route remains available. Capacity, budget, and quota failures are typed availability states and never expose partial model output.
+
+## Deferred implementation decisions
+
+- Exact Python, PyTorch, LangGraph, FastAPI, Modal SDK, Framer integration, and benchmark-winning model revisions/checksums.
 - Concrete retrieval adapter and quality-appraisal instruments; the scientific source/corpus eligibility policy is approved in ADR-012.
-- DCMFNet input feasibility and provenance.
-- Final questionnaire presentation.
+- Training-codebook compatibility evidence for the approved questionnaire encodings.
 - Exact request/state size bounds. The inactivity TTL is approved at 30 minutes.
 
 Deferred items remain owned by the roles and gates identified in the product plan and interface registry; deferral is not permission for downstream agents to guess.

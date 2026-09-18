@@ -33,7 +33,7 @@ Architecture scope: ARCH-01 and ARCH-02 initial baseline
 
 ## ML Engineer input
 
-Completion update (2026-08-16): the user supplied the sibling Thesis repository as authoritative evidence. The ML Engineer verified and ported model construction and preprocessing, published inference contracts, and added golden tests. See [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md). The questionnaire feasibility and user-facing output terminology items remain open Product Manager decisions.
+Completion update (2026-09-17): the user supplied the sibling Thesis repository as authoritative evidence. The ML Engineer verified and ported model construction and preprocessing, published inference contracts, and added golden tests. See [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md). Product wording, response options, and the visible/derived questionnaire split are approved; ML training-codebook compatibility verification remains a release gate.
 
 Inspect both repository-supplied `.pt` files and their metadata. Treat serialized artifacts as untrusted and do not use an unsafe loading mode merely to discover content. Obtain or identify the actual DCMFNet implementation/runtime before constructing the models.
 
@@ -56,7 +56,7 @@ The ML Engineer owns publication of:
 - The `.pt` files are PyTorch ZIP-format serialized artifacts, but the repository contains no DCMFNet model class or loader.
 - Target names are `SCZ18_Pos_Norm` and `SCZ18_Neg_Norm`; their user-facing meaning and any combined result are undocumented.
 
-These are blockers to concrete inference and questionnaire contracts, not permission to invent defaults or interpretations.
+The historical artifact observations above no longer block the verified inference contract. They remain warnings against inventing questionnaire mappings; the approved questionnaire must still pass authoritative codebook verification.
 
 ## Verification expected from ML Engineer
 

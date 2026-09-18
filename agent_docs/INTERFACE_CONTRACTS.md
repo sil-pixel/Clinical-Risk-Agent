@@ -24,8 +24,8 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | `DeploymentMode` | Composition root → all workflow/results/telemetry | Software Architect | **Architecture-approved:** `prototype_demo`; `hospital_silent_research` reserved and unavailable until separately gated |
 | `ArtifactInspection` | DCMFNet artifact validator → readiness/tests | ML Engineer | **Implemented:** integrity/readiness facts |
 | `InferenceInputSchema` | DCMFNet adapter → graph/backend/tools | ML Engineer | **Implemented:** exact machine feature groups/order; not user-facing questionnaire copy |
-| `QuestionnaireRequirements` | ML/questionnaire → graph/UI | ML Engineer | **Blocked** on collection feasibility, encodings, ranges, wording, and provenance |
-| `QuestionnaireValidationResult` | Questionnaire validator → graph | ML Engineer | **Blocked** on requirements contract |
+| `QuestionnaireRequirements` | ML/questionnaire → graph/UI | ML Engineer | **Product-approved for implementation:** 85 visible required fields, approved encodings/ranges, and 20 hidden generic-profile fields; release blocked only on training-codebook compatibility verification |
+| `QuestionnaireValidationResult` | Questionnaire validator → graph | ML Engineer | **Ready to implement:** fail closed on missing/invalid/non-scored values and on unverified codebook compatibility |
 | `InferenceRequest` | Graph → DCMFNet port | ML Engineer | **Implemented internally:** selected target plus records containing all 105 exact numeric feature keys |
 | `InferenceResult` | DCMFNet port → graph/context/API | ML Engineer | **Implemented:** immutable, separate positive- or negative-symptom research risk probability and artifact identity |
 | `RetrievalQuery` | Graph → RAG port | AI Architect (design), RAG Engineer (implementation) | Minimum boundary below; AI/RAG architecture and corpus policy required |
@@ -55,7 +55,7 @@ The exact spelling is the canonical machine representation. Adding an intent req
 
 `IntentDecision` contains the enum value, calibrated confidence, `requires_clarification`, non-sensitive rationale code, classifier model ID, pinned source revision/checksum, fine-tuning dataset/version, calibration version, and router version. It contains no generated prose, raw logits in public payloads, tool choice, questionnaire completeness decision, or new label. The local classifier adapter maps model logits to this contract. A maximum calibrated confidence below `0.85`, an out-of-distribution result, or unresolved incompatible intents sets `requires_clarification=true` and denies all tools. Safety uncertainty is resolved before this threshold and cannot be downgraded to clarification.
 
-The proposed baseline is a project-fine-tuned `distilbert/distilbert-base-uncased`. The base checkpoint is not approved for zero-shot routing. The selected artifact must be pinned and integrity checked, operate locally, and pass the approved English routing, calibration, adversarial, memory, and CPU-latency gates.
+The approved candidate baseline is a project-fine-tuned `distilbert/distilbert-base-uncased`. The base checkpoint is not approved for zero-shot routing. The selected artifact must be pinned and integrity checked, operate locally, and pass the approved English routing, calibration, adversarial, memory, and CPU-latency gates.
 
 `LanguageDecision` is evaluated after `SafetyDecision=ALLOW_NORMAL_PROCESSING` and before `IntentDecision`. It contains `SUPPORTED_ENGLISH`, `UNSUPPORTED_LANGUAGE`, or `UNCERTAIN_LANGUAGE`, plus detector/version and a non-sensitive rationale code. Unsupported and uncertain outcomes return `Input error: Language unsupported. Please resubmit your query in English.` with all tool permissions false. The concrete local detector and thresholds require separate evaluation; the intent classifier must not be reused as an implicit language detector.
 
@@ -93,7 +93,7 @@ A deterministic output gate—not the LLM—requires every raw probability to be
 
 The current explanation contract is prediction-only and does not perform causal inference. Without validated feature importance, the assistant cannot rank inputs or explain why a result is high and must use the deterministic message defined below. Every valid result response also requires the approved synthetic-data indicator.
 
-`QuestionnaireRequirements` and `QuestionnaireValidationResult` remain blocked only on approved user-facing wording, units, categorical encodings, and valid ranges for manually collected fields. The portfolio MVP resolves unavailable genetic inputs through `generic_genetic_profile_v1`: read the selected artifact's exported medians for all PRS and batch-by-PC fields, attach the generic-profile provenance, and disclose that these are unmeasured assumptions. This exception applies only to those named genetic groups. No consumer may derive them from family history or population descriptors, present them as the user's genomic values, or invent defaults for any other field.
+`QuestionnaireRequirements` and `QuestionnaireValidationResult` may now be implemented from [`questionnaire.md`](../questionnaire.md). The contract exposes 85 visible required manual controls. Frequency and education values are integer categorical codes `1..5`; parental country-of-birth values are `0|1`; sex values are `1|2`; no field has a physical unit. `I do not remember` has no model encoding and makes submission incomplete. The backend derives only the 16 PRS and four batch-by-PC fields through `generic_genetic_profile_v1`, attaches provenance, and discloses that they are unmeasured assumptions. Public inference remains disabled until the ML owner verifies the approved encodings, ordering, and semantics against the authoritative training codebook. No consumer may invent a mapping or default.
 
 See [`ML_ARTIFACT_AUDIT.md`](ML_ARTIFACT_AUDIT.md) and [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md) for evidence, hashes, golden values, and the required product decisions.
 
@@ -163,7 +163,7 @@ The MVP API is versioned and session-oriented:
 | Liveness | `GET /health/live` | Confirm the API process is running |
 | Readiness | `GET /health/ready` | Report required artifact/index/configuration readiness without secrets |
 
-The submit-turn request must be a discriminated union separating free text from structured questionnaire-answer updates. Exact questionnaire answer fields remain blocked on the ML contract. One request cannot silently mix an arbitrary free-text answer with unvalidated feature keys.
+The submit-turn request must be a discriminated union separating free text from structured questionnaire-answer updates. Structured questionnaire fields come from the approved requirements version and remain release-disabled until ML codebook compatibility verification passes. One request cannot silently mix arbitrary free text with questionnaire answers or unvalidated feature keys.
 
 The response envelope must include:
 
