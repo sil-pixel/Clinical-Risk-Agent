@@ -22,26 +22,53 @@ const forbiddenPublicPatterns = [
   /generic_genetic/i,
 ];
 
-test("questionnaire exposes 85 model questions and three opaque supplemental questions", () => {
-  assert.equal(totalQuestionCount, 88);
+test("questionnaire exposes exactly 85 opaque model questions", () => {
+  assert.equal(totalQuestionCount, 85);
   assert.equal(modelQuestionCount, 85);
-  assert.equal(new Set(allQuestions.map((item) => item.id)).size, 88);
+  assert.equal(new Set(allQuestions.map((item) => item.id)).size, 85);
   assert.deepEqual(
     new Set(allQuestions.map((item) => item.id)),
-    new Set(Array.from({ length: 88 }, (_, index) => `q${String(index + 1).padStart(3, "0")}`)),
+    new Set(Array.from({ length: 85 }, (_, index) => `q${String(index + 1).padStart(3, "0")}`)),
   );
-});
-
-test("supplemental abuse questions are excluded from the model count", () => {
-  const supplemental = allQuestions.filter((item) => item.supplemental);
-  assert.deepEqual(supplemental.map((item) => item.id), ["q086", "q087", "q088"]);
-  assert.ok(supplemental.every((item) => item.note.includes("not used by the current research model")));
 });
 
 test("age-15 substance prompts are explicitly retrospective", () => {
   const substanceSection = questionnaireSections[0];
   assert.ok(substanceSection.description.startsWith("Thinking back now"));
-  assert.ok(substanceSection.questions.every((item) => item.prompt.startsWith("Thinking back")));
+  assert.ok(
+    substanceSection.questions.every((item) =>
+      /^(Thinking back to when|When) you were about 15/.test(item.prompt),
+    ),
+  );
+});
+
+test("public tobacco wording uses India-relevant smokeless products", () => {
+  const publicCopy = JSON.stringify(questionnaireSections);
+  assert.doesNotMatch(publicCopy, /snuff/i);
+  assert.match(publicCopy, /gutkha/i);
+  assert.match(publicCopy, /khaini/i);
+  assert.match(publicCopy, /zarda/i);
+  assert.match(publicCopy, /paan with tobacco/i);
+});
+
+test("public copy avoids known ambiguous or awkward constructions", () => {
+  const publicCopy = JSON.stringify(questionnaireSections);
+  const rejectedPhrases = [
+    /experience seeing/i,
+    /how recently had you .* at that time/i,
+    /strongly avoid/i,
+    /according to your own preferred conditions/i,
+    /during the previous few months/i,
+    /supplemental/i,
+  ];
+  for (const phrase of rejectedPhrases) {
+    assert.doesNotMatch(publicCopy, phrase);
+  }
+});
+
+test("the exceptional age-nine experience keeps its original timeframe", () => {
+  const question = allQuestions.find((item) => item.id === "q007");
+  assert.match(question.prompt, /age 9/i);
 });
 
 test("section six places the catch-all experience last", () => {

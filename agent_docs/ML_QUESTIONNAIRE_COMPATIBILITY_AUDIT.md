@@ -28,7 +28,7 @@ No authoritative CATSS column codebook or `catss_column_mapping.json` is present
 
 ## Verified compatibility
 
-- The model has exactly 85 manually sourced fields and 20 generic-profile fields. The public questionnaire additionally contains three required age-15 abuse context fields that are supplemental and excluded from the current model matrix.
+- The model has exactly 85 manually sourced fields and 20 generic-profile fields.
 - The feature names, order, and group sizes are verified: `6, 16, 23, 19, 17, 7, 4, 4, 4, 1, 4`.
 - The 16 PRS and four batch-by-PC fields may be derived from artifact medians through `generic_genetic_profile_v1` as already approved.
 - `SEX` uses machine values `1` and `2`; the source summary identifies those as male and female.

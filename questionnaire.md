@@ -28,17 +28,17 @@ For the first two questions, use:
 
 For the remaining questions in this section, use:
 
-- I had never tried it by that age
-- I had tried it before then, but not during the year before I was about 15
-- I had used it during the year before I was about 15, but not during the most recent month
-- I had used it during the month when I was about 15
+- I had never tried it by then
+- I had tried it, but not within the previous 12 months
+- I had used it within the previous 12 months, but not within the previous 30 days
+- I had used it within the previous 30 days
 
 1. Thinking back to when you were about 15, which statement best describes how you used cigarettes at that time?
-2. Thinking back to when you were about 15, which statement best describes how you used snuff or another smokeless tobacco product at that time?
-3. Thinking back to when you were about 15, how recently had you consumed alcohol at that time?
-4. Thinking back to when you were about 15, how recently had you used cannabis at that time?
-5. Thinking back to when you were about 15, how recently had you used another recreational drug that was not cannabis or a pain medicine?
-6. Thinking back to when you were about 15, how recently had you taken a pain medicine or opioid for a reason other than the medical directions given to you?
+2. Thinking back to when you were about 15, which statement best describes how you used smokeless tobacco, such as gutkha, khaini, zarda, or paan with tobacco, at that time?
+3. When you were about 15, when had you most recently consumed alcohol?
+4. When you were about 15, when had you most recently used cannabis?
+5. When you were about 15, when had you most recently used a recreational drug other than cannabis or pain medicine?
+6. When you were about 15, when had you most recently taken pain medicine or an opioid for a non-medical reason?
 
 ## Unusual experiences and wellbeing around age 15
 
@@ -61,14 +61,14 @@ For questions 19–23, use:
 - This applied to me somewhat
 - This applied to me strongly
 
-1. At around age 9, did you experience seeing something that people near you did not seem to see?
+1. At around age 9, did you see something that people near you did not seem to see?
 2. At around age 15, did you feel as though somebody was secretly watching or tracking you?
 3. At around age 15, did it seem possible that another person knew your thoughts without you telling them?
 4. At around age 15, did ordinary media, signs, or events appear to contain a message intended specifically for you?
 5. At around age 15, did you believe you had an ability or power that other people did not have?
 6. At around age 15, did it feel as though an outside force was directing your thoughts or actions?
 7. At around age 15, did you feel able to know another person's thoughts without being told?
-8. At around age 15, did you experience seeing something that other people present did not seem to see?
+8. At around age 15, did you see something that other people present did not seem to see?
 9. At around age 15, how often did you have periods of feeling unusually excited or intensely upbeat?
 10. At around age 15, how often were you unusually irritable for an extended period?
 11. At around age 15, how often did you feel capable of things that were not realistically possible for you?
@@ -76,13 +76,13 @@ For questions 19–23, use:
 13. At around age 15, how often did you have a level of energy that was far above your usual level?
 14. At around age 15, how often did your thoughts move so quickly that they were difficult to slow down?
 15. At around age 15, how often did you speak so quickly that keeping to one topic became difficult?
-16. At around age 15, how often did your sexual words or actions not fit the situation?
+16. At around age 15, how often did you say or do sexual things that did not fit the situation?
 17. At around age 15, how often did you have intense and prolonged bursts of anger?
 18. At around age 15, how often did you hear speech or voices that nobody nearby appeared to hear?
 19. At around age 15, did you regularly experience headaches or similar physical discomfort?
 20. At around age 15, did worry affect you a great deal?
 21. At around age 15, did you regularly feel low, unhappy, or tearful?
-22. At around age 15, did you often feel less confident in yourself?
+22. At around age 15, did you often lose confidence in yourself?
 23. At around age 15, were you easily frightened by many things?
 
 ## Attention and activity during childhood
@@ -95,12 +95,12 @@ Use these options for every question in this section:
 
 Think about yourself at around age 9 compared with other children of a similar age.
 
-1. Did you often overlook details or make mistakes because you had not noticed something important?
+1. Did you often overlook details or make mistakes because you did not notice something important?
 2. Was it difficult for you to stay focused on an activity or task?
 3. Did people sometimes think you had not heard them even when they spoke directly to you?
-4. Was it difficult to carry instructions through to the end or finish assigned tasks?
-5. Did arranging tasks, belongings, or activities feel difficult?
-6. Did you strongly avoid activities that required concentration for a long time?
+4. Was it difficult for you to follow instructions through to the end or finish assigned tasks?
+5. Was it difficult for you to organize tasks, belongings, or activities?
+6. Did you often avoid activities that required concentration for a long time?
 7. Did you frequently misplace items you needed?
 8. Was your attention easily pulled away by things happening around you?
 9. Did you frequently forget ordinary activities or responsibilities?
@@ -108,11 +108,11 @@ Think about yourself at around age 9 compared with other children of a similar a
 11. Did you frequently fidget or keep parts of your body moving?
 12. Did you run or climb in situations where other children usually remained still?
 13. Was taking part quietly in play or leisure activities difficult?
-14. Did you seem constantly active, as though it was hard to slow down?
+14. Did you seem constantly active, as though you could not slow down?
 15. Did you speak much more than the situation called for?
 16. Did you often respond before somebody had finished asking a question?
 17. Was waiting for your turn particularly difficult?
-18. Did you frequently enter other people's conversations or activities without waiting?
+18. Did you frequently interrupt or join other people's conversations or activities without waiting?
 19. Did you lose interest and become bored very quickly?
 
 ## Communication, social interaction, and flexibility during childhood
@@ -125,74 +125,61 @@ Use these options for every question in this section:
 
 Think about yourself at around age 9 compared with other children of a similar age.
 
-1. Was the development of your spoken language noticeably later than expected?
+1. Did your spoken language develop noticeably later than expected?
 2. Was having a two-way conversation difficult for you?
 3. Did you repeatedly use the same words or expressions?
-4. Was make-believe or imaginative play difficult?
+4. Was make-believe or imaginative play difficult for you?
 5. Did your voice often sound unusually loud, quiet, high, low, or otherwise different?
 6. Was it hard to keep a conversation connected to its main topic?
-7. Was communicating your thoughts, feelings, or needs to other people difficult?
-8. Was joining in socially with other children difficult?
-9. Did you rarely invite other people to share your enjoyment, interests, or achievements?
-10. Did you usually want social contact to happen according to your own preferred conditions?
-11. Was understanding unspoken social expectations difficult?
+7. Was it difficult for you to communicate your thoughts, feelings, or needs to other people?
+8. Was it difficult for you to join in socially with other children?
+9. Did you rarely try to share your enjoyment, interests, or achievements with other people?
+10. Did you usually want social contact to happen only in ways that you preferred?
+11. Was it difficult for you to understand unspoken social expectations?
 12. Were you more easily persuaded or led by other people than children of a similar age?
 13. Did your interests or activities sometimes absorb nearly all of your attention?
-14. Was it difficult to move away from a particular topic or problem once it held your attention?
-15. Did you make repeated or unusual body movements?
+14. Was it difficult for you to shift your attention away from a particular topic or problem?
+15. Did you make repetitive or unusual body movements?
 16. Did you focus intensely on individual details rather than the wider situation?
-17. Did unexpected changes to routines or plans cause strong discomfort?
+17. Did unexpected changes to routines or plans cause you significant discomfort?
 
-## Bullying and other harmful experiences around age 15
+## Bullying experiences around age 15
 
-The first three questions are supplemental context questions. They are visible and required in the prototype but are not inputs to the current trained research model.
+Think specifically about bullying during the few months around age 15.
 
-For questions 1–3, use:
+For questions 1–5, use:
 
-- It never happened
-- It happened once
-- It happened two or three times
-- It happened about once a month
-- It happened about once a week
-- It happened several times a week
-
-1. By the time you were around 15, how often had a parent, caregiver, or another adult repeatedly insulted, humiliated, threatened, rejected, or emotionally harmed you?
-2. By the time you were around 15, how often had a parent, caregiver, or another adult deliberately hit, kicked, pushed, or otherwise physically hurt you?
-3. By the time you were around 15, how often had an older person or a person in authority pressured, forced, or involved you in sexual touching or sexual activity that you did not want or could not consent to?
-
-For questions 4–8, use:
-
-- This did not happen during the previous few months
+- This did not happen during the few months around age 15
 - It happened once or twice
 - It happened two or three times a month
 - It happened about once a week
 - It happened several times a week
 
-For question 9, use:
+For question 6, use:
 
-- I had not been bullied during the previous few months
+- I was not bullied during the few months around age 15
 - Usually one person was involved
 - Usually two or three people were involved
 - Usually four to nine people were involved
 - Usually more than nine people were involved
 - Different people or groups were involved at different times
 
-For question 10, use:
+For question 7, use:
 
-- I had not been bullied during the previous few months
+- I was not bullied during the few months around age 15
 - It continued for one or two weeks
 - It continued for about one month
 - It continued for about six months
 - It continued for about one year
 - It continued for several years
 
-4. During the previous few months at age 15, how often were you bullied in a way not covered by the other examples in this section?
-5. During the previous few months at age 15, how often did repeated bullying happen to you?
-6. During the previous few months at age 15, how often did somebody mock you, use a hurtful nickname, or deliberately embarrass you?
-7. During the previous few months at age 15, how often were you deliberately excluded, ignored, or treated in another emotionally harmful way?
-8. During the previous few months at age 15, how often did somebody spread an untrue or harmful story about you?
-9. When bullying happened around age 15, how many people were usually involved?
-10. When bullying happened around age 15, for how long did it continue?
+1. During the few months around age 15, how often were you bullied in a way not covered by the other examples in this section?
+2. During the few months around age 15, how often were you repeatedly bullied?
+3. During the few months around age 15, how often did someone mock you, use a hurtful nickname, or deliberately embarrass you?
+4. During the few months around age 15, how often were you deliberately excluded, ignored, or treated in another emotionally harmful way?
+5. During the few months around age 15, how often did someone spread an untrue or harmful story about you?
+6. When bullying happened around age 15, how many people were usually involved?
+7. When bullying happened around age 15, how long did it continue?
 
 ## Difficult or harmful experiences reported at age 18
 
@@ -201,9 +188,9 @@ Use these options for every question in this section:
 - I had not experienced this
 - I had experienced this
 
-1. By age 18, had you experienced violence that you believed was motivated by prejudice about an aspect of who you are?
-2. By age 18, had somebody repeatedly humiliated, rejected, intimidated, or emotionally harmed you?
-3. By age 18, had you directly witnessed a threatening or violent crime in person rather than through media?
+1. By age 18, had you experienced violence that you believed was motivated by prejudice against an aspect of your identity?
+2. By age 18, had someone repeatedly humiliated, rejected, intimidated, or emotionally harmed you?
+3. By age 18, had you directly witnessed a threatening or violent crime in person, rather than through media?
 4. By age 18, had you experienced another serious or harmful event not covered by the other questions in this section?
 
 ## Tobacco, alcohol, and other substance use around age 18
@@ -227,10 +214,10 @@ For the remaining questions in this section, use:
 - Two to three times a week
 - Four or more times a week
 
-1. Which statement best matches your cigarette use at around age 18?
-2. Which statement best matches your use of snuff or another smokeless tobacco product at around age 18?
-3. At around age 18, how frequently did you consume alcohol?
-4. At around age 18, how frequently did you use a recreational drug or medication for a non-medical reason?
+1. When you were around 18, which statement best describes your cigarette use?
+2. When you were around 18, which statement best describes your use of smokeless tobacco, such as gutkha, khaini, zarda, or paan with tobacco?
+3. When you were around 18, how often did you drink alcohol?
+4. When you were around 18, how often did you use a recreational drug or medication for a non-medical reason?
 
 For the final question above, non-medical use includes taking more than directed, taking medication more often than directed, taking it to become intoxicated or explore its effects, or using medication obtained from somebody else or an unofficial source.
 
