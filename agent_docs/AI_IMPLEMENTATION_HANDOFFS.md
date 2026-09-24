@@ -8,6 +8,8 @@ Canonical architecture: [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE
 
 ## RAG Engineer
 
+Implementation checkpoint and outstanding release gates: [`RAG_IMPLEMENTATION_DECISIONS.md`](RAG_IMPLEMENTATION_DECISIONS.md). The two chunking strategies are wired for controlled comparison, but no real-corpus benchmark result or winner is claimed yet.
+
 - Ingest PubMed abstracts and only explicitly licensed eligible full text within the approved mental-health topic scope. Record DOI/PMID, license, publication date, evidence tier, appraisal, and current retraction status.
 - Implement section-aware parent/child chunking, MedCPT and comparison embeddings, dense plus BM25 retrieval, RRF, MedCPT comparison reranking, the independent lexical fallback, and one bounded live PubMed escalation.
 - Use Qdrant only for the versioned public scientific corpus. Persist the corpus snapshot and independent BM25 index as non-user artifacts; never persist runtime query or assessment data.
