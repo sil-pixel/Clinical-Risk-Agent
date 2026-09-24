@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "version": "hierarchical-reranker-comparison-v1",
+  "locked_on": "2026-09-24",
+  "status": "pre_run_locked_exploratory_reuse_of_prior_gold",
+  "purpose": "Compare two cross-encoder rerankers against no reranker on the same hierarchical candidate pool",
+  "gold_path": "agent_docs/RAG_GENERAL_ASSOCIATION_GOLD_16_SOURCE.json",
+  "gold_sha256": "362d99818a36c0eed931fc362d6f88410f2f2490ed5685000a5e05659baac869",
+  "corpus_manifest_sha256": "36a593277a4176c5b5710aac55ab3f871bacad44726968230ab3bba919b20f5d",
+  "strategy": "hierarchical",
+  "candidate_pipeline": {"dense_min_cosine_strictly_greater_than": 0.0, "dense_limit": 40, "sparse_limit": 40, "rrf_k": 60, "fused_limit": 30, "rerank_limit": 20, "source_cap": 5, "selection_order": "reranker_score_desc_then_evidence_tier_recency_quality; no_reranker_uses_rrf_score_desc"},
+  "arms": {
+    "rrf_relevance_first": {"model": null},
+    "medcpt_cross_encoder": {"repo": "ncbi/MedCPT-Cross-Encoder", "revision": "71caf65d4927987813984f54c284405a13fcca49", "license": "public-domain", "local_dir": "data/indexes/models/MedCPT-Cross-Encoder", "source_pytorch_bin_sha256": "61d5ccd48869e03500544525fc231641d7daa9ba267b202c82724750038dc1e0", "converted_safetensors_sha256": "57100f4a5e6e81d69bc912c41efabff5cf7a9e0de3ba6e0997b254ec9fe73515"},
+    "minilm_l6_cross_encoder": {"repo": "cross-encoder/ms-marco-MiniLM-L6-v2", "revision": "233902d25c440f23af6f7d6e94d2946bac0bee0a", "license": "apache-2.0", "local_dir": "data/indexes/models/MiniLM-L6-Cross-Encoder", "model_safetensors_sha256": "821d1aa69520101d6e0737f78a042ae25b19e5cb9160701909d10434f4aeb0ae"}
+  },
+  "metrics": ["precision_at_5", "recall_at_5", "bert_score_f1_top_1", "ndcg_at_5", "mrr_at_5", "median_retrieve_latency_ms", "p95_retrieve_latency_ms"],
+  "cautions": ["Gold questions were already used in the document-versus-hierarchical comparison; this is exploratory reuse, not an untouched test.", "No direct ADHD-substance-use or bullying-substance-use source is available; score these as coverage probes only.", "Cross-encoder score scales are not comparable between models and no abstention threshold is calibrated."]
+}

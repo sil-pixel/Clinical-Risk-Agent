@@ -103,14 +103,25 @@ class MedCPTReranker:
         return cls(tokenizer, model)
 
     def score(self, query: str, passage: Passage) -> float:
+        return self.score_many(query, (passage,))[0]
+
+    def score_many(
+        self, query: str, passages: Sequence[Passage], *, batch_size: int = 8
+    ) -> tuple[float, ...]:
         import torch
 
-        article = f"{passage.title} {passage.exact_text}"
-        encoded = self.tokenizer(
-            [[query, article]], truncation=True, padding=True,
-            return_tensors="pt", max_length=512,
-        )
+        if batch_size < 1:
+            raise ValueError("batch_size must be positive")
         device = next(self.model.parameters()).device
-        encoded = {key: value.to(device) for key, value in encoded.items()}
-        with torch.inference_mode():
-            return float(self.model(**encoded).logits.reshape(-1)[0].item())
+        scores: list[float] = []
+        for start in range(0, len(passages), batch_size):
+            pairs = [[query, f"{item.title} {item.exact_text}"]
+                     for item in passages[start:start + batch_size]]
+            encoded = self.tokenizer(
+                pairs, truncation=True, padding=True,
+                return_tensors="pt", max_length=512,
+            )
+            encoded = {key: value.to(device) for key, value in encoded.items()}
+            with torch.inference_mode():
+                scores.extend(float(value) for value in self.model(**encoded).logits.reshape(-1).cpu())
+        return tuple(scores)

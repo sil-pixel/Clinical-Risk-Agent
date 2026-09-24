@@ -21,7 +21,11 @@ from clinical_risk_agent.contracts import (  # noqa: E402
 from clinical_risk_agent.rag import ScientificSource, SourceSection, chunk_source  # noqa: E402
 from clinical_risk_agent.rag.corpus import source_rejection_reasons  # noqa: E402
 from clinical_risk_agent.rag.index import BM25Index, CorpusSnapshot  # noqa: E402
-from clinical_risk_agent.rag.retrieval import DenseHit, HybridRetriever  # noqa: E402
+from clinical_risk_agent.rag.retrieval import (  # noqa: E402
+    DenseHit,
+    HybridRetriever,
+    _RankedCandidate,
+)
 from clinical_risk_agent.rag.benchmark import (  # noqa: E402
     RelevanceCase,
     compare_strategies,
@@ -72,6 +76,27 @@ class FakeReranker:
 
 
 class RAGCoreTests(unittest.TestCase):
+    def test_relevance_first_is_default_and_legacy_order_can_be_reproduced(self) -> None:
+        sources = (
+            synthetic_source(1, "Older direct evidence.", published_on=date(2021, 1, 1)),
+            synthetic_source(2, "Newer weak evidence.", published_on=date(2025, 1, 1)),
+        )
+        snapshot = CorpusSnapshot.build(sources, strategy="hierarchical", today=TODAY)
+        lexical = BM25Index(snapshot)
+        by_source = {item.source_id: item for item in snapshot.sources}
+        candidates = tuple(_RankedCandidate(
+            passage, by_source[passage.source_id],
+            0.9 if passage.source_id == "synthetic-source-1" else 0.1,
+            None, None, None,
+        ) for passage in snapshot.passages)
+        query = RetrievalQuery("direct evidence")
+        old = HybridRetriever(snapshot, lexical, FakeDense(), relevance_first=False)._select(
+            candidates, query, TODAY)
+        new = HybridRetriever(snapshot, lexical, FakeDense())._select(
+            candidates, query, TODAY)
+        self.assertEqual(old[0].source.source_id, "synthetic-source-2")
+        self.assertEqual(new[0].source.source_id, "synthetic-source-1")
+
     def test_eligibility_rejects_stale_retraction_and_unlicensed_full_text(self) -> None:
         source = synthetic_source(1, "Bullying evidence fixture.")
         self.assertEqual(source_rejection_reasons(source, today=TODAY), ())

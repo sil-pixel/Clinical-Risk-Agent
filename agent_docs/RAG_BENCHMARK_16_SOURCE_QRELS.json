@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "version": "16-source-source-qrels-v1",
+  "locked_on": "2026-09-24",
+  "status": "pre_run_locked_assistant_judgments_not_dual_adjudicated",
+  "purpose": "Research-only diagnostic comparison of document and hierarchical retrieval over the exact same 16-source PubMed-abstract corpus",
+  "corpus_manifest_sha256": "36a593277a4176c5b5710aac55ab3f871bacad44726968230ab3bba919b20f5d",
+  "source_manifest_sha256": "7603d5447945a5d25ec313cee371bb66a72995549ab2399a8f83e3283fa8bfb3",
+  "prior_draft_sha256": "4039ad193cfc0adfde93deeae8b71b1e9c3301224869bf48eef062f5083d0ba1",
+  "judgment_rule": "A positive PMID is the one source whose PubMed abstract directly answers the bounded query. All other sources are nonpositive for this source-level diagnostic. Empty positives mean no answer in this frozen corpus, not no external scientific evidence. Passage-level relevance is not scored.",
+  "predeclared_runs": [
+    {"name":"configured","dense_min_cosine_strictly_greater_than":0.85,"reranker":"none","primary_sparse":"qdrant_bm25","fallback":"independent_bm25"},
+    {"name":"dense_ablation","dense_min_cosine_strictly_greater_than":0.0,"reranker":"none","primary_sparse":"qdrant_bm25","fallback":"independent_bm25","interpretation":"diagnostic only; does not change the product relevance gate"}
+  ],
+  "cases": [
+    {"id":"PDF-23810828","query":"What do preclinical studies suggest about parental preconception drug exposure and effects in later generations?","positive_pmids":["23810828"],"origin":"new_context"},
+    {"id":"PDF-24135711","query":"Why can conventional covariate adjustment leave gene-by-environment interaction estimates confounded?","positive_pmids":["24135711"],"origin":"new_context"},
+    {"id":"SCHZ-01","query":"In a Danish nested case-control study, how were polygenic risk, family psychiatric history and parental socioeconomic status associated with schizophrenia?","positive_pmids":["25830477"],"origin":"prior_draft"},
+    {"id":"PDF-31733788","query":"What hypothesis links cognition and reward circuits in schizophrenia?","positive_pmids":["31733788"],"origin":"new_context"},
+    {"id":"PDF-32251439","query":"Why was a machine-learning model for predicting adolescent mental-health problems unsuitable for clinical use?","positive_pmids":["32251439"],"origin":"new_context"},
+    {"id":"PDF-32997097","query":"Why can a polygenic risk score not definitively predict an individual's psychiatric diagnosis?","positive_pmids":["32997097"],"origin":"new_context"},
+    {"id":"PDF-34262598","query":"What environmental associations have been investigated for schizophrenia and bipolar disorder, and where is bipolar evidence weaker?","positive_pmids":["34262598"],"origin":"new_direct"},
+    {"id":"SCHZ-02","query":"How did the cannabis use disorder–schizophrenia association vary by sex and age in a Danish register study?","positive_pmids":["37140715"],"origin":"prior_draft"},
+    {"id":"DEP-01","query":"What is the prevalence of interview-defined depressive disorders in children younger than 13, rather than depressive symptoms on a questionnaire?","positive_pmids":["37639261"],"origin":"prior_draft"},
+    {"id":"ABUSE-01","query":"What did a Swedish twin study find about adverse childhood experiences and adult mental-health outcomes after accounting for shared family factors?","positive_pmids":["38446452"],"origin":"prior_draft"},
+    {"id":"PSYCH-01","query":"How was adolescent psychedelic use associated with psychotic or manic symptoms in a twin study, and what confounding limits interpretation?","positive_pmids":["38477889"],"origin":"prior_draft"},
+    {"id":"ABUSE-02","query":"In patients with schizophrenia, how were emotional abuse, aberrant salience and positive symptoms related in a cross-sectional analysis?","positive_pmids":["38718481"],"origin":"prior_draft"},
+    {"id":"BULLY-02","query":"In a nine-wave adolescent panel, how was persistent bullying victimisation associated with depressive-symptom trajectories by gender?","positive_pmids":["39648410"],"origin":"prior_draft"},
+    {"id":"PDF-39755698","query":"How do psychiatric genomic signals converge with adult brain cell types and functional connectivity in an integrative study?","positive_pmids":["39755698"],"origin":"new_context"},
+    {"id":"PDF-40355602","query":"What does a genomic review say about the genetic architecture of schizophrenia, bipolar disorder and major depression?","positive_pmids":["40355602"],"origin":"new_direct"},
+    {"id":"SCHZ-03","query":"What does an ancestrally diverse schizophrenia genetics study contribute to understanding genetic associations across populations?","positive_pmids":["41565822"],"origin":"prior_draft"},
+    {"id":"NONE-01","query":"Which ADHD medication dose is safest for a specific 9-year-old child with a cardiac condition?","positive_pmids":[],"origin":"prior_draft"},
+    {"id":"NONE-02","query":"Can these population studies calculate one person's probability of developing autism from their questionnaire answers?","positive_pmids":[],"origin":"prior_draft"},
+    {"id":"NONE-03","query":"Do the available bullying studies prove that a particular child's depression was caused by one bullying incident?","positive_pmids":[],"origin":"prior_draft"}
+  ],
+  "limitations": ["Labels were authored by the assistant and not blindly dual-reviewed", "All positives are source-level, not exact abstract-passage judgments", "The corpus has only 16 sources, so top-20 measures have limited discrimination", "Some new questions name source-specific concepts, which may make retrieval easier than open-ended clinical queries"]
+}

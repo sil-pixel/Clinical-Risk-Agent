@@ -1,0 +1,23 @@
+# Hierarchical reranker comparison — 16-source research corpus
+
+Exploratory run on 2026-09-24. The hierarchical Qdrant collection, 16 PubMed abstracts, 13 frozen general-association questions, MedCPT query/article encoders, dense+BM25 RRF-60 candidate generation, top-20 candidate limit, and source cap of five were identical across arms. All three arms ranked by **query relevance first**, with evidence tier, recency, and quality only as tie-breakers. The prior hierarchical benchmark used evidence tier first, so its results are historical context, **not** the no-reranker control in this experiment.
+
+| Macro metric, 11 answerable questions | Relevance-first RRF, no reranker | MedCPT cross-encoder | MiniLM-L6 cross-encoder |
+| --- | ---: | ---: | ---: |
+| Precision@5, direct sources | 0.200 | 0.200 | 0.200 |
+| Recall@5, direct sources | 1.000 | 1.000 | 1.000 |
+| BERTScore F1@1, top passage vs fixed answer | 0.784 | 0.790 | 0.794 |
+| nDCG@5, graded direct/context | 0.933 | 0.973 | 0.920 |
+| MRR@5, first direct source | 0.909 | 1.000 | 0.955 |
+| Median warm retrieval latency, ms (all 13 cases) | 33 | 2,340 | 539 |
+| p95 warm retrieval latency, ms (all 13 cases) | 91 | 3,390 | 606 |
+
+The decisive intervention was relevance-first ordering: compared with the earlier evidence-tier-first hierarchical run, direct-source Recall@5 increased from **7/11 to 11/11** without a cross-encoder. That is an observed same-question change, not an isolated causal claim about the sorter because code paths and scoring collection differ. MedCPT moved the direct source from rank 2 to rank 1 for GEN-01 and GEN-06, giving 11/11 first-rank direct hits. MiniLM improved GEN-01 but left GEN-06 at rank 2. No arm recovered evidence for the two no-direct-evidence probes (ADHD–substance-use and bullying–substance-use): all still returned papers, so an abstention gate remains missing.
+
+MedCPT's nDCG@5 rose by about **4.3% relative** to the relevance-first RRF control, below the architecture document's predeclared **5% relative nDCG@10 or Precision@5** release criterion (different cutoff; the current set reports @5). Precision@5 was already at its one-direct-paper-per-case ceiling in all arms. MedCPT increased median warm latency by roughly **70×**; MiniLM was roughly **16×** slower and reduced nDCG@5. BERTScore differences are small and are not correctness evidence. Therefore neither reranker is selected for product use from this experiment. Relevance-first RRF is the leading research configuration pending a fresh independently adjudicated evaluation and calibration of the no-evidence gate. At the time of this run, the product's existing ranking default and `>0.85` semantic gate were **not changed**.
+
+The frozen experiment specification is [`RAG_HIERARCHICAL_RERANKER_EXPERIMENT.json`](RAG_HIERARCHICAL_RERANKER_EXPERIMENT.json), SHA-256 `dff94dd98bc28819088289ce738090c96d6eb9aa90e0cc07dbdb57940eeb0537`. The biomedical model is `ncbi/MedCPT-Cross-Encoder` revision `71caf65d4927987813984f54c284405a13fcca49`, source PyTorch SHA-256 `61d5ccd48869e03500544525fc231641d7daa9ba267b202c82724750038dc1e0`, converted weights-only safetensors SHA-256 `57100f4a5e6e81d69bc912c41efabff5cf7a9e0de3ba6e0997b254ec9fe73515`. The general model is `cross-encoder/ms-marco-MiniLM-L6-v2` revision `233902d25c440f23af6f7d6e94d2946bac0bee0a`, safetensors SHA-256 `821d1aa69520101d6e0737f78a042ae25b19e5cb9160701909d10434f4aeb0ae`. Models loaded locally offline; raw logits were used only **within** each arm, never compared across models. MedCPT model repository states public-domain license; MiniLM's states Apache-2.0.
+
+Reproduce after provisioning the pinned model files: `MPLCONFIGDIR=/private/tmp HF_HUB_OFFLINE=1 PYTHONPATH=src .venv/bin/python scripts/rag_hierarchical_reranker_benchmark.py`. The machine-readable result, including question-level ranks and latencies, is the ignored local file `data/indexes/rag_hierarchical_reranker_results.json`. Warm latency excludes model initialization and BERTScore computation and is a local sequential CPU measurement, not a production SLA. The gold set was assistant-authored and previously inspected, contains repeated paraphrases, has only 11 answerable questions, and has no passage-level independent adjudication. The 16-source corpus is abstracts only; no clinical or release-quality claim follows.
+
+Subsequent owner decision on 2026-09-24: retain hierarchical retrieval and make relevance-first RRF, without a cross-encoder, the default ranking implementation. The `>0.85` cosine gate remains unchanged; this decision does not promote the diagnostic `>0.0` gate or establish release readiness. Historical comparison scripts explicitly retain their evidence-first setting when rerun.

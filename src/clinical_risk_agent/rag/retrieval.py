@@ -40,6 +40,8 @@ class SparseSearcher(Protocol):
 class CrossEncoder(Protocol):
     def score(self, query: str, passage: Passage) -> float: ...
 
+    def score_many(self, query: str, passages: Sequence[Passage]) -> Sequence[float]: ...
+
 
 @dataclass(frozen=True, slots=True)
 class _RankedCandidate:
@@ -52,7 +54,7 @@ class _RankedCandidate:
 
 
 class HybridRetriever:
-    """Primary dense+BM25 search, with an independent BM25 outage path."""
+    """Relevance-first dense+BM25 search with an independent BM25 outage path."""
 
     def __init__(
         self,
@@ -64,6 +66,7 @@ class HybridRetriever:
         reranker: CrossEncoder | None = None,
         dense_min_cosine: float = 0.85,
         rerank_min_score: float | None = None,
+        relevance_first: bool = True,
     ) -> None:
         if lexical_index.version != f"bm25-{snapshot.version}":
             raise ValueError("Lexical index and corpus versions differ")
@@ -76,6 +79,7 @@ class HybridRetriever:
         self.reranker = reranker
         self.dense_min_cosine = dense_min_cosine
         self.rerank_min_score = rerank_min_score
+        self.relevance_first = relevance_first
 
     def retrieve(self, query: RetrievalQuery, *, today: date) -> EvidenceResult:
         active = self.snapshot.active_passages(today=today)
@@ -188,29 +192,41 @@ class HybridRetriever:
         self, candidates: Sequence[_RankedCandidate], query: RetrievalQuery, today: date,
         *, limit: int | None = None,
     ) -> tuple[_RankedCandidate, ...]:
+        eligible = [item for item in candidates[:20]
+                    if eligible_source(item.source, today=today)]
+        if self.reranker is not None and hasattr(self.reranker, "score_many"):
+            scores = self.reranker.score_many(query.text, [item.passage for item in eligible])
+            if len(scores) != len(eligible):
+                raise ValueError("Reranker returned the wrong score count")
+        else:
+            scores = [self.reranker.score(query.text, item.passage)
+                      if self.reranker is not None else None for item in eligible]
         rescored: list[_RankedCandidate] = []
-        for item in candidates[:20]:
-            if not eligible_source(item.source, today=today):
+        for item, score in zip(eligible, scores, strict=True):
+            if score is not None and not math.isfinite(score):
                 continue
-            if self.reranker is None:
-                score = None
-            else:
-                score = self.reranker.score(query.text, item.passage)
-                if not math.isfinite(score):
-                    continue
-                if self.rerank_min_score is not None and score < self.rerank_min_score:
-                    continue
+            if score is not None and self.rerank_min_score is not None and score < self.rerank_min_score:
+                continue
             rescored.append(_RankedCandidate(
                 item.passage, item.source, item.fused_score, item.dense_cosine,
                 item.lexical_score, score,
             ))
-        rescored.sort(key=lambda item: (
-            EVIDENCE_TIERS[item.source.study_design],
-            -item.source.published_on.toordinal(),
-            -item.source.quality_score,
-            -(item.rerank_score if item.rerank_score is not None else item.fused_score),
-            item.source.source_id,
-        ))
+        if self.relevance_first:
+            rescored.sort(key=lambda item: (
+                -(item.rerank_score if item.rerank_score is not None else item.fused_score),
+                EVIDENCE_TIERS[item.source.study_design],
+                -item.source.published_on.toordinal(),
+                -item.source.quality_score,
+                item.source.source_id,
+            ))
+        else:
+            rescored.sort(key=lambda item: (
+                EVIDENCE_TIERS[item.source.study_design],
+                -item.source.published_on.toordinal(),
+                -item.source.quality_score,
+                -(item.rerank_score if item.rerank_score is not None else item.fused_score),
+                item.source.source_id,
+            ))
         selected: list[_RankedCandidate] = []
         seen_sources: set[str] = set()
         for item in rescored:

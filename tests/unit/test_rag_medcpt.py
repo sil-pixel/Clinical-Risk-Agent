@@ -71,6 +71,8 @@ class MedCPTAdapterTests(unittest.TestCase):
         self.assertEqual(cross_tokenizer.last_input,
                          [["fixture query", "Fixture title Exact fixture text."]])
         self.assertEqual(cross_tokenizer.last_max_length, 512)
+        self.assertEqual(MedCPTReranker(cross_tokenizer, FakeModel()).score_many(
+            "fixture query", (passage, passage)), (1.0, 1.0))
 
 
 if __name__ == "__main__":

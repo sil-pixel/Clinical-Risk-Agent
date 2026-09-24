@@ -19,6 +19,9 @@ rag = [
   "safetensors>=0.4",
   "pypdf>=6,<7",
 ]
+rag-benchmark = [
+  "bert-score==0.3.13",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
