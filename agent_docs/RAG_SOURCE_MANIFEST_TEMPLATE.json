@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "pmid": "REPLACE_WITH_PUBMED_ID",
+      "topic": "depression",
+      "study_design": "observational_study",
+      "design_override_reason": null,
+      "reviewer": "REPLACE_WITH_REVIEWER_NAME_OR_ID",
+      "reviewed_on": "YYYY-MM-DD",
+      "appraisal": {
+        "passed": false,
+        "score": 0.0,
+        "rubric_version": "REPLACE_WITH_APPROVED_RUBRIC_VERSION"
+      }
+    }
+  ]
+}

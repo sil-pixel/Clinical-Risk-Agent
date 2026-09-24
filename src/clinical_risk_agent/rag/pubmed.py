@@ -5,6 +5,7 @@ from __future__ import annotations
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import date
@@ -27,7 +28,6 @@ def _publication_date(article: ET.Element) -> date | None:
     paths = (
         "./MedlineCitation/Article/ArticleDate",
         "./MedlineCitation/Article/Journal/JournalIssue/PubDate",
-        "./MedlineCitation/DateCompleted",
     )
     for path in paths:
         node = article.find(path)
@@ -39,6 +39,17 @@ def _publication_date(article: ET.Element) -> date | None:
                 return date(int(year), int(month), int(day))
             except ValueError:
                 continue
+        # PubMed often has only a year or a MedlineDate range. Use the
+        # earliest possible day, never DateCompleted/DateRevised (indexing dates).
+        if year and year.isdigit():
+            try:
+                return date(int(year), int(month) if month and month.isdigit() else 1, 1)
+            except ValueError:
+                continue
+        medline = node.findtext("MedlineDate")
+        match = re.search(r"\b(19|20)\d{2}\b", medline or "")
+        if match:
+            return date(int(match.group()), 1, 1)
     return None
 
 

@@ -17,6 +17,7 @@ rag = [
   "qdrant-client>=1.16,<2",
   "transformers>=4.44,<5",
   "safetensors>=0.4",
+  "pypdf>=6,<7",
 ]
 
 [tool.setuptools.packages.find]

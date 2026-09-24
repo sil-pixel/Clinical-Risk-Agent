@@ -1,0 +1,8 @@
+numpy>=1.26
+torch>=2.2
+
+[rag]
+qdrant-client<2,>=1.16
+transformers<5,>=4.44
+safetensors>=0.4
+pypdf<7,>=6

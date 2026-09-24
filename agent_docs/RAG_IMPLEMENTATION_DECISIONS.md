@@ -51,3 +51,21 @@ The repository now contains typed retrieval contracts, strict scientific-source 
 Conflict status requires a pre-appraised stance tied to the request's `claim_id`; absent a matching claim, no conflict is inferred from wording. This protects against falsely treating a publication's position as universal across questions.
 
 **Not yet release evidence:** a topic-curated, licensed, appraised publication set; persisted/reloadable corpus and independent BM25 artifacts; pinned MedCPT and second biomedical embedding revisions/checksums; second reranking configuration; frozen source- and passage-level judgments; actual document-versus-hierarchical and ablation results; calibrated relevance gates; cold/warm resource results; licensed full-text/BioC path; bounded live PubMed escalation; automated fortnightly ingest/retraction scrub and audit tombstones; downstream workflow integration. The Qdrant adapter has been tested with local Qdrant only, not a deployed service. Public RAG claims and release remain gated on these items and architecture review of any threshold change.
+
+## Local Qdrant and first corpus build
+
+The benchmark store is an embedded, persistent Qdrant database under ignored `data/indexes/qdrant`; no Docker service or cloud account is required. Run `python scripts/rag_provision.py` to open it. This creates storage but intentionally does not create a collection with a guessed vector size or fabricated evidence.
+
+The supplied `data/Research Papers` PDFs are now a **discovery bibliography**, not an exception to the approved ban on directly indexing curated local PDFs. `python scripts/rag_discover_pdfs.py --online` extracts candidate DOIs and resolves PubMed IDs into the ignored `data/indexes/rag_pdf_discovery.json`, then writes `rag_source_manifest_draft.json` with intentionally unapproved entries. The initial scan found 29 PDF files, 23 file-level PubMed matches, and 21 distinct PubMed IDs; duplicate papers and a supplement account for repeated IDs. This is candidate discovery, not source admission: DOI identity, topic, publication date, study design, retraction, and quality must still pass. An initial old-paper spot check exposed and fixed an incorrect fallback to PubMed's processing date in the publication-date parser.
+
+The 21-record provisional screen is recorded in [`RAG_SOURCE_APPRAISALS_DRAFT.json`](RAG_SOURCE_APPRAISALS_DRAFT.json): eight direct-topic candidates, six context-only papers, seven exclusions. It contains source-specific limitations and a design-appropriate appraisal route, but deliberately contains no passing appraisal or numeric quality score. It is not an ingestion manifest. A reviewer must complete full-text appraisal and current retraction checks before any record is marked eligible.
+
+Start from [`RAG_SOURCE_MANIFEST_TEMPLATE.json`](RAG_SOURCE_MANIFEST_TEMPLATE.json). Each source needs a real PMID, one approved topic, a reviewer, appraisal date, passing score, and rubric version. The template deliberately fails validation until these are filled after review. The ingestion command is:
+
+```sh
+python scripts/rag_ingest.py --manifest /path/to/reviewed_sources.json \
+  --query-model /path/to/pinned/MedCPT-Query-Encoder --query-sha256 SHA256 \
+  --article-model /path/to/pinned/MedCPT-Article-Encoder --article-sha256 SHA256
+```
+
+It fetches PubMed metadata/abstracts, rejects any ineligible source, then builds separate immutable document and hierarchical Qdrant collections from the *same* source set. It writes a public-corpus provenance manifest under `data/indexes`. The independent BM25 representation is deterministically rebuilt from the saved passages; production restore/publish automation is still pending. No runtime user material is used. The local store currently has no scientific collection because no reviewed source manifest or pinned MedCPT files have been supplied.

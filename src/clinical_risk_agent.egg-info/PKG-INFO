@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: clinical-risk-agent
+Version: 0.1.0
+Summary: Research-only Clinical Risk AI Agent
+Requires-Python: >=3.10
+License-File: LICENSE
+Requires-Dist: numpy>=1.26
+Requires-Dist: torch>=2.2
+Provides-Extra: rag
+Requires-Dist: qdrant-client<2,>=1.16; extra == "rag"
+Requires-Dist: transformers<5,>=4.44; extra == "rag"
+Requires-Dist: safetensors>=0.4; extra == "rag"
+Requires-Dist: pypdf<7,>=6; extra == "rag"
+Dynamic: license-file

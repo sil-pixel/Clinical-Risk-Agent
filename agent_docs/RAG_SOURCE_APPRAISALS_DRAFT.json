@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "status": "provisional_screen_only_not_ingestion_approval",
+  "screened_on": "2026-09-24",
+  "evidence_examined": "PubMed EFetch metadata and abstracts, plus supplied PDF first pages and targeted methods/limitations text where available",
+  "quality_score_policy": "No numeric score or passed=true until design-specific full-text appraisal and reviewer sign-off",
+  "rubric_draft": {
+    "version": "rag_appraisal_draft_v0",
+    "reference_urls": {
+      "jbi": "https://jbi.global/critical-appraisal-tools",
+      "probast": "https://www.probast.org/wp-content/uploads/2020/02/PROBAST_20190515.pdf",
+      "sanra": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6434870/",
+      "amstar2": "https://amstar.ca/Amstar-2.php"
+    },
+    "observational": "JBI cohort/cross-sectional domains: participant selection, exposure/outcome measurement, confounding, follow-up or temporal order, analysis and applicability",
+    "prediction": "PROBAST domains: participants, predictors, outcome and analysis; separate clinical applicability",
+    "narrative_review": "SANRA domains: importance, aims, literature search, referencing, scientific reasoning and data presentation",
+    "systematic_review": "AMSTAR 2 critical-domain confidence, not an additive score; verify that a paper is truly a systematic review",
+    "gate": "Appropriate topic, publication within 20 years, resolvable DOI/PMID, allowed source class, fresh retraction verification, then design-specific quality review"
+  },
+  "sources": [
+    {
+      "pmid": "16515735", "doi": "10.1017/s0033291706007367",
+      "title": "The impact of generalized anxiety disorder and stressful life events on risk for major depressive episodes",
+      "decision": "exclude", "design_draft": "observational_study",
+      "reason": "Published 2006-03-06, outside the rolling 20-year window on the screening date."
+    },
+    {
+      "pmid": "23810828", "doi": "10.1016/j.neuropharm.2013.06.016",
+      "title": "The impact of exposure to addictive drugs on future generations: Physiological and behavioral effects",
+      "decision": "context_only", "design_draft": "expert_opinion",
+      "reason": "Narrative synthesis on transgenerational drug exposure; much of the evidence is preclinical, limiting direct applicability to human mental-health risk claims.",
+      "review_needed": "SANRA full-text appraisal and an explicit question linking the preclinical material to the approved topic."
+    },
+    {
+      "pmid": "24135711", "doi": "10.1016/j.biopsych.2013.09.006",
+      "title": "Gene x environment interaction studies have not properly controlled for potential confounders",
+      "decision": "context_only", "design_draft": "expert_opinion",
+      "reason": "Methodological critique of confounder adjustment, not an estimate of a psychiatric exposure-outcome association.",
+      "review_needed": "Use only for methods/limitations questions after narrative or methodological appraisal."
+    },
+    {
+      "pmid": "25830477", "doi": "10.1001/jamapsychiatry.2015.0346",
+      "title": "Polygenic Risk Score, Parental Socioeconomic Status, Family History of Psychiatric Disorders, and the Risk for Schizophrenia",
+      "decision": "direct_topic_candidate", "design_draft": "observational_study",
+      "reason": "Danish nested case-control analysis (866 cases, 871 controls) directly addresses schizophrenia risk; the separate meta-analysis supplied PRS weights rather than making this a systematic-review evidence tier.",
+      "review_needed": "JBI case-control/observational appraisal, ancestry and setting generalizability, selection and confounding; document the PubMed Meta-Analysis tag versus primary design."
+    },
+    {
+      "pmid": "26867066", "doi": "10.1080/13648470301264",
+      "title": "Illusions of controlling the future: Risk and genetic inheritance",
+      "decision": "exclude", "design_draft": "expert_opinion",
+      "reason": "The source publication year is 2003, despite a later PubMed processing date; it is also centered on general genetic-risk beliefs rather than the approved mental-health scope."
+    },
+    {
+      "pmid": "31733788", "doi": "10.1016/j.biopsych.2019.09.021",
+      "title": "Cognition and Reward Circuits in Schizophrenia: Synergistic, Not Separate",
+      "decision": "context_only", "design_draft": "expert_opinion",
+      "reason": "Focused narrative/theoretical review of schizophrenia circuitry; useful for mechanisms but not a primary risk estimate.",
+      "review_needed": "SANRA appraisal and wording controls against presenting a proposed model as established causation."
+    },
+    {
+      "pmid": "32251439", "doi": "10.1371/journal.pone.0230389",
+      "title": "Predicting mental health problems in adolescence using machine learning techniques",
+      "decision": "context_only", "design_draft": "observational_study",
+      "reason": "Relevant adolescent prediction study, but its outcome is broad mental-health problems and the authors state that the top model is unsuitable for clinical use.",
+      "review_needed": "PROBAST appraisal of predictor timing, outcome definition, validation and applicability before any comparison with this project's model."
+    },
+    {
+      "pmid": "32997097", "doi": "10.1001/jamapsychiatry.2020.3049",
+      "title": "From Basic Science to Clinical Application of Polygenic Risk Scores: A Primer",
+      "decision": "context_only", "design_draft": "expert_opinion",
+      "reason": "Broad PRS primer with relevant limitations, but not disorder-specific effect evidence.",
+      "review_needed": "SANRA appraisal and restriction to explanatory/limitations questions."
+    },
+    {
+      "pmid": "34262598", "doi": "10.3389/fgene.2021.686666",
+      "title": "Environmental Risk Factors for Schizophrenia and Bipolar Disorder and Their Relationship to Genetic Risk",
+      "decision": "direct_topic_candidate", "design_draft": "expert_opinion",
+      "reason": "Narrative review directly covers environmental and genetic risk in schizophrenia and bipolar disorder; the PDF appears twice under different filenames.",
+      "review_needed": "SANRA appraisal, trace support for each asserted exposure association, and retain explicit uncertainty for bipolar-disorder evidence."
+    },
+    {
+      "pmid": "37140715", "doi": "10.1017/s0033291723000880",
+      "title": "Association between cannabis use disorder and schizophrenia stronger in young males than in females",
+      "decision": "direct_topic_candidate", "design_draft": "observational_study",
+      "reason": "Large Danish register cohort directly addresses CUD-schizophrenia association; authors note diagnosed cases only and residual confounding, so attributable fractions are not causal proof.",
+      "review_needed": "JBI cohort appraisal; examine exposure ascertainment, confounding and sex/age subgroup interpretation."
+    },
+    {
+      "pmid": "37824663", "doi": "10.1126/science.add7046",
+      "title": "Transcriptomic diversity of cell types across the adult human brain",
+      "decision": "exclude", "design_draft": "observational_study",
+      "reason": "Healthy-brain cell atlas, not evidence about an approved psychiatric condition or supported association."
+    },
+    {
+      "pmid": "38446452", "doi": "10.1001/jamapsychiatry.2024.0039",
+      "title": "Adverse Childhood Experiences and Adult Mental Health Outcomes",
+      "decision": "direct_topic_candidate", "design_draft": "observational_study",
+      "reason": "Swedish twin cohort directly covers abuse/adversity and adult psychiatric outcomes; co-twin design addresses shared familial confounding.",
+      "review_needed": "JBI cohort appraisal; evaluate retrospective ACE reports, nonshared confounding and cohort generalizability."
+    },
+    {
+      "pmid": "38477889", "doi": "10.1001/jamapsychiatry.2024.0047",
+      "title": "Adolescent Psychedelic Use and Psychotic or Manic Symptoms",
+      "decision": "direct_topic_candidate", "design_draft": "observational_study",
+      "reason": "Relevant twin-based adolescent analysis, but exposure and symptoms are cross-sectional and 535 of 541 psychedelic-exposed participants reported other drug use.",
+      "review_needed": "JBI cross-sectional appraisal; high confounding concern and no causal interpretation; inspect supplement as part of this one publication, not a separate source."
+    },
+    {
+      "pmid": "38718481", "doi": "10.1016/j.comppsych.2024.152496",
+      "title": "Aberrant salience mediates the interplay between emotional abuse and positive symptoms in schizophrenia",
+      "decision": "direct_topic_candidate", "design_draft": "observational_study",
+      "reason": "Relevant cross-sectional analysis of 222 patients; self-report exposure/mediator and cross-sectional mediation cannot establish causal direction.",
+      "review_needed": "JBI cross-sectional appraisal; outcome measurement, selection and confounding; restrict causal wording."
+    },
+    {
+      "pmid": "39755698", "doi": "10.1038/s41467-024-55611-1",
+      "title": "Connecting genomic results for psychiatric disorders to human brain cell types and regions reveals convergence with functional connectivity",
+      "decision": "context_only", "design_draft": "observational_study",
+      "reason": "Integrative genomic and imaging analysis is condition-related but mechanistic, not direct evidence of individual risk or clinical prediction.",
+      "review_needed": "Check GWAS ancestry, sample overlap, multiple testing and replication before mechanisms-only use."
+    },
+    {
+      "pmid": "39911608", "doi": "10.46989/001c.128601",
+      "title": "How to perform a high-quality peer review",
+      "decision": "exclude", "design_draft": "expert_opinion",
+      "reason": "Peer-review methodology, outside the scientific retrieval topic boundary."
+    },
+    {
+      "pmid": "40355602", "doi": "10.1038/s41576-025-00843-0",
+      "title": "Genomics of schizophrenia, bipolar disorder and major depressive disorder",
+      "decision": "direct_topic_candidate", "design_draft": "expert_opinion",
+      "reason": "Narrative review of the genetics and limitations of three approved psychiatric conditions; not a systematic review or individual risk predictor.",
+      "review_needed": "SANRA appraisal, provenance of clinical-utility statements, and avoidance of unsupported individualized interpretations."
+    },
+    {
+      "pmid": "40533517", "doi": "10.1038/s41588-025-02229-8",
+      "title": "Incorporating genetic data improves target trial emulations and informs the use of polygenic scores in randomized controlled trial design",
+      "decision": "exclude", "design_draft": "observational_study",
+      "reason": "Its emulated trial outcomes are cardiometabolic, outside the approved psychiatric topic boundary."
+    },
+    {
+      "pmid": "40802796", "doi": "10.1093/bib/bbaf373",
+      "title": "A survey on deep learning for polygenic risk scores",
+      "decision": "exclude", "design_draft": "expert_opinion",
+      "reason": "Broad PRS machine-learning survey, without a specific approved mental-health evidence question."
+    },
+    {
+      "pmid": "40819129", "doi": "10.1038/s41598-025-11989-6",
+      "title": "Cross-modal gated feature enhancement for multimodal emotion recognition in conversations",
+      "decision": "exclude", "design_draft": "observational_study",
+      "reason": "Emotion-recognition benchmark paper, not psychiatric clinical evidence."
+    },
+    {
+      "pmid": "41565822", "doi": "10.1038/s41586-025-10000-6",
+      "title": "Biological insights into schizophrenia from ancestrally diverse populations",
+      "decision": "direct_topic_candidate", "design_draft": "observational_study",
+      "reason": "Schizophrenia genetic association study improves ancestry diversity relative to earlier work; biological associations are not individual-level clinical risk estimates.",
+      "review_needed": "Assess cohort ascertainment, ancestry transferability, replication and multiple testing before genetics-context use."
+    }
+  ]
+}

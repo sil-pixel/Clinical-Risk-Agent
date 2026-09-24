@@ -62,6 +62,19 @@ class PubMedTests(unittest.TestCase):
         self.assertEqual(refresh_retraction_status((source,), (retracted,))[0].retraction_state,
                          "retracted")
 
+    def test_pubmed_processing_date_never_substitutes_for_publication_date(self) -> None:
+        xml = b"""<PubmedArticleSet><PubmedArticle><MedlineCitation><PMID>55</PMID>
+        <DateCompleted><Year>2026</Year><Month>08</Month><Day>01</Day></DateCompleted>
+        <Article><Journal><JournalIssue><PubDate><MedlineDate>2003 Jan-Feb</MedlineDate>
+        </PubDate></JournalIssue><Title>Fixture</Title></Journal>
+        <ArticleTitle>Old fixture</ArticleTitle><Abstract><AbstractText>Text.</AbstractText>
+        </Abstract><PublicationTypeList><PublicationType>Review</PublicationType>
+        </PublicationTypeList></Article></MedlineCitation></PubmedArticle></PubmedArticleSet>"""
+        source = parse_pubmed_xml(xml, checked_on=TODAY, appraisals={})[0]
+        self.assertEqual(source.published_on, date(2003, 1, 1))
+        self.assertIn("publication_date_ineligible",
+                      source_rejection_reasons(source, today=TODAY))
+
 
 if __name__ == "__main__":
     unittest.main()
