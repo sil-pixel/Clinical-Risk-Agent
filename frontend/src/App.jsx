@@ -322,7 +322,7 @@ function App() {
               <strong id="calculation-status">Model calculation is not yet enabled.</strong>{" "}
               {overallStatus.unanswered > 0 && `${overallStatus.unanswered} questions remain unanswered. `}
               {overallStatus.unknown > 0 && `${overallStatus.unknown} answers need clarification before a model could run. `}
-              The research model, mapping, and safety review must be approved before results can be produced.
+              A protected assessment service and safety review are still needed before this interface can produce results.
             </Notice>
           )}
         </main>

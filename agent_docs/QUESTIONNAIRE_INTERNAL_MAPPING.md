@@ -2,7 +2,7 @@
 
 > **Internal implementation document.** Backend code may use these feature keys, model groups, numeric encodings, and stable variables to map validated questionnaire answers into the model schema. A-TAC identifiers and other internal codes must never appear in rendered questionnaire text, option labels, accessibility labels, user-visible errors, analytics, logs, URLs, or screenshots. Public copy lives in [`questionnaire.md`](../questionnaire.md).
 
-**Status:** Archived internal mapping reference. None of this wording or its identifiers is approved for public rendering. Exact training-column mappings, transformations, and missing-value rules remain an ML release gate, so DCMFNet submission stays fail-closed pending [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md).
+**Status:** Archived internal mapping reference. None of this wording or its identifiers is approved for public rendering. On 2026-09-24 the product owner accepted the current public option order as a prototype machine mapping; the private local adapter implements that assumption. Independent training-column and measurement-equivalence evidence remain unresolved. Public DCMFNet submission stays disabled pending the protected backend workflow and safety release gates; see [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md).
 
 This document defines the approved user-facing English questions for the manually collected DCMFNet features supplied by the model owner. It preserves the feature keys so each item can be verified against the training-data dictionary during implementation.
 
@@ -11,8 +11,8 @@ This document defines the approved user-facing English questions for the manuall
 1. The supplied Python ranges create **19 ADHD fields** (`range(1, 20)`) and **17 ASD fields** (`range(1, 18)`), not 20 and 18. The model artifacts also contain 19 `ADHD9` and 17 `ASD9` fields. No twentieth ADHD question or eighteenth ASD question may be added to the inference payload without retraining or revising the model schema.
 2. The names recovered for the 19 ADHD and 17 ASD fields align with the domains and item counts of the **Autism–Tics, ADHD and other Comorbidities inventory (A-TAC)**. A-TAC is a parent/collateral interview, asks about childhood problems in a whole-life frame, and uses the three labels `No`, `Yes, to some extent`, and `Yes`. The project represents these as integers `0..2`; the authoritative training codebook must still confirm that recoding.
 3. These questions are written as adult retrospective self-report because this MVP excludes minors. That use differs from the validated parent interview. It must not be described as a validated ADHD or ASD screen, diagnostic questionnaire, or clinical assessment.
-4. The product-approved group ranges and source-derived option descriptions are documented below. Their numeric bounds match the available training evidence, but the authoritative column codebook must still verify field-specific integer mappings before inference.
-5. Numeric range and UI option rendering may be implemented now. The backend must still fail closed rather than send questionnaire values to DCMFNet until every visible option has a verified training-column mapping.
+4. The product-approved group ranges and source-derived option descriptions are documented below. Their numeric bounds match the available training evidence. The product owner accepted their current order as a prototype mapping on 2026-09-24, while historical training-column equivalence remains unverified.
+5. The backend implements that versioned prototype mapping privately and fails closed on missing, unknown, or invalid answers. Public submission still requires the protected workflow and release tests.
 6. The supplied feature groups contain **84 manual fields**. Adding the artifact's `SEX` field produces **85 manual fields**. The remaining sixteen PRS fields and four batch-by-PC fields are supplied by the approved versioned generic profile, producing the complete 105-input matrix.
 7. All 85 manual fields are visible, required controls. The 20 generic-profile fields are derived server-side, hidden from editing, and disclosed as generic unmeasured assumptions in the assessment and result views.
 8. The approved machine ranges are `SUD15=0..5`, `SCZ15=0..3`, `ADHD9=0..2`, `ASD9=0..2`, `ACE15=1..6`, `ACE18=0|1`, `SUD18=0..7`, `SES=0..5`, and `SEX=1|2`. Source-derived and product-owner-supplied option descriptions appear below. They may be used for review and disabled prototyping, but must not be represented as training-codebook-verified mappings.
@@ -277,7 +277,7 @@ Use this country-of-birth encoding for H2 and H4:
 - **1 — India**
 - **0 — Elsewhere**
 
-These descriptions are product-approved but still require confirmation against the authoritative training-data codebook before inference is enabled.
+These descriptions are product-approved for the prototype mapping; independent confirmation against the historical training-data codebook remains open.
 
 1. **H1 —** `SES_education_father`**:** What was the highest level of education completed by your father?
 2. **H2 —** `SES_birth_country_father`**:** Was your father born in India or elsewhere?
@@ -304,7 +304,7 @@ Use this approved binary encoding:
 
 ## Approval checklist
 
-Product wording, required-field behavior, and visible/derived approval was recorded on 2026-09-17. Group-level numeric ranges were aligned with the verified training ranges on 2026-09-18. Source-derived descriptions are now present for every visible option. Machine-contract approval still requires the authoritative column codebook to verify integer mappings and transformations.
+Product wording, required-field behavior, and visible/derived approval was recorded on 2026-09-17. Group-level numeric ranges were aligned with the verified training ranges on 2026-09-18. Source-derived descriptions are now present for every visible option. On 2026-09-24 the product owner accepted the current option order for the versioned prototype machine contract. The unchecked items below are independent source-equivalence and release-review work, not prerequisites to private prototype integration.
 
 - [x] Product owner approved the final questionnaire wording, option descriptions, and UX behavior for frontend implementation on 2026-09-18.
 - [x] Approve the group-level numeric ranges for `SUD15`, `SCZ15`, `ADHD9`, `ASD9`, `ACE15`, `SUD18`, and `SES`.
@@ -318,7 +318,7 @@ Product wording, required-field behavior, and visible/derived approval was recor
 - [ ] Confirm exact time frame for each age-tagged field.
 - [ ] Confirm exact item order for `ADHD9_var_*` and `ASD9_var_*`.
 - [ ] Decide whether retrospective adult self-report is acceptable; otherwise obtain a compatible validated adult instrument and retrain/revalidate the model.
-- [ ] Obtain the authoritative source codebook and verify every response label and encoding; do not change or remap them by assumption.
+- [ ] Obtain the authoritative source codebook and independently verify every response label and encoding; do not silently change the accepted prototype mapping.
 - [ ] Verify the field-specific bullying frequency, number-of-people, and duration encodings against the authoritative column codebook.
 - [ ] Verify the manually supplied education and India/elsewhere labels, valid subsets, and missing/unknown handling within the approved `SES=0..5` group range.
 - [ ] Verify that the approved `SEX` values match the artifact's training encoding and document handling for users outside the model's supported binary categories.
@@ -332,7 +332,7 @@ Product wording, required-field behavior, and visible/derived approval was recor
 - The `ADHD9` and `ASD9` descriptions use the published [A-TAC response anchors](https://www.gu.se/en/gnc/gncs-resources/screening-questionnaires-and-protocols/a-tac-screening-questionnaire).
 - The `SES` and `SEX` descriptions remain the product-owner-supplied project labels.
 
-Public survey wording supports the UI descriptions but does not replace the missing training column codebook. Exact integer direction, recoding, field transformations, and missing-value treatment must still be verified before model submission is enabled.
+Public survey wording supports the UI descriptions but does not replace the missing historical training column codebook. Exact integer direction, recoding, field transformations, and missing-value treatment remain independently unverified. The accepted prototype mapping is documented in [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md); public submission remains disabled until the protected workflow and release tests pass.
 
 ## Scientific provenance for the ADHD/ASD draft
 

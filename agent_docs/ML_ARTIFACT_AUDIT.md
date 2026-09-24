@@ -1,6 +1,6 @@
 # DCMFNet Artifact and Runtime Audit
 
-Status: Deterministic inference verified; generic genetic-input policy approved; manual field definitions pending
+Status: Deterministic inference verified; generic genetic-input policy approved; prototype manual-field mapping implemented on 2026-09-24
 
 Owner: ML Engineer
 
@@ -81,12 +81,12 @@ PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py' -v
 
 Result: 13 tests passed.
 
-## Remaining questionnaire work
+## Questionnaire update (2026-09-24)
 
-Executable inference is unblocked, but the complete public questionnaire contract still needs approved wording, units, encodings, valid ranges, and collection rules for manually answered clinical/research variables.
+Executable inference is verified. The product owner accepted the current public option order as the prototype's mapping, and the ML adapter now validates 85 opaque answers and assembles target-specific 105-feature records. See [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md) for the current callable contract. Independent source-codebook and measurement-equivalence evidence is still absent; the accepted mapping must not be described as historically verified or clinically validated. Public assessment submission remains disabled until the protected application workflow and safety tests are complete.
 
 For the portfolio MVP, the Product Manager approved `generic_genetic_profile_v1`: the runtime reads the selected artifact's exported training medians for the 16 PRS and four batch-by-PC inputs. These generic assumptions must be disclosed and must not be presented as measured or personalized genomic values. They are never adjusted from family history, nationality, ethnicity, race, or descent. No other unavailable measurement receives an invented default, and a conversational diet history is not sufficient for these models.
 
 ## Resolved product definition
 
-On 2026-08-16, the product owner clarified that `SCZ18_Pos_Norm` is the positive-symptom research risk probability and `SCZ18_Neg_Norm` is the negative-symptom research risk probability. They remain distinct and must not be combined, recalculated, or modified by the LLM. The user-input collection decision remains open.
+On 2026-08-16, the product owner clarified that `SCZ18_Pos_Norm` is the positive-symptom research risk probability and `SCZ18_Neg_Norm` is the negative-symptom research risk probability. They remain distinct and must not be combined, recalculated, or modified by the LLM. The prototype user-input collection decision was made on 2026-09-24 as documented above.

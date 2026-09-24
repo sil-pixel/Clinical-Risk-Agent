@@ -54,6 +54,8 @@ This does not authorize durable health records.
 
 **Verification update (2026-09-18):** The user-designated Thesis implementation and report established the model construction, preprocessing, targets, and golden outputs. `InferenceInputSchema` and `InferenceResult` are implemented. The product owner defines the outputs as separate positive- and negative-symptom research risk probabilities and approved `generic_genetic_profile_v1`. Product questionnaire copy exists, but ML verification found that its response encodings conflict with source ranges; `QuestionnaireRequirements` remains blocked pending an authoritative mapping or retraining. See [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md).
 
+**Superseding prototype decision (2026-09-24):** The product owner accepted the current question/option order as a documented prototype mapping. `prototype_questionnaire_v1` and its private paired-model adapter are implemented and tested. This does not establish source-codebook or measurement equivalence; public submission still requires the protected workflow and release tests. See ADR-026 and [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md).
+
 **Consequences:** AI and Backend may integrate the exact internal inference contract and generic-profile provenance. Agents cannot invent other questionnaire defaults, derive genetic values from family history or population descriptors, add risk bands or a combined probability, or claim factor attribution.
 
 ## ADR-007 — Keep scientific knowledge and citation identity external to prompts
@@ -208,11 +210,19 @@ This does not authorize durable health records.
 
 **Consequences:** Rate-limit keys are one-way, short-lived, non-telemetry values. Stale optional helplines are suppressed until reverified; the separately verified national emergency route remains available. Capacity, budget, and quota failures are typed availability states and never expose partial model output.
 
+## ADR-026 — Accept a versioned prototype questionnaire mapping
+
+**Decision (2026-09-24):** The product owner accepted the current public question and option order as `prototype_questionnaire_v1` for private prototype integration. ML owns the opaque-ID validator and backend-only mapping to 85 manual fields; each model artifact supplies its own medians for the other 20 fields. This decision supersedes the earlier codebook prerequisite for local prototype implementation, while leaving historical codebook and measurement equivalence unverified.
+
+**Why:** The product owner elected to proceed with the documented current ordering and return to discrepancies if evidence emerges. The mapping is explicit, versioned, and covered by frontend/backend contract and two-target inference tests.
+
+**Consequences:** Downstream AI/Backend owners may integrate the private adapter under the existing safety, mode, session, result-integrity, and release controls. They may not call the mapping historically verified or enable public submission before the protected workflow and release tests pass. A discovered mismatch requires Product/ML review, a versioned correction, and regression tests; retraining or revalidation may be required.
+
 ## Deferred implementation decisions
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Modal SDK, Framer integration, and benchmark-winning model revisions/checksums.
 - Concrete retrieval adapter and quality-appraisal instruments; the scientific source/corpus eligibility policy is approved in ADR-012.
-- Resolution of questionnaire training-column mappings and transformations through the authoritative codebook or retraining/revalidation; group-level ranges and source-derived UI descriptions are documented.
+- Independent historical questionnaire codebook and measurement-equivalence evidence. The prototype mapping decision is recorded in ADR-026; any discovered discrepancy returns to Product/ML review.
 - Exact request/state size bounds. The inactivity TTL is approved at 30 minutes.
 
 Deferred items remain owned by the roles and gates identified in the product plan and interface registry; deferral is not permission for downstream agents to guess.

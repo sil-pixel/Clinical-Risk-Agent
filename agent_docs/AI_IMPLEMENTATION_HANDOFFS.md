@@ -34,7 +34,7 @@ Canonical architecture: [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE
 
 ## Frontend Engineer
 
-- Prototype only the independently worded public copy in [`questionnaire.md`](../questionnaire.md), pending final product and legal review. Never render A-TAC identifiers, feature keys, model groups, numeric machine codes, source-instrument identifiers, or the 20 generic-profile fields in visible text or accessibility labels. Use opaque public IDs; backend-only adapters may map them to stable internal variables and model feature keys. Internal codes also remain prohibited from URLs, analytics, logs, user-visible errors, and screenshots. The model-submission action remains unavailable with a clear “calculation not yet enabled” message until measurement-equivalence and ML mapping gates pass.
+- Use the independently worded public copy in [`questionnaire.md`](../questionnaire.md). Never render A-TAC identifiers, feature keys, model groups, numeric machine codes, source-instrument identifiers, or the 20 generic-profile fields in visible text or accessibility labels. Use opaque public IDs; the backend-only `prototype_questionnaire_v1` adapter maps them to model inputs under the product owner's 2026-09-24 prototype assumption. Internal codes also remain prohibited from URLs, analytics, logs, user-visible errors, and screenshots. The public model-submission action remains unavailable until the protected backend workflow and safety release gates pass.
 - Treat `I do not remember` as non-scored and submission-blocking. Disable submission until every visible field is locally valid, while showing an accessible missing/invalid summary; backend validation remains authoritative.
 - Disclose the generic unmeasured genetic profile, synthetic training data, research-only status, no diagnosis/advice, and no personalized genetic-risk interpretation.
 - Support anonymous session, rate-limit, capacity, offline, budget-exhausted, no-evidence, dependency, and timeout states. Never display raw unvalidated SSE tokens.
@@ -42,9 +42,9 @@ Canonical architecture: [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE
 
 ## ML Engineer
 
-- Keep public wording/options separate from private feature/range mappings in `QuestionnaireRequirements`; public payloads use opaque question and option IDs that reveal no model semantics. Do not implement an inference-authorizing `QuestionnaireValidationResult`. Return `questionnaire_contract_unavailable` until legal, measurement-equivalence, and column-code mapping reviews pass.
-- Obtain and verify every manual field's answer labels, order, encoding, range, missing-state handling, time frame, and transformation against the authoritative training codebook before enabling public inference.
-- Fail readiness if the source codebook does not support the approved ranges and eventual UI labels. Do not privately assign code meanings or remap the questionnaire; return discrepancies to product and architecture review.
+- Keep public wording/options separate from private feature/range mappings. Public payloads use opaque question and option IDs. The local `QuestionnaireValidationResult` now authorizes only complete, valid prototype input under the product-owner-accepted mapping. Preserve version checks and return a typed unavailable state when the future protected workflow or release configuration cannot support that version.
+- Preserve `prototype_questionnaire_v1` as the explicit product-owner-accepted option-order mapping. Its backend implementation and tests are complete; do not silently change option meanings, numeric codes, or item order. If an authoritative source codebook becomes available and contradicts this mapping, return the discrepancy to Product, ML, and architecture review before using the affected contract.
+- Retain the missing historical codebook and unproven measurement equivalence as documented prototype limitations. Fail readiness on artifact-schema or version mismatch, and keep public submission disabled until the protected workflow and safety gates pass.
 - Preserve generic-profile construction from artifact medians and the complete exact 105-feature validation already defined by the inference contract.
 
 ## Testing Agent

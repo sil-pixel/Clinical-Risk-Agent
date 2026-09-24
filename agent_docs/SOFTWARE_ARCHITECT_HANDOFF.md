@@ -35,6 +35,8 @@ Architecture scope: ARCH-01 and ARCH-02 initial baseline
 
 Completion update (2026-09-18): the user supplied the sibling Thesis repository as authoritative evidence. The ML Engineer verified and ported model construction and preprocessing, published inference contracts, and added golden tests. Product questionnaire copy, group-level numeric ranges, and the visible/derived split are approved. Assessment inference remains blocked by missing authoritative code labels and field semantics documented in [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md).
 
+Current update (2026-09-24): the product owner accepted the present option order as a prototype mapping despite the unresolved historical source-codebook and equivalence evidence. The private versioned questionnaire adapter and paired model call are implemented and tested. Public submission remains disabled pending the protected workflow and release tests; see [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md).
+
 Inspect both repository-supplied `.pt` files and their metadata. Treat serialized artifacts as untrusted and do not use an unsafe loading mode merely to discover content. Obtain or identify the actual DCMFNet implementation/runtime before constructing the models.
 
 The ML Engineer owns publication of:
@@ -56,7 +58,7 @@ The ML Engineer owns publication of:
 - The `.pt` files are PyTorch ZIP-format serialized artifacts, but the repository contains no DCMFNet model class or loader.
 - Target names are `SCZ18_Pos_Norm` and `SCZ18_Neg_Norm`; their user-facing meaning and any combined result are undocumented.
 
-The historical artifact observations above no longer block direct machine inference with exact 105-field fixtures. End-user questionnaire authorization remains blocked because source-derived UI descriptions and matching group ranges do not establish the exact training integer direction, field recoding, transformations, or missing-value behavior; no undocumented mapping may supply them.
+The historical artifact observations above no longer block direct machine inference with exact 105-field fixtures. The accepted prototype mapping is explicitly documented and implemented; its match to the historical training column codebook remains unverified. The protected application boundary must still authorize any end-user questionnaire submission.
 
 ## Verification expected from ML Engineer
 

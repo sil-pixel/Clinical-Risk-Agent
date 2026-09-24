@@ -24,8 +24,8 @@ Source: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 | `DeploymentMode` | Composition root → all workflow/results/telemetry | Software Architect | **Architecture-approved:** `prototype_demo`; `hospital_silent_research` reserved and unavailable until separately gated |
 | `ArtifactInspection` | DCMFNet artifact validator → readiness/tests | ML Engineer | **Implemented:** integrity/readiness facts |
 | `InferenceInputSchema` | DCMFNet adapter → graph/backend/tools | ML Engineer | **Implemented:** exact machine feature groups/order; not user-facing questionnaire copy |
-| `QuestionnaireRequirements` | ML/questionnaire → graph/UI | ML Engineer | **Draft:** code-free public wording/options are separated from private mappings; product/legal, measurement-equivalence, and training-code gates remain |
-| `QuestionnaireValidationResult` | Questionnaire validator → graph | ML Engineer | **Blocked for inference authorization:** interactive UX and deterministic fixtures may be implemented, but no questionnaire payload may reach DCMFNet |
+| `QuestionnaireRequirements` | ML/questionnaire → graph/UI | ML Engineer | **Implemented for prototype:** opaque public IDs/options and backend-only mapping; independent source equivalence remains unresolved |
+| `QuestionnaireValidationResult` | Questionnaire validator → graph | ML Engineer | **Implemented for private prototype adapter:** only complete valid answers authorize local model input; public submission requires protected workflow and safety gates |
 | `InferenceRequest` | Graph → DCMFNet port | ML Engineer | **Implemented internally:** selected target plus records containing all 105 exact numeric feature keys |
 | `InferenceResult` | DCMFNet port → graph/context/API | ML Engineer | **Implemented:** immutable, separate positive- or negative-symptom research risk probability and artifact identity |
 | `RetrievalQuery` | Graph → RAG port | AI Architect (design), RAG Engineer (implementation) | Minimum boundary below; AI/RAG architecture and corpus policy required |
@@ -93,7 +93,7 @@ A deterministic output gate—not the LLM—requires every raw probability to be
 
 The current explanation contract is prediction-only and does not perform causal inference. Without validated feature importance, the assistant cannot rank inputs or explain why a result is high and must use the deterministic message defined below. Every valid result response also requires the approved synthetic-data indicator.
 
-`QuestionnaireRequirements` separates a public presentation projection from a private model-mapping projection. The public projection contains only independently worded prompts, descriptive options, required behavior, and opaque non-semantic IDs; rendered UI content contains no A-TAC identifiers, feature keys, model groups, numeric machine codes, scoring details, or source-instrument identifiers. The browser submits opaque question and option IDs. Backend-only code maps those IDs to stable internal variables, feature keys, numeric values, and approved group ranges. `QuestionnaireValidationResult` remains blocked for inference authorization because legal/licensing review, measurement equivalence, authoritative training-column mappings, transformations, and missing-value rules are unresolved. Consumers may implement a code-free UI prototype and deterministic fixtures but must return `questionnaire_contract_unavailable` before inference.
+`QuestionnaireRequirements` defines opaque question and option IDs; the independently worded prompts and descriptive options remain in the public questionnaire UI. Rendered UI content contains no A-TAC identifiers, feature keys, model groups, numeric machine codes, scoring details, or source-instrument identifiers. The browser submits opaque IDs. Backend-only code maps them to feature keys and numeric values under the product-owner-accepted `prototype_questionnaire_v1` assumption (2026-09-24). `QuestionnaireValidationResult` authorizes the private local adapter only for complete valid structured answers. This does not establish historical source-codebook or measurement equivalence, and the absent protected backend workflow keeps public calculation unavailable.
 
 See [`ML_ARTIFACT_AUDIT.md`](ML_ARTIFACT_AUDIT.md) and [`ML_ENGINEER_HANDOFF.md`](ML_ENGINEER_HANDOFF.md) for evidence, hashes, golden values, and the required product decisions.
 
@@ -163,7 +163,7 @@ The MVP API is versioned and session-oriented:
 | Liveness | `GET /health/live` | Confirm the API process is running |
 | Readiness | `GET /health/ready` | Report required artifact/index/configuration readiness without secrets |
 
-The submit-turn request must be a discriminated union separating free text from structured questionnaire-answer updates. Structured questionnaire fields come from the approved requirements version and remain release-disabled until ML codebook compatibility verification passes. One request cannot silently mix arbitrary free text with questionnaire answers or unvalidated feature keys.
+The submit-turn request must be a discriminated union separating free text from structured questionnaire-answer updates. Structured questionnaire fields come from the accepted `prototype_questionnaire_v1` requirements. The public submit route remains disabled until the protected backend workflow and safety release tests pass. One request cannot silently mix arbitrary free text with questionnaire answers or unvalidated feature keys.
 
 The response envelope must include:
 

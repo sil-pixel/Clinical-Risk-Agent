@@ -17,5 +17,5 @@ Use `npm test` for questionnaire contract tests and `npm run build` for a produc
 - The session clears after exactly 30 minutes without pointer, keyboard, or touch activity.
 - Public copy and markup use opaque question IDs only. Internal feature mapping belongs in the backend.
 - “I do not remember” is non-scored and prevents model readiness.
-- Model calculation intentionally remains disabled until the model mapping, legal/licensing review, measurement-equivalence review, and safety release gates are approved.
+- The product owner accepted the current option order as a prototype mapping on 2026-09-24. Model calculation remains disabled in this public UI until a protected backend workflow, safety controls, and release review are implemented. Independent source-instrument equivalence has not been established.
 - The interface must continue to disclose that it is a research-only demonstration, not a diagnosis or medical advice, and that it does not provide personalized genetic interpretation.

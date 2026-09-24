@@ -8,6 +8,15 @@ from .model_inference import (
     ModelTarget,
     SymptomSeverityPrediction,
 )
+from .questionnaire import (
+    GENERIC_PROFILE_VERSION,
+    QUESTIONNAIRE_VERSION,
+    QuestionnaireAssessmentResult,
+    QuestionnaireRequirement,
+    QuestionnaireRequirements,
+    QuestionnaireStatus,
+    QuestionnaireValidationResult,
+)
 
 __all__ = [
     "ArtifactInspection",
@@ -16,4 +25,11 @@ __all__ = [
     "InferenceResult",
     "ModelTarget",
     "SymptomSeverityPrediction",
+    "GENERIC_PROFILE_VERSION",
+    "QUESTIONNAIRE_VERSION",
+    "QuestionnaireAssessmentResult",
+    "QuestionnaireRequirement",
+    "QuestionnaireRequirements",
+    "QuestionnaireStatus",
+    "QuestionnaireValidationResult",
 ]

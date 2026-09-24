@@ -9,6 +9,12 @@ from .errors import (
     InferenceError,
     InferenceErrorCode,
 )
+from .questionnaire import (
+    assemble_model_record,
+    predict_questionnaire,
+    questionnaire_requirements,
+    validate_questionnaire,
+)
 from .runtime import DCMFNetPredictor
 
 __all__ = [
@@ -18,5 +24,9 @@ __all__ = [
     "DCMFNetPredictor",
     "InferenceError",
     "InferenceErrorCode",
+    "assemble_model_record",
     "inspect_artifact",
+    "predict_questionnaire",
+    "questionnaire_requirements",
+    "validate_questionnaire",
 ]
