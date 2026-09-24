@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "appraised_on": "2026-09-24",
+  "status": "two_bounded_use_sources_human_approved",
+  "purpose": "Research-only first-corpus selection; the separate approved manifest contains only the two signed sources",
+  "rubrics": {
+    "reviews": "JBI Critical Appraisal Checklist for Systematic Reviews and Research Syntheses, 2020, 11 items; yes/no/unclear judgments, not an additive score",
+    "cohort": "JBI Critical Appraisal Checklist for Cohort Studies, 2017, 11 items; yes/no/unclear judgments, not an additive score"
+  },
+  "rubric_urls": {
+    "reviews": "https://jbi.global/sites/default/files/2020-08/Checklist_for_Systematic_Reviews_and_Research_Syntheses.pdf",
+    "cohort": "https://jbi.global/sites/default/files/2019-05/JBI_Critical_Appraisal-Checklist_for_Cohort_Studies2017_0.pdf"
+  },
+  "pubmed_metadata_check": {
+    "checked_on": "2026-09-24",
+    "provider": "NCBI PubMed EFetch XML over verified HTTPS",
+    "scope": "PublicationType and CommentsCorrections metadata; this is not an independent external retraction-index search",
+    "records": [
+      {"pmid":"37639261","doi":"10.1001/jamapediatrics.2023.3221","retraction_or_correction_flag":false,"other_comment_refs":[{"type":"CommentIn","pmid":"37639255"}]},
+      {"pmid":"40577247","doi":"10.1177/10870547251341597","retraction_or_correction_flag":false,"other_comment_refs":[]},
+      {"pmid":"35693977","doi":"10.3389/fpsyt.2022.856208","retraction_or_correction_flag":false,"other_comment_refs":[]},
+      {"pmid":"36997959","doi":"10.1186/s12888-023-04681-4","retraction_or_correction_flag":false,"other_comment_refs":[]},
+      {"pmid":"39648410","doi":"10.1002/jad.12450","retraction_or_correction_flag":false,"other_comment_refs":[]}
+    ]
+  },
+  "proposed_manifest_score_mapping": {
+    "status": "reviewer_approved_2026-09-24",
+    "method": "Use score 1.0 only for an explicitly reviewer-approved, bounded-use source; failed or unreviewed sources never enter the manifest. This encodes a binary appraisal gate, not an additive JBI score or a comparative study-quality estimate.",
+    "limitation": "All approved first-set sources would have equal quality contribution in reranking; revise the schema and validate a comparative score before claiming quality-based ordering."
+  },
+  "item_key_reviews": {
+    "1": "clear question", "2": "appropriate inclusion criteria", "3": "appropriate search strategy", "4": "adequate search sources", "5": "appropriate primary-study appraisal criteria", "6": "independent duplicate critical appraisal", "7": "data-extraction error minimization", "8": "appropriate synthesis", "9": "publication-bias assessment", "10": "practice recommendations supported", "11": "research recommendations supported"
+  },
+  "item_key_cohort": {
+    "1": "comparable groups from same population", "2": "similar exposure measurement", "3": "valid reliable exposure measurement", "4": "confounders identified", "5": "confounding handled", "6": "outcome absent at exposure start", "7": "valid reliable outcome measurement", "8": "sufficient follow-up", "9": "complete follow-up or losses described", "10": "incomplete follow-up addressed", "11": "appropriate statistical analysis"
+  },
+  "appraisals": [
+    {
+      "pmid": "37639261", "topic": "depression", "design": "systematic_review_meta_analysis", "full_text_url": "https://jamanetwork.com/journals/jamapediatrics/fullarticle/2808878", "rubric": "reviews",
+      "items": {"1":"yes","2":"yes","3":"yes","4":"yes","5":"yes","6":"yes","7":"yes","8":"yes","9":"unclear","10":"yes","11":"yes"},
+      "evidence": ["41 population studies required structured diagnostic interviews for children younger than 13", "Two-person study selection, extraction and JBI prevalence appraisal are reported", "Random-effects models, prediction intervals, leave-one-out checks and GRADE are reported"],
+      "limitations": ["No explicit protocol registration or publication-bias assessment was verified in the main text; supplementary methods need second-reviewer confirmation", "The prevalence period is 2004–2019, so it cannot establish current post-pandemic rates", "DMDD subgroup is sparse and its evidence was judged low quality by the authors"],
+      "recommendation": "conditional_include_for_historical_interview_defined_childhood_prevalence_only", "ingestion_passed": true
+    },
+    {
+      "pmid": "40577247", "topic": "adhd", "design": "systematic_review_meta_analysis", "full_text_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12318167/", "rubric": "reviews",
+      "items": {"1":"yes","2":"yes","3":"yes","4":"yes","5":"yes","6":"no","7":"no","8":"unclear","9":"no","10":"yes","11":"yes"},
+      "evidence": ["PROSPERO registration and six-database search are reported", "24 studies and a design-specific prevalence-bias assessment are described", "The authors report I-squared of 91 percent and explore some subgroups"],
+      "limitations": ["Only 10 percent of screening, extraction and primary-study bias assessment was independently checked", "No formal publication-bias assessment was verified", "Depression questionnaires and diagnostic interviews were pooled; high heterogeneity makes the single pooled rate unsuitable as a general clinical prevalence claim"],
+      "recommendation": "defer_from_first_ingestion; retain as candidate for carefully qualified methods/co-occurrence questions after independent review", "ingestion_passed": false
+    },
+    {
+      "pmid": "35693977", "topic": "asd", "design": "systematic_review_meta_analysis", "full_text_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9186340/", "rubric": "reviews",
+      "items": {"1":"yes","2":"yes","3":"yes","4":"unclear","5":"no","6":"no","7":"yes","8":"no","9":"unclear","10":"unclear","11":"yes"},
+      "evidence": ["PROSPERO registration and blinded duplicate title/abstract screening are reported", "Eligibility was limited to population-based ASD samples and specified diagnostic methods", "Random-effects synthesis and selected publication-bias tests are reported"],
+      "limitations": ["A systematic per-primary-study risk-of-bias appraisal was not verified in the full text", "Pooled comorbidity analyses have very high heterogeneity, generally I-squared above 84 percent", "Egger's test indicated potential bias for the ADHD comorbidity subgroup; other small subgroups could not be assessed"],
+      "recommendation": "exclude_from_first_ingestion_pending_independent_quality_review", "ingestion_passed": false
+    },
+    {
+      "pmid": "36997959", "topic": "bullying", "design": "systematic_review_meta_analysis", "full_text_url": "https://link.springer.com/article/10.1186/s12888-023-04681-4", "rubric": "reviews",
+      "items": {"1":"yes","2":"yes","3":"yes","4":"yes","5":"yes","6":"yes","7":"yes","8":"no","9":"yes","10":"no","11":"yes"},
+      "evidence": ["Prospective protocol registration, multiple databases and duplicate selection/extraction are reported", "31 included studies were cross-sectional and their bias was assessed with an AHRQ checklist", "Subgroups and Egger's test are reported"],
+      "limitations": ["Most primary studies did not adequately describe confounder control or missing-data handling", "Ten studies supplied crude odds ratios, and depression measurement varied", "The discussion sometimes calls bullying a risk factor despite cross-sectional data that cannot establish temporal or causal direction"],
+      "recommendation": "exclude_from_first_ingestion; use stronger longitudinal bullying evidence for the initial corpus", "ingestion_passed": false
+    },
+    {
+      "pmid": "39648410", "topic": "bullying", "design": "longitudinal_panel_observational", "full_text_url": "https://onlinelibrary.wiley.com/doi/full/10.1002/jad.12450", "rubric": "cohort",
+      "items": {"1":"yes","2":"yes","3":"unclear","4":"yes","5":"yes","6":"no","7":"yes","8":"yes","9":"unclear","10":"no","11":"yes"},
+      "evidence": ["Nine annual waves of a nationally representative South Korean multicultural-family panel are analyzed", "Bullying and depressive symptoms use described multi-item scales; reported internal-consistency alphas are 0.85 and 0.91", "Individual fixed effects and measured time-varying covariates address some confounding"],
+      "limitations": ["Analytic sample was 1375 of 1635 baseline children after eligibility and missingness exclusions; selective follow-up was not fully resolved", "Participants were not depression-free at exposure start; this is symptom-trajectory association, not incident depression", "Self-report, possible reverse direction and unmeasured time-varying confounding remain; applicability beyond this population is limited"],
+      "recommendation": "conditional_include_for_noncausal_bullying_depressive_symptom_trajectory_questions_only", "ingestion_passed": true
+    }
+  ],
+  "signoff": {"designated_human_reviewer": "Silpa", "independent_human_reviewer": "Silpa", "reviewed_on": "2026-09-24", "approved_pmids": ["37639261", "39648410"], "bounded_uses": {"37639261": "Historical 2004–2019 interview-defined depressive-disorder prevalence in children younger than 13; not current or individual risk", "39648410": "Noncausal bullying–depressive-symptom trajectories in the studied South Korean multicultural-family panel; not incident diagnosis or general-population causal risk"}, "rubric_version_approved": {"37639261": "JBI-SR-2020-11-item+binary-gate-v1", "39648410": "JBI-Cohort-2017-11-item+binary-gate-v1"}, "numeric_score_mapping_approved": true, "approval_statement": "I approve PMIDs 37639261 and 39648410 for the stated bounded uses and approve the proposed score rule", "approval_channel": "project conversation"},
+  "next_gate": ["Run fresh DOI/PMID and retraction/correction checks at ingestion (and recheck within 14 days before use)", "Ingest PubMed abstracts from the signed two-source manifest into both benchmark collections", "Do not broaden these source uses or treat the other three appraisals as approved"]
+}

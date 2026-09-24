@@ -4,6 +4,25 @@
   "screened_on": "2026-09-24",
   "evidence_examined": "PubMed EFetch metadata and abstracts, plus supplied PDF first pages and targeted methods/limitations text where available",
   "quality_score_policy": "No numeric score or passed=true until design-specific full-text appraisal and reviewer sign-off",
+  "full_text_appraisal_queue": {
+    "p1_now": [
+      {"pmid": "37140715", "tool": "JBI cohort", "focus": "Exposure ascertainment, residual confounding, subgroup estimates and noncausal PARF interpretation"},
+      {"pmid": "38446452", "tool": "JBI cohort", "focus": "Retrospective adversity reports, twin-pair selection, nonshared confounding and generalizability"},
+      {"pmid": "25830477", "tool": "JBI case-control", "focus": "Primary nested case-control design, control selection, PRS transportability and confounding; document PubMed design-tag override"},
+      {"pmid": "38477889", "tool": "JBI analytical cross-sectional", "focus": "Psychedelic exposure timing, other-drug confounding, self-reported symptoms and genetic-interaction multiplicity"},
+      {"pmid": "38718481", "tool": "JBI analytical cross-sectional", "focus": "Selection, self-reported abuse and salience, covariate control, and noncausal interpretation of mediation"},
+      {"pmid": "34262598", "tool": "SANRA", "focus": "Search coverage, selective citation, distinction between established and speculative environmental associations"}
+    ],
+    "p2_after_p1": [
+      {"pmid": "40355602", "tool": "SANRA", "focus": "Review search and evidence support for genetics and clinical-utility limitations"},
+      {"pmid": "41565822", "tool": "Genetic-association bias and applicability review", "focus": "Ascertainment, ancestry representation, replication, multiple testing, and no individual-risk extrapolation"}
+    ],
+    "conditional_only_if_question_set_needs_them": [
+      {"pmid": "32251439", "tool": "PROBAST", "focus": "Prediction-model validity and applicability; authors explicitly reject clinical use of their model"},
+      {"pmid": "32997097", "tool": "SANRA", "focus": "PRS limitation/ethics explanation, not disorder-specific effect estimates"}
+    ],
+    "defer_for_current_corpus": ["23810828", "24135711", "31733788", "39755698"]
+  },
   "rubric_draft": {
     "version": "rag_appraisal_draft_v0",
     "reference_urls": {

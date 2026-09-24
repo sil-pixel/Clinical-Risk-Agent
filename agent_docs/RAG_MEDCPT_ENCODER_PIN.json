@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "pinned_on": "2026-09-24",
+  "status": "locally_downloaded_and_weight_hash_verified",
+  "purpose": "Research-only document-versus-hierarchical retrieval benchmark; no claim of empirical superiority",
+  "license": "public-domain (model repository metadata; verify downstream deployment obligations)",
+  "local_root": "data/indexes/models",
+  "embedding_dimension_verified": 768,
+  "models": {
+    "query": {
+      "repo": "ncbi/MedCPT-Query-Encoder",
+      "revision": "d83a36cc6b8e3a5c5e9d9d6ba156808c1643dcbc",
+      "local_dir": "data/indexes/models/MedCPT-Query-Encoder",
+      "model_safetensors_sha256": "19d78c0d5eaee2f81e6c47c5425bbadcc0c6af016cbb5da4a000d64e59d6e342"
+    },
+    "article": {
+      "repo": "ncbi/MedCPT-Article-Encoder",
+      "revision": "d05a736da4bb84ee4057b7f7999485be6ed85465",
+      "local_dir": "data/indexes/models/MedCPT-Article-Encoder",
+      "model_safetensors_sha256": "a5d5ffe4d8666c1d0aa15f371b94fc3492ca8f927e5621abd4b3ee9fc845b0f3"
+    }
+  },
+  "shared_tokenizer_and_config_sha256": {
+    "added_tokens.json": "691a5ce0135045c12b8410af8d472ff8de864094df40ac9af418d6c644c7588d",
+    "config.json": "3fea00b31d018d676d6b7e2f6cddcfe1abc69bcb88f5f09f51b848212e1671d1",
+    "special_tokens_map.json": "b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3",
+    "tokenizer.json": "6e046044df8a2fcedb10607075dca187cae61d806c0d80a96c5b81017edc90c9",
+    "tokenizer_config.json": "cabeefb4bbba68c42d40a56bfc1e73dd2e5dfb6e0ca90a66349519c375452d1e",
+    "vocab.txt": "79489a52be45e6fa033521e8ce8e4f62aedc0a742ee2aa6fc04667e5b0b1454d"
+  },
+  "checks": ["Both safetensors hashes matched locally", "Both AutoModel/AutoTokenizer artifacts loaded offline", "Query and article embedding dimensions were each 768"],
+  "not_pinned": ["Cross-encoder reranker", "Second biomedical encoder comparator"]
+}

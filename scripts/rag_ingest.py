@@ -48,6 +48,7 @@ def main() -> None:
 
     today = date.today()
     approved = load_approved_sources(args.manifest, today=today)
+    reviewed_manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     sources = fetch_approved_pubmed_sources(
         approved, today=today, client=PubMedClient(fetch=_system_trust_fetch)
     )
@@ -91,6 +92,17 @@ def main() -> None:
         "built_on": today.isoformat(),
         "source_pmids": [item.pmid for item in approved],
         "source_manifest": str(args.manifest.resolve()),
+        "purpose": reviewed_manifest.get("purpose"),
+        "source_review": {
+            item["pmid"]: {
+                "reviewer": item["reviewer"],
+                "reviewed_on": item["reviewed_on"],
+                "release_status": item.get("release_status", "unspecified"),
+                "bounded_use": item.get("bounded_use"),
+                "appraisal_assessor": item.get("appraisal_assessor", "unspecified"),
+            } for item in reviewed_manifest["sources"]
+        },
+        "bounded_use_enforcement": "provenance_only_not_query_enforced",
         "query_model_sha256": args.query_sha256,
         "article_model_sha256": args.article_sha256,
         "collections": names,

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "purpose": "Research-only two-source document-versus-hierarchical retrieval benchmark",
+  "appraisal_packet": "RAG_FIRST_SET_FULLTEXT_APPRAISALS.json",
+  "score_rule": "Reviewer-approved binary admission gate: 1.0 means approved for the stated bounded use, not a comparative or additive JBI quality score",
+  "sources": [
+    {
+      "pmid": "37639261",
+      "topic": "depression",
+      "study_design": "meta_analysis",
+      "design_override_reason": null,
+      "reviewer": "Silpa",
+      "reviewed_on": "2026-09-24",
+      "bounded_use": "Historical 2004–2019 interview-defined depressive-disorder prevalence in children younger than 13; not current or individual risk",
+      "appraisal": {
+        "passed": true,
+        "score": 1.0,
+        "rubric_version": "JBI-SR-2020-11-item+binary-gate-v1"
+      }
+    },
+    {
+      "pmid": "39648410",
+      "topic": "bullying",
+      "study_design": "observational_study",
+      "design_override_reason": null,
+      "reviewer": "Silpa",
+      "reviewed_on": "2026-09-24",
+      "bounded_use": "Noncausal bullying–depressive-symptom trajectories in the studied South Korean multicultural-family panel; not incident diagnosis or general-population causal risk",
+      "appraisal": {
+        "passed": true,
+        "score": 1.0,
+        "rubric_version": "JBI-Cohort-2017-11-item+binary-gate-v1"
+      }
+    }
+  ]
+}
