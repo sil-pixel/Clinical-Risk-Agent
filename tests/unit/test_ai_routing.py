@@ -54,7 +54,9 @@ class RoutingTests(unittest.TestCase):
         return PreflightRequest(**args)
 
     def test_scientific_route_is_not_tool_authorization(self):
-        result = self.graph.advance(self.message())
+        request = self.message()
+        self.assertNotIn("research association", repr(request))
+        result = self.graph.advance(request)
         self.assertEqual(result.route, Route.SCIENTIFIC_RETRIEVAL)
         self.assertFalse(result.allow_rag or result.allow_llm or result.allow_inference)
         self.assertEqual((self.safety.calls, self.language.calls, self.intent.calls), (1, 1, 1))
@@ -118,6 +120,11 @@ class RoutingTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             PreflightRequest(RequestKind.STRUCTURED_ASSESSMENT, "prototype_demo", True,
                              text="hello")
+        with self.assertRaises(ValueError):
+            self.message(session_valid="false")
+        with self.assertRaises(ValueError):
+            PreflightRequest(RequestKind.STRUCTURED_ASSESSMENT, "prototype_demo", True,
+                             assessment_view_authorized="false")
 
     def test_uncalibrated_router_result_is_rejected(self):
         self.intent.result = intent(confidence=float("nan"))

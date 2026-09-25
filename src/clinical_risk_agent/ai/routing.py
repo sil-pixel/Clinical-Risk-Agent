@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from enum import Enum
+from math import isfinite
 from typing import Protocol, TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -71,8 +72,13 @@ class PreflightRequest:
     assessment_view_authorized: bool = False
 
     def __post_init__(self) -> None:
+        if (type(self.session_valid) is not bool
+                or type(self.assessment_view_authorized) is not bool
+                or not isinstance(self.deployment_mode, str)):
+            raise ValueError("Invalid preflight authorization shape")
         if self.kind is RequestKind.FREE_TEXT:
-            if not self.text or not self.text.strip() or self.assessment_view_authorized:
+            if (not isinstance(self.text, str) or not self.text.strip()
+                    or self.assessment_view_authorized):
                 raise ValueError("Invalid free-text request shape")
         elif self.kind is RequestKind.STRUCTURED_ASSESSMENT:
             if self.text is not None:
@@ -193,7 +199,9 @@ class RoutingGraph:
 
     def _intercept_safety(self, state: _State) -> _State:
         decision = self._safety.evaluate(state["request"])
-        if not isinstance(decision, SafetyDecision):
+        if (not isinstance(decision, SafetyDecision)
+                or not isinstance(decision.category, SafetyCategory)
+                or not decision.policy_version or not decision.rationale_code):
             raise TypeError("Safety port returned an invalid decision")
         if decision.category is not SafetyCategory.ALLOW_NORMAL_PROCESSING:
             return {"safety": decision, "route": Route.SAFETY_TERMINAL}
@@ -209,7 +217,9 @@ class RoutingGraph:
 
     def _detect_language(self, state: _State) -> _State:
         decision = self._language.classify(state["request"].text or "")
-        if not isinstance(decision, LanguageDecision):
+        if (not isinstance(decision, LanguageDecision)
+                or not isinstance(decision.status, LanguageStatus)
+                or not decision.detector_version or not decision.rationale_code):
             raise TypeError("Language port returned an invalid decision")
         if decision.status is not LanguageStatus.SUPPORTED_ENGLISH:
             return {"language": decision, "route": Route.LANGUAGE_TERMINAL}
@@ -224,8 +234,12 @@ class RoutingGraph:
         if not isinstance(decision, IntentDecision):
             raise TypeError("Intent port returned an invalid decision")
         if (not isinstance(decision.intent, Intent)
+                or type(decision.requires_clarification) is not bool
                 or not decision.model_id or not decision.model_sha256
                 or not decision.calibration_version or not decision.router_version
+                or not isinstance(decision.calibrated_confidence, (int, float))
+                or isinstance(decision.calibrated_confidence, bool)
+                or not isfinite(decision.calibrated_confidence)
                 or not 0.0 <= decision.calibrated_confidence <= 1.0):
             raise ValueError("Intent decision lacks calibrated provenance")
         return {"intent": decision}

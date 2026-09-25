@@ -18,7 +18,7 @@ Current checkpoint: **ready for RAG engineer transfer**, not product release; se
 
 ## AI Engineer
 
-First implementation checkpoint: [`AI_ENGINEER_CHECKPOINT.md`](AI_ENGINEER_CHECKPOINT.md). A typed, non-persistent LangGraph preflight now enforces session/mode, safety-before-language-before-intent, structured-form routing, calibrated-intent abstention, and no-tool route decisions. Its classifier ports are synthetic in tests; the AI Engineer handoff is **not** complete.
+Implementation checkpoint: [`AI_ENGINEER_CHECKPOINT.md`](AI_ENGINEER_CHECKPOINT.md). A typed, non-persistent LangGraph preflight now enforces session/mode, safety-before-language-before-intent, structured-form routing, calibrated-intent abstention, and no-tool route decisions. A separate protected assessment graph validates the questionnaire and calls the completed paired ML adapter only after those guards; synthetic denial paths and one real-artifact path are tested. Its classifier ports are synthetic in tests; the AI Engineer handoff is **not** complete.
 
 - Implement the fixed LangGraph nodes and routes defined in the approved architecture: transport validation, safety, language, intent, assessment validation, inference authorization, retrieval, context construction, generation, response validation, and terminal presentation.
 - Bind DCMFNet only to complete structured assessment submissions. Chat assessment intent returns redirection; explanation uses an immutable existing result and cannot rerun inference.

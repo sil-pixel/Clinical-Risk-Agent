@@ -192,6 +192,16 @@ class AssessmentGraphTests(unittest.TestCase):
         self.assertEqual(outcome.status, AssessmentStatus.INFERENCE_UNAVAILABLE)
         self.assertIsNone(outcome.result)
 
+    def test_malformed_ml_payload_fails_closed_without_display(self):
+        result = synthetic_result()
+        self.ml.result = QuestionnaireAssessmentResult(
+            result.questionnaire_version, result.generic_profile_version,
+            None, result.negative,
+        )
+        outcome = self.graph.run(self.submission())
+        self.assertEqual(outcome.status, AssessmentStatus.INFERENCE_UNAVAILABLE)
+        self.assertIsNone(outcome.display)
+
     def test_ml_adapter_invalid_probability_maps_to_variance(self):
         self.ml.error = ValueError("Assessment produced an invalid probability")
         outcome = self.graph.run(self.submission())
@@ -218,6 +228,8 @@ class AssessmentGraphTests(unittest.TestCase):
                 PreflightRequest(RequestKind.FREE_TEXT, "prototype_demo", True, "risk?"),
                 questionnaire_requirements().version, answers(), time.monotonic() + 60,
             )
+        with self.assertRaises(ValueError):
+            self.submission(deadline=time.monotonic() + 61)
 
     def test_real_ml_adapter_uses_both_pinned_artifacts(self):
         artifact_dir = ROOT / "model_artifacts"

@@ -13,10 +13,12 @@ from typing import Protocol, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from clinical_risk_agent.contracts import (
+    InferenceResult,
     ModelTarget,
     QuestionnaireAssessmentResult,
     QuestionnaireStatus,
     QuestionnaireValidationResult,
+    SymptomSeverityPrediction,
 )
 from clinical_risk_agent.contracts.model_inference import OUTPUT_NAME
 from clinical_risk_agent.contracts.questionnaire import GENERIC_PROFILE_VERSION
@@ -70,7 +72,10 @@ class AssessmentSubmission:
             raise ValueError("Assessment requires a structured request")
         if not isinstance(self.answers, Mapping):
             raise TypeError("Questionnaire answers must be a mapping")
-        if not isfinite(self.deadline_monotonic):
+        if (not isinstance(self.deadline_monotonic, (int, float))
+                or isinstance(self.deadline_monotonic, bool)
+                or not isfinite(self.deadline_monotonic)
+                or self.deadline_monotonic - time.monotonic() > 60.0):
             raise ValueError("Assessment deadline is invalid")
         object.__setattr__(self, "answers", MappingProxyType(dict(self.answers)))
 
@@ -194,6 +199,8 @@ class ProtectedAssessmentGraph:
             return {"status": AssessmentStatus.QUESTIONNAIRE_INVALID}
         except RuntimeError:
             return {"status": AssessmentStatus.QUESTIONNAIRE_CONTRACT_UNAVAILABLE}
+        except Exception:
+            return {"status": AssessmentStatus.QUESTIONNAIRE_CONTRACT_UNAVAILABLE}
         if not isinstance(validation, QuestionnaireValidationResult):
             return {"status": AssessmentStatus.QUESTIONNAIRE_CONTRACT_UNAVAILABLE}
         if validation.version != submission.questionnaire_version:
@@ -237,13 +244,25 @@ class ProtectedAssessmentGraph:
         if result is None or (result.questionnaire_version != submission.questionnaire_version
                              or result.generic_profile_version != GENERIC_PROFILE_VERSION):
             return {"result": None, "status": AssessmentStatus.INFERENCE_UNAVAILABLE}
-        if (result.positive.target is not ModelTarget.POSITIVE_SYMPTOM_SEVERITY
+        if (not isinstance(result.positive, InferenceResult)
+                or not isinstance(result.negative, InferenceResult)
+                or result.positive.target is not ModelTarget.POSITIVE_SYMPTOM_SEVERITY
                 or result.negative.target is not ModelTarget.NEGATIVE_SYMPTOM_SEVERITY
                 or result.positive.output_name != OUTPUT_NAME
                 or result.negative.output_name != OUTPUT_NAME
+                or type(result.positive.artifact_version) is not int
+                or type(result.negative.artifact_version) is not int
+                or result.positive.artifact_version < 1
+                or result.negative.artifact_version < 1
+                or not isinstance(result.positive.artifact_sha256, str)
+                or not isinstance(result.negative.artifact_sha256, str)
                 or not result.positive.artifact_sha256 or not result.negative.artifact_sha256
+                or not isinstance(result.positive.predictions, tuple)
+                or not isinstance(result.negative.predictions, tuple)
                 or len(result.positive.predictions) != 1
-                or len(result.negative.predictions) != 1):
+                or len(result.negative.predictions) != 1
+                or not isinstance(result.positive.predictions[0], SymptomSeverityPrediction)
+                or not isinstance(result.negative.predictions[0], SymptomSeverityPrediction)):
             return {"result": None, "status": AssessmentStatus.INFERENCE_UNAVAILABLE}
         positive = result.positive.predictions[0].normalized_symptom_severity
         negative = result.negative.predictions[0].normalized_symptom_severity
