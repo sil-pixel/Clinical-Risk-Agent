@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mcp.server import MCPServer  # noqa: E402
+from mcp.server.mcpserver.exceptions import ToolError  # noqa: E402
 from mcp.types import ToolAnnotations  # noqa: E402
 
 from clinical_risk_agent.contracts import RetrievalQuery  # noqa: E402
@@ -104,6 +105,18 @@ class ResearchCorpus:
             raise ValueError("Limit must be 1 to 5")
         return limit
 
+    @staticmethod
+    def _pmid(pmid: str) -> str:
+        if not re.fullmatch(r"[1-9]\d{0,9}", pmid):
+            raise ValueError("PMID must be a positive integer string")
+        return pmid
+
+    @staticmethod
+    def _claim_id(claim_id: str) -> str:
+        if not re.fullmatch(r"[a-z][a-z0-9_]{2,100}", claim_id):
+            raise ValueError("Invalid claim ID")
+        return claim_id
+
     def _matches(self, strategy: str, question: str, limit: int) -> dict:
         question = self._question(question)
         limit = self._limit(limit)
@@ -145,8 +158,7 @@ class ResearchCorpus:
         }
 
     def get_paper(self, pmid: str) -> dict:
-        if not re.fullmatch(r"[1-9]\d{0,9}", pmid):
-            raise ValueError("PMID must be a positive integer string")
+        pmid = self._pmid(pmid)
         source = self.sources.get(pmid)
         if source is None:
             return {"found": False, "pmid": pmid, "research_only": True}
@@ -173,8 +185,7 @@ class ResearchCorpus:
         }
 
     def get_curated_claim(self, claim_id: str) -> dict:
-        if not re.fullmatch(r"[a-z][a-z0-9_]{2,100}", claim_id):
-            raise ValueError("Invalid claim ID")
+        claim_id = self._claim_id(claim_id)
         matches = []
         for assertion in self.assertions:
             if assertion.claim_id != claim_id:
@@ -216,21 +227,35 @@ mcp = MCPServer(
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 
 
+def valid_question_and_limit(question: str, limit: int) -> None:
+    try:
+        ResearchCorpus._question(question)
+        ResearchCorpus._limit(limit)
+    except ValueError as error:
+        raise ToolError(str(error)) from None
+
+
 @mcp.tool(annotations=READ_ONLY, structured_output=True)
 async def search_evidence(question: str, limit: int = 5) -> dict[str, Any]:
     """Find hierarchical passage matches; relevance and claim support are unverified."""
+    valid_question_and_limit(question, limit)
     return corpus().search_evidence(question, limit)
 
 
 @mcp.tool(annotations=READ_ONLY, structured_output=True)
 async def get_paper(pmid: str) -> dict[str, Any]:
     """Read an indexed PubMed paper's exact abstract, citation metadata and bounded use."""
+    try:
+        ResearchCorpus._pmid(pmid)
+    except ValueError as error:
+        raise ToolError(str(error)) from None
     return corpus().get_paper(pmid)
 
 
 @mcp.tool(annotations=READ_ONLY, structured_output=True)
 async def compare_retrieval(question: str, limit: int = 5) -> dict[str, Any]:
     """Compare document and hierarchical matches for one exploratory question."""
+    valid_question_and_limit(question, limit)
     return corpus().compare_retrieval(question, limit)
 
 
@@ -243,6 +268,10 @@ async def list_curated_claims() -> dict[str, Any]:
 @mcp.tool(annotations=READ_ONLY, structured_output=True)
 async def get_curated_claim(claim_id: str) -> dict[str, Any]:
     """Read exact anchored passages for a catalog claim ID, if available."""
+    try:
+        ResearchCorpus._claim_id(claim_id)
+    except ValueError as error:
+        raise ToolError(str(error)) from None
     return corpus().get_curated_claim(claim_id)
 
 

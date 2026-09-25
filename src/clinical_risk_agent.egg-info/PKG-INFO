@@ -11,4 +11,10 @@ Requires-Dist: qdrant-client<2,>=1.16; extra == "rag"
 Requires-Dist: transformers<5,>=4.44; extra == "rag"
 Requires-Dist: safetensors>=0.4; extra == "rag"
 Requires-Dist: pypdf<7,>=6; extra == "rag"
+Provides-Extra: rag-benchmark
+Requires-Dist: bert-score==0.3.13; extra == "rag-benchmark"
+Provides-Extra: mcp
+Requires-Dist: mcp<3,>=2.2; extra == "mcp"
+Provides-Extra: ai
+Requires-Dist: langgraph<2,>=1.0; extra == "ai"
 Dynamic: license-file

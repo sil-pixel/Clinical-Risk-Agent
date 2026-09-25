@@ -8,7 +8,7 @@ Canonical architecture: [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE
 
 ## RAG Engineer
 
-Current checkpoint: [`RAG_ENGINEER_HANDOFF.md`](RAG_ENGINEER_HANDOFF.md). The active research corpus has 21 sources. Hierarchical retrieval with relevance-first RRF and no cross-encoder remains the selected research configuration after the expanded benchmark. Provisional labels, support-gate diagnostics, bounded claim-support integration/recovery checks, and the [local read-only MCP playground](RAG_LOCAL_MCP_PLAYGROUND.md) are documented in the handoff. The evaluation team owns later human validation. Runtime gate activation and threshold-change approval remain in [`RAG_IMPLEMENTATION_DECISIONS.md`](RAG_IMPLEMENTATION_DECISIONS.md).
+Current checkpoint: **ready for RAG engineer transfer**, not product release; see [`RAG_ENGINEER_HANDOFF.md`](RAG_ENGINEER_HANDOFF.md). The active research corpus has 21 sources. Hierarchical retrieval with relevance-first RRF and no cross-encoder remains the selected research configuration after the expanded benchmark. Provisional labels, support-gate diagnostics, bounded claim-support integration/recovery checks, and the evaluated [local read-only MCP playground](RAG_LOCAL_MCP_PLAYGROUND.md) are documented in the handoff. The evaluation team owns later human validation. Runtime gate activation and threshold-change approval remain in [`RAG_IMPLEMENTATION_DECISIONS.md`](RAG_IMPLEMENTATION_DECISIONS.md).
 
 - Ingest PubMed abstracts and only explicitly licensed eligible full text within the approved mental-health topic scope. Record DOI/PMID, license, publication date, evidence tier, appraisal, and current retraction status.
 - Implement section-aware parent/child chunking, MedCPT and comparison embeddings, dense plus BM25 retrieval, RRF, MedCPT comparison reranking, the independent lexical fallback, and one bounded live PubMed escalation.
@@ -17,6 +17,8 @@ Current checkpoint: [`RAG_ENGINEER_HANDOFF.md`](RAG_ENGINEER_HANDOFF.md). The ac
 - Execute the retrieval and resource sections of [`AI_MODEL_BENCHMARK_REPORT.md`](AI_MODEL_BENCHMARK_REPORT.md). Return threshold or feasibility changes to the AI Architect; do not silently tune the `0.85` gate.
 
 ## AI Engineer
+
+First implementation checkpoint: [`AI_ENGINEER_CHECKPOINT.md`](AI_ENGINEER_CHECKPOINT.md). A typed, non-persistent LangGraph preflight now enforces session/mode, safety-before-language-before-intent, structured-form routing, calibrated-intent abstention, and no-tool route decisions. Its classifier ports are synthetic in tests; the AI Engineer handoff is **not** complete.
 
 - Implement the fixed LangGraph nodes and routes defined in the approved architecture: transport validation, safety, language, intent, assessment validation, inference authorization, retrieval, context construction, generation, response validation, and terminal presentation.
 - Bind DCMFNet only to complete structured assessment submissions. Chat assessment intent returns redirection; explanation uses an immutable existing result and cannot rerun inference.

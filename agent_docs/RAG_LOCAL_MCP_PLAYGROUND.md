@@ -33,6 +33,14 @@ PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/python scripts/rag_mcp_smoke.py --stdi
 
 The smoke script launches the actual stdio server, lists its tools, calls all five, checks structured results, and exits. The SDK dependency is optional under `.[mcp]`; local testing used official Python MCP SDK 2.2.0. The [official SDK running guide](https://github.com/modelcontextprotocol/python-sdk/blob/main/docs/run/index.md) describes stdio, and the [Inspector guide](https://github.com/modelcontextprotocol/docs/blob/main/docs/tools/inspector.mdx) documents the interactive client.
 
+For a fuller local contract and indicative latency check, with no other process holding embedded Qdrant:
+
+```sh
+PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/python scripts/rag_mcp_evaluate.py
+```
+
+This exercises all 21 paper lookups, the nine existing curated-claim integration cases, exploratory-result provenance, five document-versus-hierarchical calls, invalid-input rejection, and warm per-tool call timing through a real stdio client. It does not measure concurrent load, clinical correctness, arbitrary-question claim support, or deployment security. Timings are machine-specific and not a service-level objective.
+
 ## Current boundaries
 
 The server verifies the corpus manifest against the curated catalog, pinned encoder weights, source identities, eligibility, exact assertion anchors and Qdrant collection sizes before serving a tool call. It does not accept file paths, collection names or URLs from MCP callers. Results are read-only; raw questions are processed in memory and are not written by the server.
