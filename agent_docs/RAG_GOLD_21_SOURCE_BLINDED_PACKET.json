@@ -1,0 +1,260 @@
+{
+  "schema_version": 1,
+  "status": "blinded_human_first_pass_packet",
+  "corpus_manifest_sha256": "3a0fb23ca8681f2918ed53cee7235df5e877468bcfa73cf156b4359b8b12c4a6",
+  "source_count": 21,
+  "case_count": 20,
+  "instructions": "Read the linked PubMed abstracts. For every case, independently assign source-level grades 0/1/2, evidence spans and a bounded answer in the separate blank worksheet. Do not inspect assistant or AI judgments, appraisals, retrieval rankings or benchmark results until the first pass is saved. Grade 2 directly answers the exact exposure/outcome; grade 1 is limited context; unlisted sources are grade 0. No adequate direct source means no grade 2 and a null answer.",
+  "sources": [
+    {
+      "pmid": "23810828",
+      "title": "The impact of exposure to addictive drugs on future generations: Physiological and behavioral effects.",
+      "journal": "Neuropharmacology",
+      "published_on": "2013-06-25",
+      "doi": "10.1016/j.neuropharm.2013.06.016",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/23810828/"
+    },
+    {
+      "pmid": "24135711",
+      "title": "Gene × environment interaction studies have not properly controlled for potential confounders: the problem and the (simple) solution.",
+      "journal": "Biological psychiatry",
+      "published_on": "2013-10-15",
+      "doi": "10.1016/j.biopsych.2013.09.006",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/24135711/"
+    },
+    {
+      "pmid": "25830477",
+      "title": "Polygenic Risk Score, Parental Socioeconomic Status, Family History of Psychiatric Disorders, and the Risk for Schizophrenia: A Danish Population-Based Study and Meta-analysis.",
+      "journal": "JAMA psychiatry",
+      "published_on": "2015-01-01",
+      "doi": "10.1001/jamapsychiatry.2015.0346",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/25830477/"
+    },
+    {
+      "pmid": "31733788",
+      "title": "Cognition and Reward Circuits in Schizophrenia: Synergistic, Not Separate.",
+      "journal": "Biological psychiatry",
+      "published_on": "2019-10-03",
+      "doi": "10.1016/j.biopsych.2019.09.021",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/31733788/"
+    },
+    {
+      "pmid": "32251439",
+      "title": "Predicting mental health problems in adolescence using machine learning techniques.",
+      "journal": "PloS one",
+      "published_on": "2020-04-06",
+      "doi": "10.1371/journal.pone.0230389",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/32251439/"
+    },
+    {
+      "pmid": "32997097",
+      "title": "From Basic Science to Clinical Application of Polygenic Risk Scores: A Primer.",
+      "journal": "JAMA psychiatry",
+      "published_on": "2021-01-01",
+      "doi": "10.1001/jamapsychiatry.2020.3049",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/32997097/"
+    },
+    {
+      "pmid": "34262598",
+      "title": "Environmental Risk Factors for Schizophrenia and Bipolar Disorder and Their Relationship to Genetic Risk: Current Knowledge and Future Directions.",
+      "journal": "Frontiers in genetics",
+      "published_on": "2021-06-28",
+      "doi": "10.3389/fgene.2021.686666",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/34262598/"
+    },
+    {
+      "pmid": "37140715",
+      "title": "Association between cannabis use disorder and schizophrenia stronger in young males than in females.",
+      "journal": "Psychological medicine",
+      "published_on": "2023-05-04",
+      "doi": "10.1017/s0033291723000880",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/37140715/"
+    },
+    {
+      "pmid": "37639261",
+      "title": "Estimated Prevalence of Depressive Disorders in Children From 2004 to 2019: A Systematic Review and Meta-Analysis.",
+      "journal": "JAMA pediatrics",
+      "published_on": "2023-01-01",
+      "doi": "10.1001/jamapediatrics.2023.3221",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/37639261/"
+    },
+    {
+      "pmid": "38446452",
+      "title": "Adverse Childhood Experiences and Adult Mental Health Outcomes.",
+      "journal": "JAMA psychiatry",
+      "published_on": "2024-01-01",
+      "doi": "10.1001/jamapsychiatry.2024.0039",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/38446452/"
+    },
+    {
+      "pmid": "38477889",
+      "title": "Adolescent Psychedelic Use and Psychotic or Manic Symptoms.",
+      "journal": "JAMA psychiatry",
+      "published_on": "2024-01-01",
+      "doi": "10.1001/jamapsychiatry.2024.0047",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/38477889/"
+    },
+    {
+      "pmid": "38718481",
+      "title": "Aberrant salience mediates the interplay between emotional abuse and positive symptoms in schizophrenia.",
+      "journal": "Comprehensive psychiatry",
+      "published_on": "2024-05-03",
+      "doi": "10.1016/j.comppsych.2024.152496",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/38718481/"
+    },
+    {
+      "pmid": "39648410",
+      "title": "Exploring the Trajectories of Depressive Symptoms Associated With Bullying Victimization: The Intersection of Gender and Family Support.",
+      "journal": "Journal of adolescence",
+      "published_on": "2024-12-08",
+      "doi": "10.1002/jad.12450",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/39648410/"
+    },
+    {
+      "pmid": "39755698",
+      "title": "Connecting genomic results for psychiatric disorders to human brain cell types and regions reveals convergence with functional connectivity.",
+      "journal": "Nature communications",
+      "published_on": "2025-01-04",
+      "doi": "10.1038/s41467-024-55611-1",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/39755698/"
+    },
+    {
+      "pmid": "40355602",
+      "title": "Genomics of schizophrenia, bipolar disorder and major depressive disorder.",
+      "journal": "Nature reviews. Genetics",
+      "published_on": "2025-05-12",
+      "doi": "10.1038/s41576-025-00843-0",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/40355602/"
+    },
+    {
+      "pmid": "41565822",
+      "title": "Biological insights into schizophrenia from ancestrally diverse populations.",
+      "journal": "Nature",
+      "published_on": "2026-01-21",
+      "doi": "10.1038/s41586-025-10000-6",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/41565822/"
+    },
+    {
+      "pmid": "21382538",
+      "title": "Prospective association of childhood attention-deficit/hyperactivity disorder (ADHD) and substance use and abuse/dependence: a meta-analytic review.",
+      "journal": "Clinical psychology review",
+      "published_on": "2011-01-20",
+      "doi": "10.1016/j.cpr.2011.01.006",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/21382538/"
+    },
+    {
+      "pmid": "29315559",
+      "title": "Substance use through adolescence into early adulthood after childhood-diagnosed ADHD: findings from the MTA longitudinal study.",
+      "journal": "Journal of child psychology and psychiatry, and allied disciplines",
+      "published_on": "2018-01-08",
+      "doi": "10.1111/jcpp.12855",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/29315559/"
+    },
+    {
+      "pmid": "28562268",
+      "title": "Peer Victimization, Depressive Symptoms, and Substance Use: A Longitudinal Analysis.",
+      "journal": "Pediatrics",
+      "published_on": "2017-05-08",
+      "doi": "10.1542/peds.2016-3426",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/28562268/"
+    },
+    {
+      "pmid": "33224066",
+      "title": "Bullying and Substance Use in Early Adolescence: Investigating the Longitudinal and Reciprocal Effects Over 3 Years Using the Random Intercept Cross-Lagged Panel Model.",
+      "journal": "Frontiers in psychology",
+      "published_on": "2020-11-05",
+      "doi": "10.3389/fpsyg.2020.571943",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/33224066/"
+    },
+    {
+      "pmid": "40625792",
+      "title": "Cyberbullying, mental health, and substance use experimentation among early adolescents: a prospective cohort study.",
+      "journal": "Lancet regional health. Americas",
+      "published_on": "2025-05-20",
+      "doi": "10.1016/j.lana.2025.101002",
+      "pubmed_url": "https://pubmed.ncbi.nlm.nih.gov/40625792/"
+    }
+  ],
+  "cases": [
+    {
+      "id": "GEN-01",
+      "query": "How are cannabis use and schizophrenia risk associated?"
+    },
+    {
+      "id": "GEN-02",
+      "query": "What is known about cannabis exposure alongside genetic and environmental vulnerability to psychosis?"
+    },
+    {
+      "id": "GEN-03",
+      "query": "Does genetic vulnerability modify associations between adolescent psychedelic use and manic symptoms?"
+    },
+    {
+      "id": "GEN-04",
+      "query": "Can inherited and environmental factors both contribute to drug addiction?"
+    },
+    {
+      "id": "GEN-05",
+      "query": "Could parental substance exposure before conception affect later generations?"
+    },
+    {
+      "id": "ACE-01",
+      "query": "Are adverse childhood experiences associated with later alcohol or drug misuse?"
+    },
+    {
+      "id": "ACE-02",
+      "query": "Does an ACE association with later substance-related mental health outcomes remain after accounting for family background?"
+    },
+    {
+      "id": "ACE-03",
+      "query": "What limits causal interpretation of childhood adversity associations with psychiatric outcomes?"
+    },
+    {
+      "id": "BULLY-01",
+      "query": "Is repeated bullying victimization associated with depressive symptoms in adolescents?"
+    },
+    {
+      "id": "BULLY-02",
+      "query": "Does family support change the association between bullying and depressive symptoms?"
+    },
+    {
+      "id": "GEN-06",
+      "query": "Can a polygenic risk score alone determine whether someone will develop a psychiatric disorder?"
+    },
+    {
+      "id": "NONE-ADHD",
+      "query": "What does this evidence show about ADHD being associated with later substance use disorder?"
+    },
+    {
+      "id": "NONE-BULLY-SUD",
+      "query": "What does this evidence show about bullying victimization being associated with later substance use disorder?"
+    },
+    {
+      "id": "ADHD-DIRECT-01",
+      "query": "Is childhood ADHD associated with later substance abuse or dependence?"
+    },
+    {
+      "id": "ADHD-DIRECT-02",
+      "query": "Did the ADHD longitudinal cohort find higher young-adult weekly cannabis use and daily cigarette smoking?"
+    },
+    {
+      "id": "ADHD-DIRECT-03",
+      "query": "Did a prospective ADHD meta-analysis find significantly more ever-use of alcohol?"
+    },
+    {
+      "id": "BULLY-DIRECT-01",
+      "query": "Is early peer victimization linked with alcohol, marijuana or tobacco use later in adolescence?"
+    },
+    {
+      "id": "BULLY-DIRECT-02",
+      "query": "Is cyberbullying victimization associated with later substance experimentation in early adolescence?"
+    },
+    {
+      "id": "BULLY-DIRECT-03",
+      "query": "Is bullying perpetration associated with smoking or drinking in early adolescence?"
+    },
+    {
+      "id": "BULLY-DIRECT-04",
+      "query": "Do these bullying papers establish that victimization causes a later substance-use disorder?"
+    }
+  ]
+}

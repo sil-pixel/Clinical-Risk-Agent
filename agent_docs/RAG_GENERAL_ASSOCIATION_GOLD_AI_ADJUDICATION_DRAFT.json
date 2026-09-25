@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "status": "assistant_reconciliation_of_blinded_ai_first_pass_not_human_signed_not_frozen",
+  "adjudicated_on": "2026-09-25",
+  "first_pass": "RAG_GENERAL_ASSOCIATION_GOLD_INDEPENDENT_AI_FIRST_PASS.json",
+  "assistant_proposal": "RAG_GENERAL_ASSOCIATION_GOLD_EXPANSION_REVIEW_DRAFT.json plus RAG_GENERAL_ASSOCIATION_GOLD_16_SOURCE.json",
+  "scope": "All 20 cases compared across 21 sources. Nine grade maps matched exactly; 11 differed. This record preserves the AI disagreement instead of overwriting the independent pass. Recommended changes are for a later human reviewer, not final gold.",
+  "decisions": [
+    {"id":"GEN-01","recommended_grades":{"37140715":2,"34262598":2},"resolution":"Accept independent grade 2 for the narrative review because the broad question asks about cannabis use and schizophrenia association; distinguish that from the cohort's narrower diagnosed-CUD exposure."},
+    {"id":"GEN-03","recommended_grades":{"38477889":2},"resolution":"Remove the schizophrenia environmental review as grade-1 context; it lacks psychedelic-use/manic-symptom interaction evidence."},
+    {"id":"GEN-04","recommended_grades":{"23810828":2},"resolution":"Remove schizophrenia environmental review; it is not about addiction inheritance."},
+    {"id":"ACE-01","recommended_grades":{"38446452":2},"resolution":"Remove schizophrenia environmental review; answer must say the twin abstract reports a combined psychiatric outcome containing alcohol/drug misuse, not a separate substance effect estimate."},
+    {"id":"ACE-02","recommended_grades":{"38446452":2},"resolution":"Remove general GxE methods paper, which does not answer whether the ACE/substance-related association persists after family adjustment. Bound the answer to a combined outcome."},
+    {"id":"ACE-03","recommended_grades":{"38446452":2,"24135711":1,"38718481":1},"resolution":"Keep ACE twin evidence direct. GxE methodology and cross-sectional emotional-abuse analysis illustrate limitations but are contextual, not direct ACE causal evidence. Remove unrelated schizophrenia environment narrative."},
+    {"id":"BULLY-01","recommended_grades":{"39648410":2,"28562268":1,"40625792":1},"resolution":"Remove depression-prevalence meta-analysis PMID 37639261; it does not examine bullying. Add peer/cybervictimization papers as context because they report depressive symptoms but not persistent traditional-bullying exposure."},
+    {"id":"GEN-06","recommended_grades":{"32997097":2,"25830477":1,"32251439":1},"resolution":"Accept prediction-model limitations as context and remove broad genomics review absent a direct PRS-alone limitation in the indexed abstract."},
+    {"id":"NONE-BULLY-SUD","recommended_grades":{"28562268":1,"40625792":1},"recommended_reference_answer":null,"resolution":"Both victimization studies are useful use/experimentation context but neither directly addresses diagnosed SUD, so no grade-2 source and the benchmark's no-adequate-evidence behavior remains appropriate. This does not assert no true association exists."},
+    {"id":"ADHD-DIRECT-02","recommended_grades":{"29315559":2},"resolution":"The meta-analysis is too broad to help answer this MTA-cohort-specific frequency question; remove its context grade."},
+    {"id":"BULLY-DIRECT-04","recommended_grades":{"28562268":2,"40625792":2,"33224066":1},"recommended_reference_answer":"No. The two victimization studies measure later use or experimentation, not diagnosed SUD, and their observational designs cannot establish that victimization causes one. The perpetration paper is contextual only.","resolution":"Accept independent reading: a question asking whether these studies establish the combined causal/SUD claim is directly answerable 'no' from their measured endpoints/designs. It is not an abstention case; NONE-BULLY-SUD retains that role."}
+  ],
+  "additional_full_text_check": {
+    "pmid": "33224066",
+    "finding": "The full-text measure is bullying perpetration. Table 5 gives pooled bullying T1 to use T2 standardized beta 0.18, p<0.05; sex-stratified paths are non-significant. Thus the independent reviewer's exposure ambiguity is resolved, but observational confounding remains.",
+    "source": "https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.571943/full"
+  },
+  "human_review": {"reviewer":null,"reviewed_on":null,"case_level_acceptance":null,"status":"pending"},
+  "freeze_gate": "Per RAG_ENGINEER_HANDOFF.md, the RAG engineer may apply these recommended resolutions to a provisional research qrels file, bind it to the active 21-source corpus manifest and checksum-lock it before a research comparison. Human validation remains a later release workstream; no human approval is implied."
+}

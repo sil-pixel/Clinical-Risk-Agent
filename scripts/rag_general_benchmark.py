@@ -40,9 +40,26 @@ def _scores(ranked: list[str], grades: dict[str, int], k: int) -> dict[str, floa
     }
 
 
+def _answerable(case: dict) -> bool:
+    return 2 in case["grades"].values()
+
+
+def _relevance_first(gold: dict) -> bool:
+    ranking = gold["predeclared_run"].get("ranking", "evidence_first")
+    if ranking not in ("evidence_first", "relevance_first"):
+        raise ValueError("Unknown ranking configuration")
+    return ranking == "relevance_first"
+
+
 def _validate(gold: dict, corpus: dict, gold_path: Path, corpus_path: Path) -> None:
-    if gold["status"] != "pre_run_locked_assistant_judgments_not_dual_adjudicated":
+    if gold["status"] not in ("pre_run_locked_assistant_judgments_not_dual_adjudicated",
+                              "pre_run_locked_provisional_ai_reviewed_research_only"):
         raise ValueError("Gold set is not in expected locked state")
+    if gold["status"] == "pre_run_locked_provisional_ai_reviewed_research_only":
+        lock = json.loads(gold_path.with_suffix(".lock.json").read_text())
+        if lock["gold_sha256"] != _sha256(gold_path):
+            raise ValueError("Gold bytes changed after lock")
+    _relevance_first(gold)
     if gold["corpus_manifest_sha256"] != _sha256(corpus_path):
         raise ValueError("Corpus changed after gold lock")
     if gold["source_manifest_sha256"] != _sha256(Path(corpus["source_manifest"])):
@@ -56,10 +73,12 @@ def _validate(gold: dict, corpus: dict, gold_path: Path, corpus_path: Path) -> N
     for case in cases:
         if not set(case["grades"]).issubset(source_ids):
             raise ValueError(f"Unknown gold PMID in {case['id']}")
-        if case["grades"] and (2 not in case["grades"].values()
-                               or not case["reference_answer"]):
+        if any(type(grade) is not int or grade not in (0, 1, 2)
+               for grade in case["grades"].values()):
+            raise ValueError("Invalid relevance grade")
+        if _answerable(case) and not case["reference_answer"]:
             raise ValueError(f"Answerable case lacks a direct source or reference: {case['id']}")
-        if not case["grades"] and case["reference_answer"] is not None:
+        if not _answerable(case) and case["reference_answer"] is not None:
             raise ValueError(f"No-evidence case has a reference answer: {case['id']}")
     if not gold_path.is_file():
         raise ValueError("Gold set missing")
@@ -112,7 +131,7 @@ def main() -> None:
             retriever = HybridRetriever(
                 snapshot, lexical, qdrant, primary_sparse_searcher=qdrant,
                 dense_min_cosine=gold["predeclared_run"]["dense_min_cosine_strictly_greater_than"],
-                relevance_first=False,  # Reproduce the historical document comparison.
+                relevance_first=_relevance_first(gold),
             )
             rows = []
             for case in gold["cases"]:
@@ -121,13 +140,15 @@ def main() -> None:
                 ranked = list(retriever.rank_source_ids_for_evaluation(query, today=today, limit=20))
                 row = {
                     "id": case["id"], "topic": case["topic"], "query": case["query"],
-                    "answerable": bool(case["grades"]),
+                    "answerable": _answerable(case),
+                    "evidence_status": retrieved.status.value,
+                    "returned_count": len(retrieved.items),
                     "top_5_pmids": [item.removeprefix("pmid:") for item in ranked[:5]],
                     "top_1_passage": retrieved.items[0].exact_matched_text if retrieved.items else None,
                     "retrieval_mode": retrieved.retrieval_mode.value if retrieved.retrieval_mode else None,
                     "primary_status": retrieved.primary_status.value,
                 }
-                if case["grades"]:
+                if _answerable(case):
                     row.update(_scores(ranked, case["grades"], 5))
                 rows.append(row)
             results[strategy] = {"cases": rows}
@@ -176,7 +197,7 @@ def main() -> None:
         "metric_rule": gold["judgment_rule"], "predeclared_run": gold["predeclared_run"],
         "strategies": results, "limitations": gold["limitations"] + [
             "BERTScore compares top-1 retrieved passage with an assistant-written reference answer and is length-sensitive; it is not answer-generation quality or clinical correctness.",
-            "Retrieval has no cross-encoder reranker; evidence-tier and recency ordering may dominate fused relevance.",
+            "Retrieval has no cross-encoder reranker; ranking is explicitly recorded in predeclared_run (historical default: evidence_first).",
             "No-evidence controls are reported separately and excluded from five-metric macro averages.",
         ],
     }

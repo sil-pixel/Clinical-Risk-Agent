@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "version": "general-association-direct-adhd-bullying-review-draft-v1",
+  "status": "provisional_ai_reviewed_inputs_pending_research_consolidation_and_lock",
+  "workflow": "RAG_ENGINEER_HANDOFF.md permits research consolidation and checksum-locking of these proposals with the separate AI first pass and reconciliation record. Human evaluation is deferred to a later validation/release workstream, with no product-owner annotation assignment.",
+  "created_on": "2026-09-25",
+  "parent_gold_file": "RAG_GENERAL_ASSOCIATION_GOLD_16_SOURCE.json",
+  "parent_gold_sha256": "362d99818a36c0eed931fc362d6f88410f2f2490ed5685000a5e05659baac869",
+  "candidate_appraisal_file": "RAG_DIRECT_ADHD_BULLYING_SOURCE_APPRAISALS_DRAFT.json",
+  "source_universe": "Existing 16 PMIDs plus 21382538, 29315559, 28562268, 33224066, 40625792; all 21 are now in the research-only Qdrant corpus",
+  "corpus_manifest_sha256": "3a0fb23ca8681f2918ed53cee7235df5e877468bcfa73cf156b4359b8b12c4a6",
+  "judgment_rule": "Grade 2: directly answers the exact exposure, outcome and time-frame of the question. Grade 1: useful contextual evidence with an exposure/outcome or design mismatch. Grade 0: not relevant. Unlisted sources are grade 0. A PubMed MeSH term does not override the study's measured outcome. Substance use, experimentation, and SUD are separate outcomes; bullying perpetration, peer victimization and cyberbullying victimization are separate exposures.",
+  "review_scope": "Independently assess all 13 parent cases (including 11 unchanged cases) and all 7 new cases against the 21-source abstract universe; do not view retriever ranks or assistant grades before making first-pass labels. Then compare and adjudicate disagreements.",
+  "parent_case_overrides": [
+    {
+      "id": "NONE-ADHD",
+      "reason": "A new direct prospective meta-analysis addresses abuse/dependence; an ADHD cohort addresses use but not diagnosed SUD.",
+      "proposed_grades": {"21382538": 2, "29315559": 1},
+      "proposed_reference_answer": "A meta-analysis of prospective studies found that children with ADHD were more likely to develop several substance abuse/dependence outcomes, although comorbid disruptive behavior disorders complicate attribution to ADHD itself. The MTA cohort separately reports later use, not incident SUD.",
+      "support": [{"pmid": "21382538", "section": "PubMed abstract", "anchor": "more likely to develop disorders of abuse/dependence"}, {"pmid": "29315559", "section": "PubMed abstract", "anchor": "weekly marijuana use and daily cigarette smoking"}]
+    },
+    {
+      "id": "NONE-BULLY-SUD",
+      "reason": "Keep as no adequate direct source: the new bullying/victimization papers measure use or experimentation, not diagnosed SUD.",
+      "proposed_grades": {}, "proposed_reference_answer": null,
+      "reviewer_check": "Explicitly inspect all five candidate abstracts for a diagnosed SUD endpoint; PubMed indexing alone is insufficient."
+    }
+  ],
+  "new_cases": [
+    {
+      "id": "ADHD-DIRECT-01", "topic": "substance_adhd",
+      "query": "Is childhood ADHD associated with later substance abuse or dependence?",
+      "proposed_grades": {"21382538": 2, "29315559": 1},
+      "proposed_reference_answer": "A prospective-study meta-analysis reported higher later nicotine, alcohol, marijuana, cocaine and other abuse/dependence outcomes after childhood ADHD; few studies adequately separated ADHD from comorbid disruptive behavior disorders.",
+      "support": [{"pmid": "21382538", "section": "PubMed abstract", "anchor": "disorders of abuse/dependence for nicotine, alcohol, marijuana, cocaine"}]
+    },
+    {
+      "id": "ADHD-DIRECT-02", "topic": "substance_adhd",
+      "query": "Did the ADHD longitudinal cohort find higher young-adult weekly cannabis use and daily cigarette smoking?",
+      "proposed_grades": {"29315559": 2, "21382538": 1},
+      "proposed_reference_answer": "Yes. In the MTA observational follow-up, weekly marijuana use and daily cigarette smoking were more common in the childhood-ADHD group than in the local comparison group by mean age 25; this is use frequency, not diagnosed disorder.",
+      "support": [{"pmid": "29315559", "section": "PubMed abstract", "anchor": "weekly marijuana use (32.8% ADHD vs. 21.3% LNCG) and daily cigarette smoking (35.9% vs. 17.5%)"}]
+    },
+    {
+      "id": "ADHD-DIRECT-03", "topic": "substance_adhd",
+      "query": "Did a prospective ADHD meta-analysis find significantly more ever-use of alcohol?",
+      "proposed_grades": {"21382538": 2},
+      "proposed_reference_answer": "No. The meta-analysis reported greater ever-use of nicotine and other substances, but not alcohol; this does not negate its separate alcohol abuse/dependence association.",
+      "support": [{"pmid": "21382538", "section": "PubMed abstract", "anchor": "ever used nicotine and other substances, but not alcohol"}]
+    },
+    {
+      "id": "BULLY-DIRECT-01", "topic": "substance_bullying",
+      "query": "Is early peer victimization linked with alcohol, marijuana or tobacco use later in adolescence?",
+      "proposed_grades": {"28562268": 2, "40625792": 1},
+      "proposed_reference_answer": "A longitudinal US study linked fifth-grade peer victimization indirectly to tenth-grade alcohol, marijuana and tobacco use through seventh-grade depressive symptoms. Peer victimization is broader than confirmed repeated bullying, and the reported mediation is not causal proof.",
+      "support": [{"pmid": "28562268", "section": "PubMed abstract", "anchor": "indirectly associated with tenth-grade substance use via the mediator"}]
+    },
+    {
+      "id": "BULLY-DIRECT-02", "topic": "substance_bullying",
+      "query": "Is cyberbullying victimization associated with later substance experimentation in early adolescence?",
+      "proposed_grades": {"40625792": 2, "28562268": 1},
+      "proposed_reference_answer": "In the ABCD cohort, cyberbullying victimization at ages 11–12 was associated with higher adjusted odds of alcohol, nicotine and cannabis experimentation one year later. Experimentation is not substance-use disorder and the association is not causal proof.",
+      "support": [{"pmid": "40625792", "section": "PubMed abstract", "anchor": "higher odds of alcohol ... nicotine ... and cannabis ... experimentation one year later"}]
+    },
+    {
+      "id": "BULLY-DIRECT-03", "topic": "substance_bullying",
+      "query": "Is bullying perpetration associated with smoking or drinking in early adolescence?",
+      "proposed_grades": {"33224066": 2},
+      "proposed_reference_answer": "A three-wave Swiss study of bullying perpetration found a between-person association with a combined smoking/drinking measure and a positive pooled within-person path from age 12 perpetration to age 13 use (beta 0.18, p<0.05). No reverse or later cross-lagged path was significant, nor was the pooled path significant in sex-stratified models. It does not study victimization or SUD.",
+      "support": [{"pmid": "33224066", "section": "Frontiers Table 5 and Results full text", "anchor": "Bullying T1 → substance use T2 ... β 0.18 ... <0.05"}],
+      "adjudication_flag": "The pooled cross-lagged path is significant in Table 5, whereas sex-stratified paths are not; reviewer should distinguish these from the Discussion wording about no effects in females or males."
+    },
+    {
+      "id": "BULLY-DIRECT-04", "topic": "substance_bullying",
+      "query": "Do these bullying papers establish that victimization causes a later substance-use disorder?",
+      "proposed_grades": {}, "proposed_reference_answer": null,
+      "reviewer_check": "A no-adequate-evidence case for the combined causal, victimization and diagnosed-SUD claim; papers on use or experimentation must not be promoted to this endpoint."
+    }
+  ],
+  "independent_review": {
+    "reviewer": null, "reviewed_on": null, "first_pass_blinded_to_assistant_labels": null,
+    "case_level_decisions_file": null, "disagreements_adjudicated": false,
+    "status": "awaiting_external_reviewer"
+  },
+  "freeze_gate": "For research runs, consolidate the AI proposals and reconciliation decisions, label the result provisional_ai_reviewed_research_only, bind it to the recorded corpus SHA256 and lock its checksum before execution. Human review remains a later validation/release task. Runtime threshold changes require architecture approval. Preserve the 16-source gold and historical results."
+}

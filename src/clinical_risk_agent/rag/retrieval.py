@@ -43,6 +43,11 @@ class CrossEncoder(Protocol):
     def score_many(self, query: str, passages: Sequence[Passage]) -> Sequence[float]: ...
 
 
+class SupportChecker(Protocol):
+    def supports(self, query: RetrievalQuery, source: ScientificSource,
+                 passage: Passage) -> bool: ...
+
+
 @dataclass(frozen=True, slots=True)
 class _RankedCandidate:
     passage: Passage
@@ -67,6 +72,7 @@ class HybridRetriever:
         dense_min_cosine: float = 0.85,
         rerank_min_score: float | None = None,
         relevance_first: bool = True,
+        support_checker: SupportChecker | None = None,
     ) -> None:
         if lexical_index.version != f"bm25-{snapshot.version}":
             raise ValueError("Lexical index and corpus versions differ")
@@ -80,6 +86,7 @@ class HybridRetriever:
         self.dense_min_cosine = dense_min_cosine
         self.rerank_min_score = rerank_min_score
         self.relevance_first = relevance_first
+        self.support_checker = support_checker
 
     def retrieve(self, query: RetrievalQuery, *, today: date) -> EvidenceResult:
         active = self.snapshot.active_passages(today=today)
@@ -121,7 +128,7 @@ class HybridRetriever:
             return self._fallback(query, today, passages, sources, AttemptStatus.UNAVAILABLE)
         candidates = self._fuse(dense, lexical, passages, sources)
         try:
-            selected = self._select(candidates, query, today)
+            selected = self._select(self._supported(candidates, query), query, today)
         except Exception:
             return self._result(
                 query, EvidenceStatus.RETRIEVAL_UNAVAILABLE, None,
@@ -151,7 +158,7 @@ class HybridRetriever:
                                  hit.score, None, hit.score, None)
                 for hit in lexical
             )
-            selected = self._select(candidates, query, today)
+            selected = self._select(self._supported(candidates, query), query, today)
         except Exception:
             return self._result(
                 query, EvidenceStatus.RETRIEVAL_UNAVAILABLE, None,
@@ -162,10 +169,17 @@ class HybridRetriever:
                 query, self._evidence_status(selected, query), RetrievalMode.KEYWORD_FALLBACK,
                 primary_status, AttemptStatus.SUCCESS, selected,
             )
-        status = (EvidenceStatus.RETRIEVAL_UNAVAILABLE
-                  if primary_status is AttemptStatus.UNAVAILABLE
-                  else EvidenceStatus.NO_ELIGIBLE_EVIDENCE)
-        return self._result(query, status, None, primary_status, AttemptStatus.ZERO_MATCH, ())
+        # The independent fallback completed. Its zero supported matches are
+        # a no-evidence result even if the primary backend was unavailable.
+        return self._result(query, EvidenceStatus.NO_ELIGIBLE_EVIDENCE, None,
+                            primary_status, AttemptStatus.ZERO_MATCH, ())
+
+    def _supported(self, candidates: Sequence[_RankedCandidate],
+                   query: RetrievalQuery) -> tuple[_RankedCandidate, ...]:
+        if self.support_checker is None:
+            return tuple(candidates)
+        return tuple(item for item in candidates if self.support_checker.supports(
+            query, item.source, item.passage))
 
     def _fuse(
         self,

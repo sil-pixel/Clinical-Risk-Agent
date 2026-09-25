@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 from dataclasses import asdict
@@ -116,6 +117,18 @@ def main() -> None:
         },
     }
     output = allowed / "rag_corpus_manifest.json"
+    if output.exists():
+        previous_bytes = output.read_bytes()
+        previous = json.loads(previous_bytes)
+        previous_hash = hashlib.sha256(previous_bytes).hexdigest()[:12]
+        archive = allowed / (
+            f"rag_corpus_manifest_{len(previous['source_pmids'])}_source_"
+            f"{previous_hash}.json"
+        )
+        if archive.exists() and archive.read_bytes() != previous_bytes:
+            raise ValueError("Existing corpus-manifest archive does not match the current manifest")
+        if not archive.exists():
+            archive.write_bytes(previous_bytes)
     output.write_text(json.dumps(manifest, indent=2, default=date.isoformat), encoding="utf-8")
     print(f"Indexed {len(sources)} reviewed publications into {names}")
     print(f"Public-corpus manifest: {output}")

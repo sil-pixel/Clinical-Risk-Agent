@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "version": "general-association-21-v1",
+  "status": "pre_run_locked_provisional_ai_reviewed_research_only",
+  "locked_at_utc": "2026-09-25T06:15:52.788798+00:00",
+  "human_review": {
+    "reviewer": null,
+    "status": "pending_later_validation"
+  },
+  "corpus_manifest_sha256": "3a0fb23ca8681f2918ed53cee7235df5e877468bcfa73cf156b4359b8b12c4a6",
+  "source_manifest_sha256": "b7526915fdfcae96aeb421c39d6c0440b681fb120abc4e7b8ee1b7a89780ca79",
+  "input_sha256": {
+    "RAG_GENERAL_ASSOCIATION_GOLD_16_SOURCE.json": "362d99818a36c0eed931fc362d6f88410f2f2490ed5685000a5e05659baac869",
+    "RAG_GENERAL_ASSOCIATION_GOLD_EXPANSION_REVIEW_DRAFT.json": "3f766c8b531338024cfe366896420d65b6e195f03a25e94a0c71e98f5e360a25",
+    "RAG_GENERAL_ASSOCIATION_GOLD_INDEPENDENT_AI_FIRST_PASS.json": "e5d675d2fd8594d9bc0c96165849fd2c17435308de48f50f321fe64a81a92603",
+    "RAG_GENERAL_ASSOCIATION_GOLD_AI_ADJUDICATION_DRAFT.json": "c0a1563d997da2d68b738931d40fa6b1d87bcc8bddd15f9bcc1a400e370edf23"
+  },
+  "consolidation_rule": "Parent plus expansion; reconciliation overrides grade maps and explicit answers. GEN-01/ACE-01/ACE-02 use bounded independent answers. Other answers retain original bounded proposals, including full-text-informed BULLY-DIRECT-03. Historical NONE-ADHD ID is retained but now answerable.",
+  "judgment_rule": "Grade 2: directly answers the exact exposure, outcome and time-frame of the question. Grade 1: useful contextual evidence with an exposure/outcome or design mismatch. Grade 0: not relevant. Unlisted sources are grade 0. A PubMed MeSH term does not override the study's measured outcome. Substance use, experimentation, and SUD are separate outcomes; bullying perpetration, peer victimization and cyberbullying victimization are separate exposures. Binary precision/recall/MRR use grade 2 only; nDCG uses gain 2^grade-1. No grade-2 cases are excluded from all five macro means and reported separately.",
+  "predeclared_run": {
+    "k": 5,
+    "dense_min_cosine_strictly_greater_than": 0.0,
+    "primary_sparse": "qdrant_bm25",
+    "fallback": "independent_bm25",
+    "reranker": "none",
+    "bert_score": "DistilBERT layer 5, no IDF, no baseline rescaling; top-1 retrieved passage versus frozen reference answer",
+    "ranking": "relevance_first"
+  },
+  "cases": [
+    {
+      "id": "GEN-01",
+      "topic": "substance_genetics",
+      "query": "How are cannabis use and schizophrenia risk associated?",
+      "grades": {
+        "37140715": 2,
+        "34262598": 2
+      },
+      "reference_answer": "Cannabis use is among the environmental exposures associated with schizophrenia. A Danish register study found higher subsequent schizophrenia incidence among people with cannabis use disorder, especially young males. These associations do not by themselves establish causation, and cannabis use disorder is a narrower exposure than any cannabis use.",
+      "reconciliation": "Accept independent grade 2 for the narrative review because the broad question asks about cannabis use and schizophrenia association; distinguish that from the cohort's narrower diagnosed-CUD exposure."
+    },
+    {
+      "id": "GEN-02",
+      "topic": "substance_genetics",
+      "query": "What is known about cannabis exposure alongside genetic and environmental vulnerability to psychosis?",
+      "grades": {
+        "34262598": 2,
+        "37140715": 1,
+        "25830477": 1
+      },
+      "reference_answer": "Cannabis use is among environmental factors associated with schizophrenia. How cannabis exposure interacts with genetic liability remains insufficiently understood."
+    },
+    {
+      "id": "GEN-03",
+      "topic": "substance_genetics",
+      "query": "Does genetic vulnerability modify associations between adolescent psychedelic use and manic symptoms?",
+      "grades": {
+        "38477889": 2
+      },
+      "reference_answer": "An adolescent twin study reported interactions of psychedelic use with genetic vulnerability to schizophrenia or bipolar I disorder for manic symptoms; findings require cautious interpretation.",
+      "reconciliation": "Remove the schizophrenia environmental review as grade-1 context; it lacks psychedelic-use/manic-symptom interaction evidence."
+    },
+    {
+      "id": "GEN-04",
+      "topic": "substance_genetics",
+      "query": "Can inherited and environmental factors both contribute to drug addiction?",
+      "grades": {
+        "23810828": 2
+      },
+      "reference_answer": "Both genetic and environmental factors contribute to drug addiction; a review also discusses potential transgenerational epigenetic influences of parental drug exposure.",
+      "reconciliation": "Remove schizophrenia environmental review; it is not about addiction inheritance."
+    },
+    {
+      "id": "GEN-05",
+      "topic": "substance_genetics",
+      "query": "Could parental substance exposure before conception affect later generations?",
+      "grades": {
+        "23810828": 2
+      },
+      "reference_answer": "A review describes preclinical evidence for physiological and behavioral effects in future generations after parental preconception exposure to alcohol, nicotine, marijuana, opioids, or cocaine, with possible epigenetic mechanisms."
+    },
+    {
+      "id": "ACE-01",
+      "topic": "substance_ace",
+      "query": "Are adverse childhood experiences associated with later alcohol or drug misuse?",
+      "grades": {
+        "38446452": 2
+      },
+      "reference_answer": "ACEs were associated with a higher likelihood of adult clinically diagnosed psychiatric disorders in a twin cohort whose outcomes included alcohol or drug misuse. The abstract reports the association for a combined psychiatric outcome, so it does not quantify alcohol or drug misuse separately.",
+      "reconciliation": "Remove schizophrenia environmental review; answer must say the twin abstract reports a combined psychiatric outcome containing alcohol/drug misuse, not a separate substance effect estimate."
+    },
+    {
+      "id": "ACE-02",
+      "topic": "substance_ace",
+      "query": "Does an ACE association with later substance-related mental health outcomes remain after accounting for family background?",
+      "grades": {
+        "38446452": 2
+      },
+      "reference_answer": "The association between ACEs and a combined adult psychiatric outcome, which included alcohol or drug misuse, remained after accounting for shared family factors in twin comparisons but weakened. The abstract does not report a separate family-adjusted estimate for substance outcomes.",
+      "reconciliation": "Remove general GxE methods paper, which does not answer whether the ACE/substance-related association persists after family adjustment. Bound the answer to a combined outcome."
+    },
+    {
+      "id": "ACE-03",
+      "topic": "ace_context",
+      "query": "What limits causal interpretation of childhood adversity associations with psychiatric outcomes?",
+      "grades": {
+        "38446452": 2,
+        "24135711": 1,
+        "38718481": 1
+      },
+      "reference_answer": "Adverse childhood experiences and psychiatric disorders cluster in families, so shared genetic and environmental factors can confound observed associations; twin comparisons help assess but do not prove causality.",
+      "reconciliation": "Keep ACE twin evidence direct. GxE methodology and cross-sectional emotional-abuse analysis illustrate limitations but are contextual, not direct ACE causal evidence. Remove unrelated schizophrenia environment narrative."
+    },
+    {
+      "id": "BULLY-01",
+      "topic": "bullying_context",
+      "query": "Is repeated bullying victimization associated with depressive symptoms in adolescents?",
+      "grades": {
+        "39648410": 2,
+        "28562268": 1,
+        "40625792": 1
+      },
+      "reference_answer": "A longitudinal study of adolescents from multicultural families in South Korea found persistent bullying victimization associated with depressive symptoms, with different trajectories by gender.",
+      "reconciliation": "Remove depression-prevalence meta-analysis PMID 37639261; it does not examine bullying. Add peer/cybervictimization papers as context because they report depressive symptoms but not persistent traditional-bullying exposure."
+    },
+    {
+      "id": "BULLY-02",
+      "topic": "bullying_context",
+      "query": "Does family support change the association between bullying and depressive symptoms?",
+      "grades": {
+        "39648410": 2
+      },
+      "reference_answer": "In a South Korean multicultural adolescent cohort, family support was associated with lower depressive symptoms among bullied girls, while the cumulative pattern among boys persisted regardless of support level."
+    },
+    {
+      "id": "GEN-06",
+      "topic": "genetics_context",
+      "query": "Can a polygenic risk score alone determine whether someone will develop a psychiatric disorder?",
+      "grades": {
+        "32997097": 2,
+        "25830477": 1,
+        "32251439": 1
+      },
+      "reference_answer": "Polygenic risk scores cannot definitively predict an individual's future diagnosis because genetic factors explain only part of risk and the score captures only part of genetic contribution.",
+      "reconciliation": "Accept prediction-model limitations as context and remove broad genomics review absent a direct PRS-alone limitation in the indexed abstract."
+    },
+    {
+      "id": "NONE-ADHD",
+      "topic": "substance_adhd",
+      "query": "What does this evidence show about ADHD being associated with later substance use disorder?",
+      "grades": {
+        "21382538": 2,
+        "29315559": 1
+      },
+      "reference_answer": "A meta-analysis of prospective studies found that children with ADHD were more likely to develop several substance abuse/dependence outcomes, although comorbid disruptive behavior disorders complicate attribution to ADHD itself. The MTA cohort separately reports later use, not incident SUD."
+    },
+    {
+      "id": "NONE-BULLY-SUD",
+      "topic": "substance_bullying",
+      "query": "What does this evidence show about bullying victimization being associated with later substance use disorder?",
+      "grades": {
+        "28562268": 1,
+        "40625792": 1
+      },
+      "reference_answer": null,
+      "reconciliation": "Both victimization studies are useful use/experimentation context but neither directly addresses diagnosed SUD, so no grade-2 source and the benchmark's no-adequate-evidence behavior remains appropriate. This does not assert no true association exists."
+    },
+    {
+      "id": "ADHD-DIRECT-01",
+      "topic": "substance_adhd",
+      "query": "Is childhood ADHD associated with later substance abuse or dependence?",
+      "grades": {
+        "21382538": 2,
+        "29315559": 1
+      },
+      "reference_answer": "A prospective-study meta-analysis reported higher later nicotine, alcohol, marijuana, cocaine and other abuse/dependence outcomes after childhood ADHD; few studies adequately separated ADHD from comorbid disruptive behavior disorders."
+    },
+    {
+      "id": "ADHD-DIRECT-02",
+      "topic": "substance_adhd",
+      "query": "Did the ADHD longitudinal cohort find higher young-adult weekly cannabis use and daily cigarette smoking?",
+      "grades": {
+        "29315559": 2
+      },
+      "reference_answer": "Yes. In the MTA observational follow-up, weekly marijuana use and daily cigarette smoking were more common in the childhood-ADHD group than in the local comparison group by mean age 25; this is use frequency, not diagnosed disorder.",
+      "reconciliation": "The meta-analysis is too broad to help answer this MTA-cohort-specific frequency question; remove its context grade."
+    },
+    {
+      "id": "ADHD-DIRECT-03",
+      "topic": "substance_adhd",
+      "query": "Did a prospective ADHD meta-analysis find significantly more ever-use of alcohol?",
+      "grades": {
+        "21382538": 2
+      },
+      "reference_answer": "No. The meta-analysis reported greater ever-use of nicotine and other substances, but not alcohol; this does not negate its separate alcohol abuse/dependence association."
+    },
+    {
+      "id": "BULLY-DIRECT-01",
+      "topic": "substance_bullying",
+      "query": "Is early peer victimization linked with alcohol, marijuana or tobacco use later in adolescence?",
+      "grades": {
+        "28562268": 2,
+        "40625792": 1
+      },
+      "reference_answer": "A longitudinal US study linked fifth-grade peer victimization indirectly to tenth-grade alcohol, marijuana and tobacco use through seventh-grade depressive symptoms. Peer victimization is broader than confirmed repeated bullying, and the reported mediation is not causal proof."
+    },
+    {
+      "id": "BULLY-DIRECT-02",
+      "topic": "substance_bullying",
+      "query": "Is cyberbullying victimization associated with later substance experimentation in early adolescence?",
+      "grades": {
+        "40625792": 2,
+        "28562268": 1
+      },
+      "reference_answer": "In the ABCD cohort, cyberbullying victimization at ages 11\u201312 was associated with higher adjusted odds of alcohol, nicotine and cannabis experimentation one year later. Experimentation is not substance-use disorder and the association is not causal proof."
+    },
+    {
+      "id": "BULLY-DIRECT-03",
+      "topic": "substance_bullying",
+      "query": "Is bullying perpetration associated with smoking or drinking in early adolescence?",
+      "grades": {
+        "33224066": 2
+      },
+      "reference_answer": "A three-wave Swiss study of bullying perpetration found a between-person association with a combined smoking/drinking measure and a positive pooled within-person path from age 12 perpetration to age 13 use (beta 0.18, p<0.05). No reverse or later cross-lagged path was significant, nor was the pooled path significant in sex-stratified models. It does not study victimization or SUD."
+    },
+    {
+      "id": "BULLY-DIRECT-04",
+      "topic": "substance_bullying",
+      "query": "Do these bullying papers establish that victimization causes a later substance-use disorder?",
+      "grades": {
+        "28562268": 2,
+        "40625792": 2,
+        "33224066": 1
+      },
+      "reference_answer": "No. The two victimization studies measure later use or experimentation, not diagnosed SUD, and their observational designs cannot establish that victimization causes one. The perpetration paper is contextual only.",
+      "reconciliation": "Accept independent reading: a question asking whether these studies establish the combined causal/SUD claim is directly answerable 'no' from their measured endpoints/designs. It is not an abstention case; NONE-BULLY-SUD retains that role."
+    }
+  ],
+  "limitations": [
+    "Provisional AI-reviewed research labels, not human-adjudicated or clinical approval.",
+    "21-source abstract retrieval; full-text appraisal cautions do not make the indexed passages full text.",
+    "Small reused set with paraphrases and multiple cases per source; no independent held-out generalization claim.",
+    "19 answerable cases and one context-only negative cannot validate an abstention threshold.",
+    "Diagnostic dense cosine >0.0 is not the runtime >0.85 gate; no threshold change is authorized.",
+    "ACE source reports a combined psychiatric endpoint, not a separate substance estimate; perpetration, victimization, use and SUD must remain distinct."
+  ]
+}

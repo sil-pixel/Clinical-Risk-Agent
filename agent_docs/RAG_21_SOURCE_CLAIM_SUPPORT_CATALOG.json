@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "status": "research_only_curated_assertions_pending_architecture_approval",
+  "corpus_manifest_sha256": "3a0fb23ca8681f2918ed53cee7235df5e877468bcfa73cf156b4359b8b12c4a6",
+  "strategy": "hierarchical",
+  "rule": "A typed claim ID is supported only by an explicitly appraised source and its exact indexed passage. The anchor is verified at catalog load. Unknown claims fail closed. These assertions cover five bounded association claims, not the full 21-source topic universe.",
+  "assertions": [
+    {"claim_id":"childhood_adhd_later_abuse_dependence","source_id":"pmid:21382538","chunk_id":"6bd65c01064408a2a95b0d44","anchor":"more likely to develop disorders of abuse/dependence for nicotine, alcohol, marijuana, cocaine"},
+    {"claim_id":"mta_childhood_adhd_later_use_frequency","source_id":"pmid:29315559","chunk_id":"73b0204ca29a305c0df8856b","anchor":"weekly marijuana use (32.8% ADHD vs. 21.3% LNCG) and daily cigarette smoking"},
+    {"claim_id":"peer_victimization_later_substance_use","source_id":"pmid:28562268","chunk_id":"586b3d790c07f558db4ff24f","anchor":"fifth-grade peer victimization was indirectly associated with tenth-grade substance use"},
+    {"claim_id":"cybervictimization_later_experimentation","source_id":"pmid:40625792","chunk_id":"43f6c365d81b31aa30bd0806","anchor":"Cyberbullying victimization was prospectively associated with higher odds of alcohol"},
+    {"claim_id":"bullying_perpetration_early_smoking_drinking","source_id":"pmid:33224066","chunk_id":"051f13afb3e71a03c6ddcc9b","anchor":"bullying at 12 years old on substance use at 13 years"}
+  ]
+}

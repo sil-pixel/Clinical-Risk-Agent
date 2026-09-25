@@ -26,6 +26,7 @@ from clinical_risk_agent.rag.retrieval import (  # noqa: E402
     HybridRetriever,
     _RankedCandidate,
 )
+from clinical_risk_agent.rag.support import CuratedClaimSupport, SupportAssertion  # noqa: E402
 from clinical_risk_agent.rag.benchmark import (  # noqa: E402
     RelevanceCase,
     compare_strategies,
@@ -76,6 +77,45 @@ class FakeReranker:
 
 
 class RAGCoreTests(unittest.TestCase):
+    def test_claim_support_filters_primary_and_fallback_and_validates_anchor(self) -> None:
+        sources = (
+            synthetic_source(1, "Synthetic victimization predicts experimentation only."),
+            synthetic_source(2, "Synthetic victimization predicts diagnosed disorder."),
+        )
+        snapshot = CorpusSnapshot.build(sources, strategy="hierarchical", today=TODAY)
+        lexical = BM25Index(snapshot)
+        passages = {item.source_id: item for item in snapshot.passages}
+        valid = SupportAssertion("victimization_disorder", "synthetic-source-2",
+                                 passages["synthetic-source-2"].chunk_id,
+                                 "predicts diagnosed disorder")
+        support = CuratedClaimSupport(snapshot, (valid,), expected_version=snapshot.version)
+        query = RetrievalQuery("victimization diagnosed disorder", claim_id="victimization_disorder")
+        dense = FakeDense(tuple(DenseHit(item.chunk_id, 0.95) for item in snapshot.passages))
+        primary = HybridRetriever(snapshot, lexical, dense, support_checker=support,
+                                  dense_min_cosine=0.0).retrieve(query, today=TODAY)
+        fallback = HybridRetriever(snapshot, lexical, FakeDense(fails=True),
+                                   support_checker=support).retrieve(query, today=TODAY)
+        self.assertEqual([item.source_id for item in primary.items], ["synthetic-source-2"])
+        self.assertEqual([item.source_id for item in fallback.items], ["synthetic-source-2"])
+        self.assertEqual(fallback.retrieval_mode, RetrievalMode.KEYWORD_FALLBACK)
+        unsupported = HybridRetriever(snapshot, lexical, dense, support_checker=support).retrieve(
+            RetrievalQuery("victimization substance disorder", claim_id="different_claim"),
+            today=TODAY)
+        self.assertEqual(unsupported.status, EvidenceStatus.NO_ELIGIBLE_EVIDENCE)
+        self.assertFalse(unsupported.items)
+        with self.assertRaisesRegex(ValueError, "exact cited passage"):
+            CuratedClaimSupport(snapshot, (replace(valid, anchor="not present"),),
+                                expected_version=snapshot.version)
+        with self.assertRaisesRegex(ValueError, "different corpus"):
+            CuratedClaimSupport(snapshot, (valid,), expected_version="wrong-version")
+        class BrokenSupport:
+            def supports(self, query, source, passage):
+                raise RuntimeError("fixture checker unavailable")
+        broken = HybridRetriever(snapshot, lexical, dense,
+                                 support_checker=BrokenSupport()).retrieve(query, today=TODAY)
+        self.assertEqual(broken.status, EvidenceStatus.RETRIEVAL_UNAVAILABLE)
+        self.assertFalse(broken.items)
+
     def test_relevance_first_is_default_and_legacy_order_can_be_reproduced(self) -> None:
         sources = (
             synthetic_source(1, "Older direct evidence.", published_on=date(2021, 1, 1)),
@@ -162,7 +202,9 @@ class RAGCoreTests(unittest.TestCase):
         self.assertEqual(no_evidence.status, EvidenceStatus.NO_ELIGIBLE_EVIDENCE)
         outage = HybridRetriever(snapshot, index, FakeDense(fails=True)).retrieve(
             query, today=TODAY)
-        self.assertEqual(outage.status, EvidenceStatus.RETRIEVAL_UNAVAILABLE)
+        self.assertEqual(outage.status, EvidenceStatus.NO_ELIGIBLE_EVIDENCE)
+        self.assertEqual(outage.primary_status, AttemptStatus.UNAVAILABLE)
+        self.assertEqual(outage.fallback_status, AttemptStatus.ZERO_MATCH)
 
     def test_explicit_opposing_stance_survives_source_cap(self) -> None:
         sources = tuple(

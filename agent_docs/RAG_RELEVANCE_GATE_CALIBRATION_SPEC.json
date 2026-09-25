@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "version": "hierarchical-relevance-gate-exploration-v1",
+  "locked_on": "2026-09-24",
+  "status": "pre_run_locked_exploratory_not_approved_threshold",
+  "gold_path": "agent_docs/RAG_GENERAL_ASSOCIATION_GOLD_16_SOURCE.json",
+  "gold_sha256": "362d99818a36c0eed931fc362d6f88410f2f2490ed5685000a5e05659baac869",
+  "corpus_manifest_sha256": "36a593277a4176c5b5710aac55ab3f871bacad44726968230ab3bba919b20f5d",
+  "strategy": "hierarchical",
+  "ranking": "relevance_first_RRF_no_cross_encoder",
+  "diagnostic_candidate_dense_min_cosine_strictly_greater_than": 0.0,
+  "current_configured_dense_min_cosine_strictly_greater_than": 0.85,
+  "candidate_gate_rule": "From the same unfiltered top-five result at diagnostic dense threshold >0.0, retain only exact selected passages whose own dense cosine is strictly greater than the swept cutoff. If none remain, classify no adequate local evidence. This is an offline post-retrieval gate simulation, not the current fallback implementation.",
+  "dense_cosine_cutoffs_strictly_greater_than": [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9],
+  "metrics": ["direct_source_recall_at_5_answerable", "answerable_acceptance_rate", "no_direct_evidence_abstention_rate", "false_evidence_return_rate_no_direct_evidence"],
+  "selection_policy": "Do not select or approve a new threshold from this reused, assistant-authored 11-positive/2-negative set. Report the full grid and score overlap; require independent adjudication, broader no-evidence cases, and AI Architect sign-off before any runtime change."
+}

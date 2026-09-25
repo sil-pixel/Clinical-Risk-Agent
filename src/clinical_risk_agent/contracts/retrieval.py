@@ -28,7 +28,11 @@ class AttemptStatus(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class RetrievalQuery:
-    """Volatile query text; never serialize or log a runtime instance."""
+    """Volatile query text; never serialize or log a runtime instance.
+
+    claim_id is an internal, trusted, bounded assertion identity. A public
+    caller must never be allowed to supply it without a validated router.
+    """
 
     text: str
     source_cap: int = 5

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "version": "hierarchical-support-gate-21-source-exploration-v1",
+  "status": "pre_run_locked_exploratory_not_approved_threshold",
+  "gold_path": "agent_docs/RAG_GENERAL_ASSOCIATION_GOLD_21_SOURCE.json",
+  "gold_sha256": "59b8367b62f040aea6121da26acb02b1e5a14ba3418bf917cc308ecaa2a33a15",
+  "corpus_manifest_sha256": "3a0fb23ca8681f2918ed53cee7235df5e877468bcfa73cf156b4359b8b12c4a6",
+  "strategy": "hierarchical",
+  "ranking": "relevance_first_RRF_no_cross_encoder",
+  "diagnostic_candidate_dense_min_cosine_strictly_greater_than": 0.0,
+  "current_configured_dense_min_cosine_strictly_greater_than": 0.85,
+  "dense_cosine_cutoffs_strictly_greater_than": [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9],
+  "candidate_gate_rule": "Offline selected-passage diagnostic: from diagnostic top five, retain passages only when their own dense cosine is strictly above cutoff. Separately run the actual configured path and forced dense-outage independent BM25 fallback. A retained source is counted as direct only when its source-level gold grade is 2; no passage-level support is inferred.",
+  "selection_policy": "Report the whole sweep, gold-only and challenge-probe counts separately, and both primary and fallback outcomes. Do not choose or deploy a threshold from this reused provisional source-level set. Gate policy and any threshold change require AI Architect sign-off recorded in RAG_IMPLEMENTATION_DECISIONS.md.",
+  "exploratory_no_direct_probes": [
+    {"id":"PROBE-CYBER-SUD","topic":"substance_bullying","query":"What evidence shows cyberbullying victimization predicts diagnosed substance use disorder one year later?","grades":{},"reference_answer":null,"reason":"Cybervictimization study measures experimentation, not diagnosed SUD."},
+    {"id":"PROBE-PEER-SUD","topic":"substance_bullying","query":"What evidence shows fifth-grade peer victimization predicts diagnosed substance use disorder in tenth grade?","grades":{},"reference_answer":null,"reason":"Peer victimization study measures alcohol, marijuana and tobacco use, not diagnosed SUD."},
+    {"id":"PROBE-PERP-SUD","topic":"substance_bullying","query":"What evidence shows bullying perpetration predicts a diagnosed substance use disorder by age 13?","grades":{},"reference_answer":null,"reason":"Perpetration study measures a smoking and drinking composite, not diagnosed SUD."},
+    {"id":"PROBE-MTA-SUD","topic":"substance_adhd","query":"What evidence from the MTA ADHD cohort shows increased diagnosed substance use disorder by age 25?","grades":{},"reference_answer":null,"reason":"MTA cohort indexed outcome is weekly cannabis use and daily smoking, not a diagnosed SUD; other ADHD meta-analysis is not the MTA cohort."}
+  ]
+}

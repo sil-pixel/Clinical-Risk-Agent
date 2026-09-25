@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "status": "assistant_fulltext_appraisal_silpa_approved_for_research_ingestion_not_clinical_or_independent_human_quality_adjudication",
+  "appraised_on": "2026-09-25",
+  "purpose": "Research-only direct ADHD/bullying–substance-use source expansion; no clinical release or individual-risk inference",
+  "eligibility_rule": "PubMed ID, publication within 20 years as of appraisal, direct ADHD or bullying/peer-victimization exposure and substance-use outcome, no known retraction on the inspected PubMed record",
+  "method": "Design-matched bounded-use appraisal of full article text and PubMed records, considering selection, measurement, temporality, confounding, analysis and transportability. This is not a numeric quality score. Full-text access route is recorded per item. Independent item-by-item quality adjudication remains outstanding.",
+  "method_reference": "https://jbi.global/critical-appraisal-tools",
+  "source_representation_if_approved": "PubMed abstract and metadata only, consistent with the existing Qdrant corpus; no article full text is licensed or queued for indexing.",
+  "admission_gate": "Silpa explicitly approved adding the five named PubMed papers to the research-only Qdrant corpus on 2026-09-25. The binary bounded-use appraisal gate passed for research ingestion only; human item-by-item quality adjudication and clinical release remain outstanding.",
+  "human_approval": {"reviewer":"Silpa","approved_on":"2026-09-25","scope":"Add these five PMIDs to the existing research-only Qdrant corpus for the stated bounded uses","basis":"Project conversation: 'add the 5 papers to qdrant as well, i approve the pubmeds'","independent_item_by_item_quality_adjudication":false,"gold_judgment_signoff":false},
+  "candidates": [
+    {
+      "pmid": "21382538", "doi": "10.1016/j.cpr.2011.01.006", "year": 2011,
+      "title": "Prospective association of childhood ADHD and substance use and abuse/dependence: a meta-analytic review",
+      "topic": "adhd", "design": "meta_analysis_of_prospective_studies", "exposure": "childhood ADHD", "outcome": "later substance use and abuse/dependence",
+      "text_reviewed": "Complete 14-page author-hosted PDF and PubMed record; text extracted with pypdf",
+      "proposed_role": "direct_topic", "decision": "bounded_research_ingested_pending_independent_human_quality_adjudication",
+      "bounded_use": "Prospective-study synthesis reports greater subsequent nicotine and other-substance use and nicotine, alcohol, marijuana, cocaine and other abuse/dependence outcomes among children with ADHD; ever-use of alcohol was not significantly higher. Do not assert an ADHD-specific causal effect.",
+      "strength": "Twenty-seven eligible prospective studies and 65 effect sizes; predefined inclusion criteria, random-effects pooling, heterogeneity and publication-bias checks, and substance-specific use versus disorder outcomes.",
+      "critical_limit": "Comorbid disruptive behavior disorders could partly or wholly account for associations and were not formally meta-analyzed; treatment and other psychiatric comorbidity were also not resolved. Older studies and binary lifetime outcomes limit present-day and individual application. Publication-bias tests with few studies per outcome do not rule out missing evidence.",
+      "pubmed": "https://pubmed.ncbi.nlm.nih.gov/21382538/", "full_text": "https://pages.charlotte.edu/wp-content/uploads/sites/268/2013/09/prospective-association-between-ADHD-and-substance-use-2011.pdf"
+    },
+    {
+      "pmid": "29315559", "doi": "10.1111/jcpp.12855", "year": 2018,
+      "title": "Substance use through adolescence into early adulthood after childhood-diagnosed ADHD: findings from the MTA longitudinal study",
+      "topic": "adhd", "design": "observational_cohort_followup", "exposure": "childhood combined-type ADHD", "outcome": "substance-use onset, frequency and escalation, not incident SUD",
+      "text_reviewed": "PMC author-manuscript full text and PubMed record",
+      "proposed_role": "direct_topic", "decision": "bounded_research_ingested_pending_independent_human_quality_adjudication",
+      "bounded_use": "In the MTA comparison, childhood ADHD was associated with earlier use and higher young-adult weekly marijuana use and daily cigarette smoking; do not translate frequency into diagnosed SUD or assert that every substance category increased in adulthood.",
+      "strength": "Rigorous childhood diagnosis, classmates as comparison, and repeated substance-use questionnaires through mean age 25.",
+      "critical_limit": "Observational follow-up of a treatment trial, self-reported substance use, possible attrition and comorbid/exposure confounding, and combined-type ADHD enrollment limit causal and population-wide claims.",
+      "pubmed": "https://pubmed.ncbi.nlm.nih.gov/29315559/", "full_text": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5985671/"
+    },
+    {
+      "pmid": "28562268", "doi": "10.1542/peds.2016-3426", "year": 2017,
+      "title": "Peer Victimization, Depressive Symptoms, and Substance Use: A Longitudinal Analysis",
+      "topic": "bullying", "design": "observational_longitudinal_cohort", "exposure": "peer victimization in grade 5, broader than a verified bullying definition", "outcome": "alcohol, marijuana and tobacco use in grade 10, not SUD",
+      "text_reviewed": "Complete 15-page CDC-hosted PMC author-manuscript PDF and PubMed record; text extracted with pypdf",
+      "proposed_role": "direct_topic_with_exposure_caveat", "decision": "bounded_research_ingested_pending_independent_human_quality_adjudication",
+      "bounded_use": "A US cohort reported an indirect association between grade-5 peer victimization and grade-10 substance use through grade-7 depressive symptoms. Label the exposure peer victimization, not confirmed repeated bullying; mediation is statistical, not causal.",
+      "strength": "Prospective ordering across three school grades in 4,297 youth, six-item peer-victimization measure, specified substance outcomes and attrition weighting (16.5% loss).",
+      "critical_limit": "The modeled indirect paths are small and observed simple victimization–later-use correlations are near zero; do not claim a robust direct total effect. The six-item peer-victimization measure does not establish repeated bullying or power imbalance. Outcomes are any past-30-day use, not misuse or disorder; self-report, mediator confounding and limited settings remain.",
+      "pubmed": "https://pubmed.ncbi.nlm.nih.gov/28562268/", "full_text": "https://stacks.cdc.gov/view/cdc/115447/cdc_115447_DS1.pdf"
+    },
+    {
+      "pmid": "33224066", "doi": "10.3389/fpsyg.2020.571943", "year": 2020,
+      "title": "Bullying and Substance Use in Early Adolescence: Investigating the Longitudinal and Reciprocal Effects Over 3 Years",
+      "topic": "bullying", "design": "three_wave_observational_panel", "exposure": "self-reported bullying perpetration, not victimization", "outcome": "smoking and alcohol use, not SUD",
+      "text_reviewed": "Frontiers full text and PubMed record",
+      "proposed_role": "direct_topic", "decision": "bounded_research_ingested_pending_independent_human_quality_adjudication",
+      "bounded_use": "In 1,495 Swiss adolescents, bullying perpetration and smoking/alcohol use covaried between persons; the pooled model's age-12 perpetration-to-age-13 use path was positive (standardized beta 0.18, p<0.05), but later and reverse paths were not significant. Never use it as victimization or SUD evidence.",
+      "strength": "Three waves and random-intercept cross-lagged modeling separate between-person from within-person patterns.",
+      "critical_limit": "Self-reported perpetration and combined smoking/drinking score, 95/1,495 cases excluded from the fitted model, short follow-up and possible unmeasured time-varying confounding limit causal inference. The pooled cross-lagged path was significant, but sex-stratified paths were not; the discussion's no-cross-lagged wording refers to sex-specific models and is easy to overread. The outcome is use, not disorder.",
+      "pubmed": "https://pubmed.ncbi.nlm.nih.gov/33224066/", "full_text": "https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2020.571943/full"
+    },
+    {
+      "pmid": "40625792", "doi": "10.1016/j.lana.2025.101002", "year": 2025,
+      "title": "Cyberbullying, mental health, and substance use experimentation among early adolescents: a prospective cohort study",
+      "topic": "bullying", "design": "observational_prospective_cohort", "exposure": "cyberbullying victimization at age 11–12", "outcome": "one-year alcohol, nicotine and cannabis experimentation, not SUD",
+      "text_reviewed": "Complete PMC BioC full-text record and PubMed record",
+      "proposed_role": "direct_topic", "decision": "bounded_research_ingested_pending_independent_human_quality_adjudication",
+      "bounded_use": "ABCD data show adjusted prospective associations of cyberbullying victimization with alcohol, nicotine and cannabis experimentation one year later. This is cyberbullying, not all traditional bullying, and experimentation is not disorder.",
+      "strength": "Large cohort (9,799), prospective ordering, adjustment for baseline substance experimentation and measured sociodemographics, survey weights and sensitivity analysis restricted to new experimentation.",
+      "critical_limit": "Exposure is a single unvalidated lifetime self-report item, so onset/repetition are unknown; experimentation is as little as one sip or puff. The 9,799 analyzed exclude participants with missing use or cyberbullying data; selection and residual confounding remain, and the ABCD sample is not independent of earlier ABCD analyses.",
+      "overlap_note": "Likely shares the ABCD cohort with PMID 37598455; do not count as independent replication without wave/sample comparison.",
+      "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40625792/", "full_text": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12230417/", "full_text_access_route": "https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_json/PMC12230417/unicode"
+    }
+  ]
+}

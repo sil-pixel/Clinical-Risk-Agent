@@ -8,7 +8,7 @@ Canonical architecture: [`APPROVED_AI_ARCHITECTURE.md`](APPROVED_AI_ARCHITECTURE
 
 ## RAG Engineer
 
-Implementation checkpoint and outstanding release gates: [`RAG_IMPLEMENTATION_DECISIONS.md`](RAG_IMPLEMENTATION_DECISIONS.md). The two chunking strategies are wired for controlled comparison, but no real-corpus benchmark result or winner is claimed yet.
+Current checkpoint: [`RAG_ENGINEER_HANDOFF.md`](RAG_ENGINEER_HANDOFF.md). The active research corpus has 21 sources. Hierarchical retrieval with relevance-first RRF and no cross-encoder remains the selected research configuration after the expanded benchmark. Provisional labels, support-gate diagnostics, bounded claim-support integration/recovery checks, and the [local read-only MCP playground](RAG_LOCAL_MCP_PLAYGROUND.md) are documented in the handoff. The evaluation team owns later human validation. Runtime gate activation and threshold-change approval remain in [`RAG_IMPLEMENTATION_DECISIONS.md`](RAG_IMPLEMENTATION_DECISIONS.md).
 
 - Ingest PubMed abstracts and only explicitly licensed eligible full text within the approved mental-health topic scope. Record DOI/PMID, license, publication date, evidence tier, appraisal, and current retraction status.
 - Implement section-aware parent/child chunking, MedCPT and comparison embeddings, dense plus BM25 retrieval, RRF, MedCPT comparison reranking, the independent lexical fallback, and one bounded live PubMed escalation.
