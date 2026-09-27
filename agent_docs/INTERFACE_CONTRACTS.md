@@ -165,6 +165,10 @@ The MVP API is versioned and session-oriented:
 
 The submit-turn request must be a discriminated union separating free text from structured questionnaire-answer updates. Structured questionnaire fields come from the accepted `prototype_questionnaire_v1` requirements. The public submit route remains disabled until the protected backend workflow and safety release tests pass. One request cannot silently mix arbitrary free text with questionnaire answers or unvalidated feature keys.
 
+### Bounded research API slice (2026-09-27)
+
+The backend exposes authenticated `GET /v1/research/questions` and `POST /v1/research/answers` for five reviewed fixed questions. It also exposes a bounded prototype `POST /v1/messages` JSON route. The chat route accepts the discriminated shape `{"kind":"free_text","text":"..."}`, derives session validity from the bearer credential, and runs local safety → language → intent routing. Only exact trusted claim mappings may reach claim-supported retrieval and provider-neutral structured generation; deterministic validation requires the generated prose and citation IDs to match the approved answer contract exactly. Other scientific wording abstains. Fixed safety/refusal, language, clarification, assessment-redirection, greeting, and unsupported responses invoke no LLM, RAG, or inference. These deterministic routing ports are prototype scaffolding, not substitutes for the required evaluated classifier artifacts, and the route never authorizes DCMFNet.
+
 The response envelope must include:
 
 - API/schema version

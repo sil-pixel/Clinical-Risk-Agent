@@ -17,6 +17,7 @@ from clinical_risk_agent.contracts import EvidenceResult, EvidenceStatus
 
 @dataclass(frozen=True, slots=True)
 class CuratedQuestion:
+    public_id: str
     claim_id: str
     question: str
     pmid: str
@@ -25,6 +26,7 @@ class CuratedQuestion:
 
 CURATED_QUESTIONS = (
     CuratedQuestion(
+        "rq_01",
         "childhood_adhd_later_abuse_dependence",
         "Is childhood ADHD associated with later substance abuse or dependence?",
         "21382538",
@@ -34,6 +36,7 @@ CURATED_QUESTIONS = (
         "causation or an individual's risk.",
     ),
     CuratedQuestion(
+        "rq_02",
         "mta_childhood_adhd_later_use_frequency",
         "Did the MTA childhood ADHD cohort find more frequent cannabis use and smoking by age 25?",
         "29315559",
@@ -42,6 +45,7 @@ CURATED_QUESTIONS = (
         "not a diagnosed substance-use-disorder finding.",
     ),
     CuratedQuestion(
+        "rq_03",
         "peer_victimization_later_substance_use",
         "Is fifth-grade peer victimization associated with later adolescent substance use?",
         "28562268",
@@ -50,6 +54,7 @@ CURATED_QUESTIONS = (
         "establish causation or diagnosed substance use disorder.",
     ),
     CuratedQuestion(
+        "rq_04",
         "cybervictimization_later_experimentation",
         "Is cyberbullying victimization associated with later substance experimentation?",
         "40625792",
@@ -58,6 +63,7 @@ CURATED_QUESTIONS = (
         "not a diagnosed substance use disorder, and the finding is not causal proof.",
     ),
     CuratedQuestion(
+        "rq_05",
         "bullying_perpetration_early_smoking_drinking",
         "Is bullying perpetration associated with smoking or drinking at age 13?",
         "33224066",
@@ -96,6 +102,7 @@ class BoundedResearchAnswerer:
         if not expected <= claim_ids:
             raise ValueError("Answer templates differ from the curated assertion catalog")
         self._questions = {_normalized(item.question): item for item in CURATED_QUESTIONS}
+        self._questions_by_id = {item.public_id: item for item in CURATED_QUESTIONS}
         if len(self._questions) != len(CURATED_QUESTIONS):
             raise ValueError("Curated question normalization is not unique")
         self._retrieve_supported = retrieve_supported
@@ -105,6 +112,18 @@ class BoundedResearchAnswerer:
     @property
     def example_questions(self) -> tuple[str, ...]:
         return tuple(item.question for item in CURATED_QUESTIONS)
+
+    @property
+    def public_questions(self) -> tuple[dict[str, str], ...]:
+        return tuple({"id": item.public_id, "question": item.question}
+                     for item in CURATED_QUESTIONS)
+
+    def answer_public_id(self, question_id: str) -> dict[str, Any]:
+        """Answer an allowlisted public question without accepting arbitrary text."""
+        spec = self._questions_by_id.get(question_id)
+        if spec is None:
+            raise KeyError("Unknown research question")
+        return self.answer(spec.question)
 
     def answer(self, question: str) -> dict[str, Any]:
         if not isinstance(question, str) or not 3 <= len(question.strip()) <= 500:

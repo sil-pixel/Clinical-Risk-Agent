@@ -7,6 +7,16 @@ src/clinical_risk_agent.egg-info/SOURCES.txt
 src/clinical_risk_agent.egg-info/dependency_links.txt
 src/clinical_risk_agent.egg-info/requires.txt
 src/clinical_risk_agent.egg-info/top_level.txt
+src/clinical_risk_agent/ai/__init__.py
+src/clinical_risk_agent/ai/assessment.py
+src/clinical_risk_agent/ai/conversation.py
+src/clinical_risk_agent/ai/generation.py
+src/clinical_risk_agent/ai/prototype_ports.py
+src/clinical_risk_agent/ai/routing.py
+src/clinical_risk_agent/backend/__init__.py
+src/clinical_risk_agent/backend/app.py
+src/clinical_risk_agent/backend/sessions.py
+src/clinical_risk_agent/backend/settings.py
 src/clinical_risk_agent/contracts/__init__.py
 src/clinical_risk_agent/contracts/model_artifacts.py
 src/clinical_risk_agent/contracts/model_inference.py
@@ -20,6 +30,7 @@ src/clinical_risk_agent/inference/questionnaire.py
 src/clinical_risk_agent/inference/runtime.py
 src/clinical_risk_agent/inference/schema.py
 src/clinical_risk_agent/rag/__init__.py
+src/clinical_risk_agent/rag/answering.py
 src/clinical_risk_agent/rag/benchmark.py
 src/clinical_risk_agent/rag/chunking.py
 src/clinical_risk_agent/rag/corpus.py
@@ -29,4 +40,5 @@ src/clinical_risk_agent/rag/medcpt.py
 src/clinical_risk_agent/rag/pubmed.py
 src/clinical_risk_agent/rag/qdrant_index.py
 src/clinical_risk_agent/rag/retrieval.py
+src/clinical_risk_agent/rag/runtime.py
 src/clinical_risk_agent/rag/support.py

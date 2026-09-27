@@ -21,6 +21,18 @@ from .assessment import (
     ProtectedAssessmentOutcome,
     ValidatedAssessmentDisplay,
 )
+from .generation import (
+    AnthropicGenerator,
+    AssistantDraft,
+    GenerationRequest,
+    GeminiGenerator,
+    LLMProvider,
+    OpenAIGenerator,
+    StructuredGenerator,
+    create_generator,
+)
+from .conversation import ConversationOutcome, ProtectedConversationOrchestrator
+from .prototype_ports import PrototypeIntentPort, PrototypeLanguagePort, PrototypeSafetyPort
 
 __all__ = [
     "Intent",
@@ -40,4 +52,17 @@ __all__ = [
     "ProtectedAssessmentGraph",
     "ProtectedAssessmentOutcome",
     "ValidatedAssessmentDisplay",
+    "AnthropicGenerator",
+    "AssistantDraft",
+    "GenerationRequest",
+    "GeminiGenerator",
+    "LLMProvider",
+    "OpenAIGenerator",
+    "StructuredGenerator",
+    "create_generator",
+    "ConversationOutcome",
+    "ProtectedConversationOrchestrator",
+    "PrototypeIntentPort",
+    "PrototypeLanguagePort",
+    "PrototypeSafetyPort",
 ]
