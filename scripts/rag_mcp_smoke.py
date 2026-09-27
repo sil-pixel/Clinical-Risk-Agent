@@ -24,7 +24,7 @@ async def main(*, stdio: bool = False) -> None:
         listed = await client.list_tools()
         names = {tool.name for tool in listed.tools}
         expected = {"search_evidence", "get_paper", "compare_retrieval",
-                    "list_curated_claims", "get_curated_claim"}
+                    "list_curated_claims", "get_curated_claim", "answer_research_question"}
         if names != expected:
             raise AssertionError(f"Unexpected MCP tools: {names}")
         if any(not tool.annotations or not tool.annotations.read_only_hint
@@ -64,10 +64,20 @@ async def main(*, stdio: bool = False) -> None:
                 or comparison["hierarchical"]["strategy"] != "hierarchical"
                 or len(comparison["document"]["matches"]) > 2):
             raise AssertionError("Comparison response is invalid")
+        answer = await call("answer_research_question", {"question": question})
+        if (answer["status"] != "curated_support_available"
+                or answer["citations"][0]["pmid"] != "21382538"
+                or "[S1]" not in answer["answer"]):
+            raise AssertionError("Bounded RAG answer is invalid")
+        unsupported = await call("answer_research_question", {
+            "question": "Does cyberbullying victimization predict diagnosed substance use disorder?"})
+        if unsupported["status"] != "no_adequate_evidence" or unsupported["citations"]:
+            raise AssertionError("Unsupported claim received a cited answer")
         print(json.dumps({"transport": "stdio" if stdio else "in_process",
                           "tools": sorted(names), "paper": paper["pmid"],
                           "curated_claims": len(claims["claim_ids"]),
                           "search_first_pmid": search["matches"][0]["pmid"],
+                          "answer_status": answer["status"],
                           "comparison_document_count": len(comparison["document"]["matches"]),
                           "comparison_hierarchical_count": len(comparison["hierarchical"]["matches"])}))
 

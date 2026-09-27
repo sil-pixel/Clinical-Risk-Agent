@@ -2,6 +2,8 @@
 
 Status: **ready to hand to the RAG engineer**, verified 2026-09-25. The 21-source corpus, locked provisional labels, retrieval comparison, expanded support-gate diagnostic, local claim-support/recovery checks, and read-only MCP contract evaluation are complete. This means the research baseline is reproducible and its limits are documented; it does **not** mean the RAG engineer's product-integration or release work is complete. There is no user-facing RAG endpoint or approved runtime claim gate.
 
+Local prototype update (2026-09-27): `answer_research_question` and `scripts/rag_research_demo.py` now provide an end-to-end, research-only question → hierarchical retrieval → claim support → cited fixed answer/abstention path. It intentionally recognizes only five exact curated questions; general questions return unverified related passages without an evidence claim. This does not change the product-release status above.
+
 ## What is handed over
 
 | Component | Current state | Evidence or entry point |
@@ -13,7 +15,7 @@ Status: **ready to hand to the RAG engineer**, verified 2026-09-25. The 21-sourc
 | Strategy comparison | Both Recall@5 1.0; document slightly higher nDCG/MRR, hierarchical higher top-passage BERTScore | [21-source report](RAG_GENERAL_ASSOCIATION_21_SOURCE_BENCHMARK_REPORT.md), `scripts/rag_general_benchmark.py` |
 | Support-gate diagnostic | The configured `>0.85` route falls back to BM25 for all 24 tested questions and returns related papers for all five unsupported questions; a scalar cosine cutoff cannot separate them while retaining every direct source | [Expanded diagnostic](RAG_RELEVANCE_GATE_21_SOURCE_REPORT.md), `scripts/rag_relevance_gate_calibration.py` |
 | Claim support prototype | Optional exact-passage assertion checker filters both primary and fallback candidates; five bounded claims and four mismatched SUD claims passed 36 local route checks | [Catalog](RAG_21_SOURCE_CLAIM_SUPPORT_CATALOG.json), [integration report](RAG_CLAIM_SUPPORT_INTEGRATION_REPORT.md), `src/clinical_risk_agent/rag/support.py`, `scripts/rag_support_integration.py` |
-| Local MCP playground | Five read-only stdio tools over the pinned corpus; exploratory matches are not claim support. The contract evaluation checked all 21 paper lookups, five supported and four unsupported catalog cases, exact search provenance, comparison calls and invalid inputs | [Playground and evaluation instructions](RAG_LOCAL_MCP_PLAYGROUND.md), `scripts/rag_mcp_server.py`, `scripts/rag_mcp_evaluate.py` |
+| Local MCP playground | Six read-only stdio tools over the pinned corpus, including a basic end-to-end research answer tool for five exact curated questions. Exploratory matches are not claim support. The contract evaluation checks all 21 paper lookups, five supported and four abstained answers, exact search provenance, comparison calls and invalid inputs | [Playground and evaluation instructions](RAG_LOCAL_MCP_PLAYGROUND.md), `scripts/rag_mcp_server.py`, `scripts/rag_research_demo.py`, `scripts/rag_mcp_evaluate.py` |
 
 The active corpus manifest SHA-256 is `3a0fb23ca8681f2918ed53cee7235df5e877468bcfa73cf156b4359b8b12c4a6`. The gold SHA-256 is `59b8367b62f040aea6121da26acb02b1e5a14ba3418bf917cc308ecaa2a33a15`. The assertion catalog SHA-256 is `97843a01dd345bedd273883134f4d42867d0d1852db4ededba29fcdf318e201a`. Verify these before using the local results. The historical 16-source corpus and reports remain separate.
 

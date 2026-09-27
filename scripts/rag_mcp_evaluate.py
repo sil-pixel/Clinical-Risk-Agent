@@ -41,8 +41,8 @@ async def main() -> None:
         tools = await client.list_tools()
         names = {tool.name for tool in tools.tools}
         if names != {"search_evidence", "get_paper", "compare_retrieval",
-                     "list_curated_claims", "get_curated_claim"}:
-            raise AssertionError("MCP tool inventory differs from the five-tool contract")
+                     "list_curated_claims", "get_curated_claim", "answer_research_question"}:
+            raise AssertionError("MCP tool inventory differs from the six-tool contract")
         if any(not tool.annotations or not tool.annotations.read_only_hint
                or tool.annotations.open_world_hint is not False for tool in tools.tools):
             raise AssertionError("A tool lacks read-only/closed-corpus annotations")
@@ -106,6 +106,21 @@ async def main() -> None:
             checks["search_exact"] += 1
             if expected_pmid and expected_pmid in [row["pmid"] for row in search["matches"]]:
                 checks["direct_source_in_search_top5"] += 1
+
+            answer = await call("answer_research_question", {"question": question})
+            if expected_pmid:
+                if (answer["status"] != "curated_support_available"
+                        or answer["citations"][0]["pmid"] != expected_pmid
+                        or answer["citations"][0]["exact_matched_text"]
+                        != passages[answer["citations"][0]["chunk_id"]]
+                        or "[S1]" not in answer["answer"]):
+                    raise AssertionError(f"Curated answer mismatch: {claim_id}")
+                checks["answer_positive"] += 1
+            else:
+                if (answer["status"] != "no_adequate_evidence"
+                        or answer["citations"] or "[S1]" in answer["answer"]):
+                    raise AssertionError(f"Unsupported answer leaked support: {claim_id}")
+                checks["answer_negative"] += 1
 
         for _, question, _, _ in CASES[:5]:
             result = await call("compare_retrieval", {"question": question, "limit": 5})

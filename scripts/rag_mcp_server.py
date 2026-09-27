@@ -18,6 +18,7 @@ from mcp.server.mcpserver.exceptions import ToolError  # noqa: E402
 from mcp.types import ToolAnnotations  # noqa: E402
 
 from clinical_risk_agent.contracts import RetrievalQuery  # noqa: E402
+from clinical_risk_agent.rag.answering import BoundedResearchAnswerer  # noqa: E402
 from clinical_risk_agent.rag.index import BM25Index  # noqa: E402
 from clinical_risk_agent.rag.medcpt import MedCPTEncoder  # noqa: E402
 from clinical_risk_agent.rag.qdrant_index import QdrantScientificIndex  # noqa: E402
@@ -85,6 +86,18 @@ class ResearchCorpus:
                     snapshot, lexical, qdrant, primary_sparse_searcher=qdrant,
                     dense_min_cosine=0.0, relevance_first=True,
                 )
+            base = self.retrievers["hierarchical"]
+            self.supported_retriever = HybridRetriever(
+                hierarchical, base.lexical_index, base.dense_searcher,
+                primary_sparse_searcher=base.primary_sparse_searcher,
+                dense_min_cosine=0.85, relevance_first=True, support_checker=self.support,
+            )
+            self.answerer = BoundedResearchAnswerer(
+                claim_ids={item.claim_id for item in self.assertions},
+                retrieve_supported=self.retrieve_supported,
+                exploratory_search=lambda question, limit: self.search_evidence(question, limit),
+                bounded_use=lambda pmid: self.corpus["source_review"][pmid]["bounded_use"],
+            )
         except Exception:
             self.client.close()
             raise
@@ -146,6 +159,14 @@ class ResearchCorpus:
 
     def search_evidence(self, question: str, limit: int = 5) -> dict:
         return self._matches("hierarchical", question, limit)
+
+    def retrieve_supported(self, question: str, claim_id: str):
+        return self.supported_retriever.retrieve(
+            RetrievalQuery(self._question(question), claim_id=claim_id), today=date.today(),
+        )
+
+    def answer_research_question(self, question: str) -> dict:
+        return self.answerer.answer(question)
 
     def compare_retrieval(self, question: str, limit: int = 5) -> dict:
         question = self._question(question)
@@ -219,8 +240,9 @@ def corpus() -> ResearchCorpus:
 
 mcp = MCPServer(
     "Clinical Risk Research Corpus",
-    instructions=("Read-only local PubMed-abstract research playground. Retrieval matches are "
-                  "unverified for arbitrary questions; never describe them as claim support. "
+    instructions=("Read-only local PubMed-abstract research playground. Only the five exact "
+                  "curated questions can produce claim-supported extractive answers. Other "
+                  "retrieval matches are unverified; never describe them as claim support. "
                   "Use only public or synthetic questions, never patient data."),
     version="0.1.0",
 )
@@ -273,6 +295,16 @@ async def get_curated_claim(claim_id: str) -> dict[str, Any]:
     except ValueError as error:
         raise ToolError(str(error)) from None
     return corpus().get_curated_claim(claim_id)
+
+
+@mcp.tool(annotations=READ_ONLY, structured_output=True)
+async def answer_research_question(question: str) -> dict[str, Any]:
+    """Give a bounded cited answer for a curated question, otherwise abstain."""
+    try:
+        ResearchCorpus._question(question)
+    except ValueError as error:
+        raise ToolError(str(error)) from None
+    return corpus().answer_research_question(question)
 
 
 if __name__ == "__main__":

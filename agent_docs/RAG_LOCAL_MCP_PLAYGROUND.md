@@ -13,7 +13,7 @@ npx --yes @modelcontextprotocol/inspector .venv/bin/python scripts/rag_mcp_serve
 
 Open the local URL printed by Inspector, connect using stdio, and choose the Tools tab. The server waits for a client on stdin when run directly, so a bare `python scripts/rag_mcp_server.py` does not show a prompt or web page. Stop Inspector with Ctrl-C. Embedded Qdrant permits one process to own its local store at a time; close another local benchmark or Inspector session before starting this one.
 
-The five tools are:
+The six tools are:
 
 | Tool | Try this | What it returns |
 | --- | --- | --- |
@@ -22,8 +22,23 @@ The five tools are:
 | `compare_retrieval` | Same question, `limit`: `3` | Side-by-side document and hierarchical matches for that question. These are live retrieval results, not a scored benchmark. |
 | `list_curated_claims` | No arguments | Five available bounded claim IDs. |
 | `get_curated_claim` | `claim_id`: `childhood_adhd_later_abuse_dependence` | The catalogued source, anchored exact passage and bounded use for that ID. Unknown IDs return `no_curated_assertion`. |
+| `answer_research_question` | `question`: “Is childhood ADHD associated with later substance abuse or dependence?” | A fixed, bounded research answer with a freshly checked citation for one of five exact curated questions. Other questions return `no_adequate_evidence` and any related passages are explicitly unverified. |
 
-Try `get_curated_claim` with `cybervictimization_later_diagnosed_sud`: it returns no curated passage. A `search_evidence` call about that topic may still return *related* papers about experimentation. Treat its matches as candidates to inspect, not proof of the asked disorder claim. The server provides neither answer generation nor clinical advice.
+Try `get_curated_claim` with `cybervictimization_later_diagnosed_sud`: it returns no curated passage. A `search_evidence` call about that topic may still return *related* papers about experimentation. Treat its matches as candidates to inspect, not proof of the asked disorder claim. The answer tool is extractive/fixed-template, not free-form LLM generation, and provides no clinical advice.
+
+## Ask a question end-to-end
+
+From the repository root, with the pinned models and local Qdrant store present:
+
+```sh
+PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/python scripts/rag_research_demo.py --list-questions
+PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/python scripts/rag_research_demo.py --question 'Is childhood ADHD associated with later substance abuse or dependence?'
+PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/python scripts/rag_research_demo.py --question 'Is cyberbullying victimization associated with later diagnosed substance use disorder?'
+```
+
+The CLI launches the actual MCP server, which checks the pinned 21-source manifest and encoders, retrieves from hierarchical Qdrant/BM25 using relevance-first RRF, applies the configured `>0.85` dense gate and exact-claim support filter to both primary and keyword-fallback results, and returns either a fixed cited research answer or an explicit abstention. Five exact questions are recognized (case, whitespace and trailing punctuation are ignored); `--list-questions` shows them. A paraphrase or changed exposure, endpoint, or time frame is **not** automatically mapped to a claim. For unknown questions, the CLI can show related passages for inspection, but it never promotes them to a supported answer. Use `--json` to inspect the structured result.
+
+This is the basic local research RAG path, not a deployable patient-facing service. It has no general-purpose answer generation, trusted semantic claim router, session authorization, or clinical-use approval. Do not send patient data. On deployment, restore the pinned store and models and recheck source currency/retractions before exposing any endpoint.
 
 For a quick protocol check without opening the graphical Inspector:
 
@@ -31,7 +46,7 @@ For a quick protocol check without opening the graphical Inspector:
 PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/python scripts/rag_mcp_smoke.py --stdio
 ```
 
-The smoke script launches the actual stdio server, lists its tools, calls all five, checks structured results, and exits. The SDK dependency is optional under `.[mcp]`; local testing used official Python MCP SDK 2.2.0. The [official SDK running guide](https://github.com/modelcontextprotocol/python-sdk/blob/main/docs/run/index.md) describes stdio, and the [Inspector guide](https://github.com/modelcontextprotocol/docs/blob/main/docs/tools/inspector.mdx) documents the interactive client.
+The smoke script launches the actual stdio server, lists its six tools, checks a supported answer and an abstention along with the inspection tools, and exits. The SDK dependency is optional under `.[mcp]`; local testing used official Python MCP SDK 2.2.0. The [official SDK running guide](https://github.com/modelcontextprotocol/python-sdk/blob/main/docs/run/index.md) describes stdio, and the [Inspector guide](https://github.com/modelcontextprotocol/docs/blob/main/docs/tools/inspector.mdx) documents the interactive client.
 
 For a fuller local contract and indicative latency check, with no other process holding embedded Qdrant:
 
@@ -39,7 +54,7 @@ For a fuller local contract and indicative latency check, with no other process 
 PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/python scripts/rag_mcp_evaluate.py
 ```
 
-This exercises all 21 paper lookups, the nine existing curated-claim integration cases, exploratory-result provenance, five document-versus-hierarchical calls, invalid-input rejection, and warm per-tool call timing through a real stdio client. It does not measure concurrent load, clinical correctness, arbitrary-question claim support, or deployment security. Timings are machine-specific and not a service-level objective.
+This exercises all 21 paper lookups, the nine existing curated-claim integration cases, five supported and four abstained answers, exploratory-result provenance, five document-versus-hierarchical calls, invalid-input rejection, and warm per-tool call timing through a real stdio client. It does not measure concurrent load, clinical correctness, arbitrary-question claim support, or deployment security. Timings are machine-specific and not a service-level objective.
 
 ## Current boundaries
 
