@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import threading
+import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -12,17 +14,25 @@ from typing import Any, Literal, Protocol
 from fastapi import Depends, FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.responses import StreamingResponse
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ConfigDict, Field
 
 from clinical_risk_agent.ai import (
+    AssessmentStatus,
+    AssessmentSubmission,
+    MLAssessmentAdapter,
+    PreflightRequest,
     ProtectedConversationOrchestrator,
+    ProtectedAssessmentGraph,
     PrototypeIntentPort,
     PrototypeLanguagePort,
     PrototypeSafetyPort,
+    RequestKind,
     RoutingGraph,
     create_generator,
 )
+from clinical_risk_agent.inference import DCMFNetPredictor, questionnaire_requirements
 from clinical_risk_agent.rag.answering import CURATED_QUESTIONS
 from clinical_risk_agent.rag.runtime import ResearchRuntime
 
@@ -48,6 +58,95 @@ class ConversationService(Protocol):
     def handle(self, text: str, *, deployment_mode: str,
                session_valid: bool) -> dict[str, Any]: ...
     def close(self) -> None: ...
+
+
+class AssessmentService(Protocol):
+    def requirements(self) -> dict[str, Any]: ...
+    def assess(self, version: str, answers: dict[str, str],
+               *, deployment_mode: str, timeout_seconds: float) -> dict[str, Any]: ...
+
+
+class LocalAssessmentService:
+    """Lazily loads both pinned DCMFNet artifacts and the protected graph."""
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+        self._graph: ProtectedAssessmentGraph | None = None
+        self._lock = threading.Lock()
+
+    def _load(self) -> ProtectedAssessmentGraph:
+        with self._lock:
+            if self._graph is None:
+                artifact_dir = self._root / "model_artifacts"
+                positive = DCMFNetPredictor(
+                    artifact_dir / "dcmfnet_pos.pt",
+                    artifact_dir / "dcmfnet_pos.metadata.json",
+                )
+                negative = DCMFNetPredictor(
+                    artifact_dir / "dcmfnet_neg.pt",
+                    artifact_dir / "dcmfnet_neg.metadata.json",
+                )
+                routing = RoutingGraph(
+                    PrototypeSafetyPort(), PrototypeLanguagePort(), PrototypeIntentPort(),
+                )
+                self._graph = ProtectedAssessmentGraph(
+                    routing, MLAssessmentAdapter(positive, negative),
+                )
+            return self._graph
+
+    @staticmethod
+    def requirements() -> dict[str, Any]:
+        contract = questionnaire_requirements()
+        return {
+            "questionnaire_version": contract.version,
+            "questions": [
+                {"question_id": item.question_id, "option_ids": list(item.option_ids)}
+                for item in contract.questions
+            ],
+        }
+
+    def assess(self, version: str, answers: dict[str, str],
+               *, deployment_mode: str, timeout_seconds: float) -> dict[str, Any]:
+        submission = AssessmentSubmission(
+            PreflightRequest(
+                RequestKind.STRUCTURED_ASSESSMENT, deployment_mode, True,
+                assessment_view_authorized=True,
+            ),
+            version,
+            answers,
+            time.monotonic() + min(timeout_seconds, 59.0),
+        )
+        outcome = self._load().run(submission)
+        body: dict[str, Any] = {
+            "response_kind": outcome.status.value.upper(),
+            "status": outcome.status.value,
+        }
+        if outcome.validation is not None:
+            body["missing_question_ids"] = list(outcome.validation.missing_question_ids)
+            body["invalid_question_ids"] = list(outcome.validation.invalid_question_ids)
+            body["unknown_question_ids"] = list(outcome.validation.unknown_question_ids)
+        if outcome.status is AssessmentStatus.READY and outcome.display is not None:
+            body.update({
+                "response_kind": "ASSESSMENT_RESULT",
+                "result": {
+                    "positive_symptom_research_probability": outcome.display.positive_percent,
+                    "negative_symptom_research_probability": outcome.display.negative_percent,
+                    "generic_profile_version": outcome.display.generic_profile_version,
+                    "synthetic_training_data": outcome.display.synthetic_training_data,
+                },
+                "prediction_note": (
+                    "This is a prediction, not a causal explanation. The model evaluates all "
+                    "105 inputs together; no single answer can be identified as the cause of "
+                    "the result. Validated feature importance is not available for this result."
+                ),
+                "limitation": (
+                    "Portfolio research demonstration only; not validated for individual care, "
+                    "diagnosis, screening, or treatment decisions."
+                ),
+            })
+        elif outcome.safe_message:
+            body["message"] = outcome.safe_message
+        return body
 
 
 class LocalResearchService:
@@ -92,6 +191,20 @@ class MessageRequest(BaseModel):
     text: str = Field(min_length=1, max_length=500)
 
 
+class AssessmentAttestations(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    age_18_or_over: Literal[True]
+    self_assessment: Literal[True]
+    research_only_consent: Literal[True]
+
+
+class AssessmentRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    questionnaire_version: str = Field(min_length=1, max_length=80)
+    answers: dict[str, str] = Field(max_length=85)
+    attestations: AssessmentAttestations
+
+
 class CapacityGate:
     def __init__(self, limit: int) -> None:
         self._limit = limit
@@ -121,6 +234,7 @@ def _error(code: str, message: str, component: str, status: int,
 
 def create_app(settings: BackendSettings, *, service: ResearchService | None = None,
                conversation: ConversationService | None = None,
+               assessment: AssessmentService | None = None,
                clock: Callable[[], float] | None = None) -> FastAPI:
     """Compose the API. Authorization is derived only from transport state."""
     research = service or LocalResearchService(settings.root)
@@ -137,6 +251,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
             research,
             generator,
         )
+    assessment = assessment or LocalAssessmentService(settings.root)
     sessions = SessionStore(
         settings.session_signing_key, ttl_seconds=settings.session_ttl_seconds,
         max_sessions=settings.max_active_sessions,
@@ -144,6 +259,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
         daily_limit=settings.model_turns_per_day,
         global_daily_limit=settings.global_model_operations_per_day,
         create_limit=settings.session_creations_per_network_hour,
+        assessment_daily_limit=settings.assessment_submissions_per_day,
     )
     model_capacity = CapacityGate(settings.max_model_concurrency)
     http_capacity = CapacityGate(settings.max_http_concurrency)
@@ -212,7 +328,8 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     @app.exception_handler(PermissionError)
     async def permission_error(_request: Request, error: PermissionError):
         code = str(error)
-        if code in {"hourly_quota_exhausted", "daily_quota_exhausted"}:
+        if code in {"hourly_quota_exhausted", "daily_quota_exhausted",
+                    "assessment_quota_exhausted"}:
             return _error("SESSION_QUOTA_EXHAUSTED", USAGE_LIMIT_MESSAGE, "quota", 429)
         return _error("SESSION_INVALID", "Session is missing, invalid, or expired.",
                       "session", 401)
@@ -342,9 +459,132 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
         }
         return JSONResponse(status_code=status_code, content=body)
 
+    @app.post("/v1/messages:stream")
+    async def stream_message(payload: MessageRequest, token: str = Depends(bearer)):
+        if not model_capacity.acquire():
+            return _error("MODEL_CAPACITY_EXHAUSTED", "The research service is busy. Try again.",
+                          "capacity", 503, retryable=True)
+        try:
+            try:
+                state = sessions.consume_model_operation(token, now=now() if now else None)
+            except Exception:
+                model_capacity.release()
+                raise
+
+            async def events():
+                try:
+                    yield _sse("status", {"phase": "protected_preflight"}, 1)
+                    yield _sse("status", {"phase": "retrieval_and_generation"}, 2)
+                    try:
+                        result = await asyncio.wait_for(
+                            asyncio.to_thread(
+                                conversation.handle, payload.text,
+                                deployment_mode=settings.deployment_mode, session_valid=True,
+                            ),
+                            timeout=settings.request_timeout_seconds,
+                        )
+                    except TimeoutError:
+                        yield _sse("error", {
+                            "code": "REQUEST_DEADLINE_EXPIRED",
+                            "message": "The request timed out safely.",
+                            "component": "workflow", "retryable": True,
+                        }, 3)
+                        return
+                    except Exception:
+                        yield _sse("error", {
+                            "code": "WORKFLOW_UNAVAILABLE",
+                            "message": "The conversation workflow is unavailable.",
+                            "component": "workflow", "retryable": True,
+                        }, 3)
+                        return
+                    yield _sse("validated_content", {
+                        key: result.get(key) for key in (
+                            "response_kind", "message", "limitation", "actions", "route",
+                        )
+                    }, 3)
+                    sequence = 4
+                    for citation in result.get("citations", []):
+                        yield _sse("evidence", citation, sequence)
+                        sequence += 1
+                    yield _sse("done", {
+                        "response_kind": result["response_kind"],
+                        "provider": result.get("provider"), "model": result.get("model"),
+                        "corpus_version": result.get("corpus_version"),
+                        "state_version": state.state_version,
+                        "inactivity_expires_in_seconds": settings.session_ttl_seconds,
+                    }, sequence)
+                finally:
+                    model_capacity.release()
+
+            return StreamingResponse(
+                events(), media_type="text/event-stream",
+                headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+            )
+        except Exception:
+            # Permission and quota exceptions are handled before streaming starts.
+            raise
+
+    @app.get("/v1/assessments/questionnaire")
+    async def assessment_questionnaire(token: str = Depends(bearer)):
+        state = sessions.authorize(token, renew=False, now=now() if now else None)
+        return {
+            "api_version": API_VERSION, "deployment_mode": settings.deployment_mode,
+            "state_version": state.state_version,
+            "inactivity_expires_in_seconds": settings.session_ttl_seconds,
+            **assessment.requirements(),
+        }
+
+    @app.post("/v1/assessments")
+    async def submit_assessment(payload: AssessmentRequest, token: str = Depends(bearer)):
+        if not model_capacity.acquire():
+            return _error("MODEL_CAPACITY_EXHAUSTED", "The model service is busy. Try again.",
+                          "capacity", 503, retryable=True)
+        try:
+            try:
+                state = sessions.consume_assessment_operation(
+                    token, now=now() if now else None,
+                )
+            except OverflowError:
+                return _error("GLOBAL_USAGE_LIMIT", USAGE_LIMIT_MESSAGE, "quota", 429)
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        assessment.assess, payload.questionnaire_version, payload.answers,
+                        deployment_mode=settings.deployment_mode,
+                        timeout_seconds=settings.request_timeout_seconds,
+                    ),
+                    timeout=settings.request_timeout_seconds,
+                )
+            except TimeoutError:
+                return _error("REQUEST_DEADLINE_EXPIRED", "The assessment timed out safely.",
+                              "workflow", 504, retryable=True)
+            except Exception:
+                return _error("INFERENCE_UNAVAILABLE", "The assessment is unavailable.",
+                              "inference", 503, retryable=True)
+        finally:
+            model_capacity.release()
+        status = result["status"]
+        status_code = 200
+        if status in {"questionnaire_incomplete", "questionnaire_invalid"}:
+            status_code = 422
+        elif status not in {"assessment_ready"}:
+            status_code = 503
+        return JSONResponse(status_code=status_code, content={
+            "api_version": API_VERSION, "deployment_mode": settings.deployment_mode,
+            "state_version": state.state_version,
+            "inactivity_expires_in_seconds": settings.session_ttl_seconds,
+            **result,
+        })
+
     return app
 
 
 def app_factory() -> FastAPI:
     """Uvicorn factory; secrets and origins come from environment variables."""
     return create_app(BackendSettings.from_env())
+
+
+def _sse(event: str, data: dict[str, Any], sequence: int) -> str:
+    payload = json.dumps(data, separators=(",", ":"), ensure_ascii=True)
+    return f"id: {sequence}\nevent: {event}\ndata: {payload}\n\n"
+    RequestKind,

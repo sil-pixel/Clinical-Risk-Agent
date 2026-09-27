@@ -69,6 +69,31 @@ class FakeConversation:
         }
 
 
+class FakeAssessment:
+    def __init__(self) -> None:
+        self.calls = []
+
+    def requirements(self):
+        return {
+            "questionnaire_version": "prototype_questionnaire_v1",
+            "questions": [{"question_id": "q001", "option_ids": ["o01", "o02"]}],
+        }
+
+    def assess(self, version, answers, *, deployment_mode, timeout_seconds):
+        self.calls.append((version, answers, deployment_mode, timeout_seconds))
+        return {
+            "response_kind": "ASSESSMENT_RESULT", "status": "assessment_ready",
+            "result": {
+                "positive_symptom_research_probability": "12.3%",
+                "negative_symptom_research_probability": "45.6%",
+                "generic_profile_version": "generic_genetic_profile_v1",
+                "synthetic_training_data": True,
+            },
+            "prediction_note": "Fixture prediction-only note.",
+            "limitation": "Fixture research-only limitation.",
+        }
+
+
 class BackendAPITests(unittest.TestCase):
     def setUp(self) -> None:
         self.clock = Clock()
@@ -197,6 +222,67 @@ class BackendAPITests(unittest.TestCase):
                 json={"kind": "free_text", "text": "hello", "session_valid": True},
             )
             self.assertEqual(invalid.status_code, 422)
+
+    def test_sse_emits_only_typed_validated_events(self) -> None:
+        conversation = FakeConversation()
+        with TestClient(create_app(
+            self.settings, service=self.service, conversation=conversation, clock=self.clock,
+        )) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            with client.stream(
+                "POST", "/v1/messages:stream", headers=self.auth(token),
+                json={"kind": "free_text", "text": "Fixture research question?"},
+            ) as response:
+                body = "".join(response.iter_text())
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers["content-type"].split(";")[0],
+                             "text/event-stream")
+            self.assertIn("event: status", body)
+            self.assertIn("event: validated_content", body)
+            self.assertIn("event: evidence", body)
+            self.assertIn("event: done", body)
+            self.assertNotIn("event: token", body)
+
+    def test_public_questionnaire_contract_and_submission(self) -> None:
+        assessment = FakeAssessment()
+        with TestClient(create_app(
+            self.settings, service=self.service, assessment=assessment, clock=self.clock,
+        )) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            requirements = client.get(
+                "/v1/assessments/questionnaire", headers=self.auth(token),
+            )
+            self.assertEqual(requirements.status_code, 200)
+            self.assertEqual(requirements.json()["questions"][0]["question_id"], "q001")
+            response = client.post(
+                "/v1/assessments", headers=self.auth(token), json={
+                    "questionnaire_version": "prototype_questionnaire_v1",
+                    "answers": {"q001": "o01"},
+                    "attestations": {
+                        "age_18_or_over": True,
+                        "self_assessment": True,
+                        "research_only_consent": True,
+                    },
+                },
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["response_kind"], "ASSESSMENT_RESULT")
+            self.assertEqual(response.json()["result"][
+                "positive_symptom_research_probability"
+            ], "12.3%")
+            self.assertEqual(len(assessment.calls), 1)
+            forged = client.post(
+                "/v1/assessments", headers=self.auth(token), json={
+                    "questionnaire_version": "prototype_questionnaire_v1",
+                    "answers": {"q001": "o01"},
+                    "attestations": {
+                        "age_18_or_over": False,
+                        "self_assessment": True,
+                        "research_only_consent": True,
+                    },
+                },
+            )
+            self.assertEqual(forged.status_code, 422)
 
 
 class BackendSettingsTests(unittest.TestCase):

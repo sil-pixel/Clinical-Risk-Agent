@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -23,21 +24,32 @@ def main() -> None:
         session = client.post("/v1/session", headers=origin)
         session.raise_for_status()
         auth = {**origin, "Authorization": f"Bearer {session.json()['session_token']}"}
-        response = client.post(
-            "/v1/messages", headers=auth,
+        events = []
+        with client.stream(
+            "POST", "/v1/messages:stream", headers=auth,
             json={"kind": "free_text", "text": CURATED_QUESTIONS[0].question},
-        )
-        response.raise_for_status()
-        payload = response.json()
-        if (payload["response_kind"] != "GROUNDED_ANSWER"
-                or payload["provider"] != settings.llm_provider
-                or payload["citations"][0]["pmid"] != "21382538"):
+        ) as response:
+            response.raise_for_status()
+            event_name = None
+            for line in response.iter_lines():
+                if line.startswith("event: "):
+                    event_name = line[7:]
+                elif line.startswith("data: ") and event_name:
+                    events.append((event_name, json.loads(line[6:])))
+                    event_name = None
+        content = next(data for event, data in events if event == "validated_content")
+        evidence = [data for event, data in events if event == "evidence"]
+        done = next(data for event, data in events if event == "done")
+        if (content["response_kind"] != "GROUNDED_ANSWER"
+                or done["provider"] != settings.llm_provider
+                or evidence[0]["pmid"] != "21382538"):
             raise AssertionError("Conversation path returned an invalid grounded response")
         client.delete("/v1/session", headers=auth).raise_for_status()
         print({
-            "response_kind": payload["response_kind"],
-            "provider": payload["provider"],
-            "citation_count": len(payload["citations"]),
+            "response_kind": content["response_kind"],
+            "provider": done["provider"],
+            "citation_count": len(evidence),
+            "transport": "sse",
             "validated": True,
         })
 

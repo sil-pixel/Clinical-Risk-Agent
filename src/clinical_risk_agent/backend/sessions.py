@@ -21,6 +21,7 @@ class SessionState:
     last_activity: float
     hourly_operations: deque[float]
     daily_operations: deque[float]
+    assessment_operations: deque[float]
     state_version: int = 1
 
 
@@ -29,13 +30,14 @@ class SessionStore:
 
     def __init__(self, key: bytes, *, ttl_seconds: int, max_sessions: int,
                  hourly_limit: int, daily_limit: int, global_daily_limit: int,
-                 create_limit: int) -> None:
+                 create_limit: int, assessment_daily_limit: int = 3) -> None:
         self._key = key
         self._ttl = ttl_seconds
         self._max_sessions = max_sessions
         self._hourly_limit = hourly_limit
         self._daily_limit = daily_limit
         self._global_daily_limit = global_daily_limit
+        self._assessment_daily_limit = assessment_daily_limit
         self._create_limit = create_limit
         self._sessions: dict[str, SessionState] = {}
         self._creations: dict[str, deque[float]] = defaultdict(deque)
@@ -73,7 +75,7 @@ class SessionStore:
             if len(self._sessions) >= self._max_sessions:
                 raise OverflowError("session_capacity_exhausted")
             session_id = _b64(secrets.token_bytes(24))
-            self._sessions[session_id] = SessionState(now, deque(), deque())
+            self._sessions[session_id] = SessionState(now, deque(), deque(), deque())
             creations.append(now)
         return f"{session_id}.{self._signature(session_id)}", self._ttl
 
@@ -119,6 +121,26 @@ class SessionStore:
                 raise OverflowError("global_quota_exhausted")
             state.hourly_operations.append(now)
             state.daily_operations.append(now)
+            self._global_operations.append(now)
+            state.last_activity = now
+            state.state_version += 1
+            return state
+
+    def consume_assessment_operation(self, token: str, *, now: float | None = None) -> SessionState:
+        now = time.monotonic() if now is None else now
+        session_id = self._session_id(token)
+        with self._lock:
+            state = self._sessions.get(session_id)
+            if state is None or now - state.last_activity >= self._ttl:
+                self._sessions.pop(session_id, None)
+                raise PermissionError("expired_session")
+            self._prune(state.assessment_operations, now - 86400)
+            self._prune(self._global_operations, now - 86400)
+            if len(state.assessment_operations) >= self._assessment_daily_limit:
+                raise PermissionError("assessment_quota_exhausted")
+            if len(self._global_operations) >= self._global_daily_limit:
+                raise OverflowError("global_quota_exhausted")
+            state.assessment_operations.append(now)
             self._global_operations.append(now)
             state.last_activity = now
             state.state_version += 1

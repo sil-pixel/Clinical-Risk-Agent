@@ -14,3 +14,12 @@ See [the backend/deployment handoff](agent_docs/BACKEND_DEPLOYMENT_HANDOFF.md) f
 For local conversational-generation configuration, select `openai`, `anthropic`, or `gemini` with `LLM_PROVIDER`, set that provider's exact model ID in `LLM_MODEL`, and put its key in `LLM_API_KEY` in the git-ignored root `.env`. The key is backend-only and must never be placed in `frontend/` or a `VITE_` variable. `.env.example` documents the contract. The intended UI is chat-first, with the questionnaire available as an optional left-side assessment workflow.
 
 `POST /v1/messages` now provides the bounded conversational path. It accepts `{"kind":"free_text","text":"..."}` under an authenticated ephemeral session. Only the five claim-verified research questions can produce generated scientific answers; broader questions abstain, and safety/refusal/assessment routes use fixed local content without invoking the LLM. After configuring `.env`, run `PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/python scripts/conversation_smoke.py` to make one live-provider request using a non-user curated fixture.
+
+For the local browser experience, run the API and Vite UI in separate terminals:
+
+```sh
+PYTHONPATH=src HF_HUB_OFFLINE=1 .venv/bin/uvicorn clinical_risk_agent.backend.app:app_factory --factory --host 127.0.0.1 --port 8000 --no-access-log
+cd frontend && npm run dev -- --host localhost --port 5173
+```
+
+Open `http://localhost:5173`. Chat uses validated SSE events from `POST /v1/messages:stream`; the optional questionnaire uses `GET /v1/assessments/questionnaire` and `POST /v1/assessments` with memory-only session authorization.

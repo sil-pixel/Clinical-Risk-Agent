@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import ChatWorkspace from "./ChatWorkspace.jsx";
+import { createSession, deleteSession, submitAssessment } from "./api.js";
 import {
   DO_NOT_REMEMBER_ID,
   getOptionsForQuestion,
@@ -48,10 +50,20 @@ function Notice({ tone = "info", children }) {
 }
 
 function App() {
+  const [view, setView] = useState("chat");
+  const [sessionToken, setSessionToken] = useState("");
+  const [sessionError, setSessionError] = useState("");
   const [answers, setAnswers] = useState({});
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [validationMessage, setValidationMessage] = useState("");
   const [systemMessage, setSystemMessage] = useState("");
+  const [assessmentResult, setAssessmentResult] = useState(null);
+  const [assessmentBusy, setAssessmentBusy] = useState(false);
+  const [attestations, setAttestations] = useState({
+    age_18_or_over: false,
+    self_assessment: false,
+    research_only_consent: false,
+  });
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const inactivityTimer = useRef(null);
   const mainHeadingRef = useRef(null);
@@ -68,8 +80,32 @@ function App() {
     setCurrentSectionIndex(0);
     setValidationMessage("");
     setSystemMessage(reason);
+    setAssessmentResult(null);
+    setAttestations({
+      age_18_or_over: false,
+      self_assessment: false,
+      research_only_consent: false,
+    });
     requestAnimationFrame(() => mainHeadingRef.current?.focus());
   }, []);
+
+  const startSession = useCallback(async () => {
+    try {
+      setSessionError("");
+      const session = await createSession();
+      setSessionToken(session.session_token);
+    } catch (error) {
+      setSessionError(error.message);
+    }
+  }, []);
+
+  const resetSession = useCallback(async () => {
+    const previous = sessionToken;
+    setSessionToken("");
+    resetQuestionnaire("Your private session and answers have been cleared.");
+    await deleteSession(previous).catch(() => {});
+    await startSession();
+  }, [resetQuestionnaire, sessionToken, startSession]);
 
   useEffect(() => {
     const scheduleExpiry = () => {
@@ -97,6 +133,10 @@ function App() {
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
+
+  useEffect(() => {
+    if (isOnline && !sessionToken) startSession();
+  }, [isOnline, sessionToken, startSession]);
 
   const selectAnswer = (questionId, optionId) => {
     setAnswers((current) => ({ ...current, [questionId]: optionId }));
@@ -126,33 +166,60 @@ function App() {
   };
 
   const progressPercent = Math.round((overallStatus.answered / totalQuestionCount) * 100);
+  const attestationsComplete = Object.values(attestations).every(Boolean);
+
+  const calculateAssessment = async () => {
+    if (!overallStatus.ready || !attestationsComplete || !sessionToken || assessmentBusy) return;
+    setAssessmentBusy(true);
+    setValidationMessage("");
+    setAssessmentResult(null);
+    try {
+      const result = await submitAssessment(sessionToken, {
+        questionnaire_version: "prototype_questionnaire_v1",
+        answers,
+        attestations,
+      });
+      setAssessmentResult(result);
+      setSystemMessage("The protected assessment completed successfully.");
+    } catch (error) {
+      setValidationMessage(error.message);
+    } finally {
+      setAssessmentBusy(false);
+    }
+  };
 
   return (
     <div className="app-shell">
       <header className="site-header">
-        <a className="brand" href="#questionnaire-main" aria-label="Research Risk Questionnaire home">
+        <a className="brand" href="#main" aria-label="Clinical Risk Research Assistant home">
           <ShieldIcon />
           <span>
-            <strong>Research Risk Questionnaire</strong>
+            <strong>Clinical Risk Research Assistant</strong>
             <small>Private, research-only demonstration</small>
           </span>
         </a>
-        <button
-          className="button button--quiet"
-          type="button"
-          onClick={() => resetQuestionnaire()}
-          disabled={overallStatus.answered === 0}
-        >
-          Clear answers
-        </button>
+        <div className="header-actions">
+          <button className={`button ${view === "chat" ? "button--primary" : "button--quiet"}`}
+            type="button" onClick={() => setView("chat")}>Chat</button>
+          <button className={`button ${view === "questionnaire" ? "button--primary" : "button--quiet"}`}
+            type="button" onClick={() => setView("questionnaire")}>Questionnaire</button>
+          <button className="button button--quiet" type="button" onClick={resetSession}>
+            Reset session
+          </button>
+        </div>
       </header>
 
       {!isOnline && (
         <div className="offline-banner" role="status">
-          You appear to be offline. Your answers remain on this device, but calculation is unavailable.
+          You're offline. Research estimates and evidence-based answers require a connection. No calculation has been performed.
         </div>
       )}
 
+      {view === "chat" ? (
+        <ChatWorkspace key={sessionToken || "no-session"} token={sessionToken}
+          sessionError={sessionError} onOpenQuestionnaire={() => setView("questionnaire")}
+          onReset={resetSession} />
+      ) : (
       <div className="layout">
         <aside className="sidebar" aria-label="Questionnaire progress">
           <div className="progress-card">
@@ -203,7 +270,7 @@ function App() {
           </div>
         </aside>
 
-        <main id="questionnaire-main" className="main-content">
+        <main id="main" className="main-content">
           <div className="sr-only" role="status" aria-live="polite">
             {systemMessage}
           </div>
@@ -307,10 +374,12 @@ function App() {
                   <button
                     className="button button--primary"
                     type="button"
-                    disabled
+                    disabled={!overallStatus.ready || !attestationsComplete || assessmentBusy
+                      || !sessionToken || !isOnline}
+                    onClick={calculateAssessment}
                     aria-describedby="calculation-status"
                   >
-                    Calculate research result
+                    {assessmentBusy ? "Calculating…" : "Calculate research result"}
                   </button>
                 )}
               </div>
@@ -319,14 +388,47 @@ function App() {
 
           {currentSectionIndex === questionnaireSections.length - 1 && (
             <Notice tone={overallStatus.ready ? "success" : "warning"}>
-              <strong id="calculation-status">Model calculation is not yet enabled.</strong>{" "}
+              <strong id="calculation-status">Protected model calculation</strong>{" "}
               {overallStatus.unanswered > 0 && `${overallStatus.unanswered} questions remain unanswered. `}
               {overallStatus.unknown > 0 && `${overallStatus.unknown} answers need clarification before a model could run. `}
-              A protected assessment service and safety review are still needed before this interface can produce results.
+              Complete all questions and attestations below before calculating.
             </Notice>
+          )}
+
+          {currentSectionIndex === questionnaireSections.length - 1 && (
+            <section className="attestation-card" aria-labelledby="attestation-title">
+              <h2 id="attestation-title">Before calculating</h2>
+              {[
+                ["age_18_or_over", "I confirm that I am aged 18 or over."],
+                ["self_assessment", "I am completing this questionnaire only about myself."],
+                ["research_only_consent", "I understand this is a research demonstration, not clinical care."],
+              ].map(([id, label]) => (
+                <label key={id}>
+                  <input type="checkbox" checked={attestations[id]}
+                    onChange={(event) => setAttestations((current) => ({
+                      ...current, [id]: event.target.checked,
+                    }))} />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </section>
+          )}
+
+          {assessmentResult && (
+            <section className="result-card" aria-labelledby="result-title">
+              <span className="eyebrow eyebrow--dark">Simulated research output</span>
+              <h2 id="result-title">Assessment result</h2>
+              <div className="result-grid">
+                <div><span>Positive-symptom estimate</span><strong>{assessmentResult.result.positive_symptom_research_probability}</strong></div>
+                <div><span>Negative-symptom estimate</span><strong>{assessmentResult.result.negative_symptom_research_probability}</strong></div>
+              </div>
+              <p>{assessmentResult.prediction_note}</p>
+              <p><strong>Limitation:</strong> {assessmentResult.limitation}</p>
+            </section>
           )}
         </main>
       </div>
+      )}
 
       <footer>
         <p>Built for evaluation with synthetic training data. Do not use this questionnaire for clinical decisions.</p>

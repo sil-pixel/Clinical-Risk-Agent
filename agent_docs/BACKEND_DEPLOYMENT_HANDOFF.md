@@ -14,11 +14,14 @@ This is currently a deliberately narrow public prototype boundary. It exposes fi
 | List questions | `GET /v1/research/questions` | Bearer session | Returns five public IDs and fixed question wording. This static read does not renew inactivity. |
 | Answer question | `POST /v1/research/answers` | Bearer session | Accepts only `{"question_id":"rq_01"}` through `rq_05`; retrieves through hierarchical Qdrant/BM25 and returns the claim-checked fixed answer or a typed safe failure. |
 | Submit chat turn | `POST /v1/messages` | Bearer session | Accepts only `{"kind":"free_text","text":"..."}`. Runs safety, language, and intent preflight. Exact supported research questions use verified RAG, the configured provider, strict structured output, exact answer/citation validation, and one validation retry. |
+| Stream chat turn | `POST /v1/messages:stream` | Bearer session | Emits typed `status`, `validated_content`, `evidence`, `done`, or safe `error` SSE events. Raw provider tokens are never emitted. |
+| Get questionnaire contract | `GET /v1/assessments/questionnaire` | Bearer session | Returns the versioned 85 opaque question IDs and valid option IDs without backend feature mappings. |
+| Submit questionnaire | `POST /v1/assessments` | Bearer session | Requires adult, self-assessment, and research-only attestations; independently validates all answers and invokes both pinned DCMFNet targets through the protected graph. |
 | Reset | `DELETE /v1/session` | Bearer session | Idempotently removes the in-memory session state. |
 
 The service derives authorization from the bearer credential, never from client-supplied booleans. It has narrow CORS, a 4 KiB body ceiling, multipart rejection, `Cache-Control: no-store`, generic validation errors, an exact 30-minute memory-only session TTL, five session creations/hour/transient one-way network digest, 10 research operations/hour/session, 25/day/session, 1,000/day/process, 50 HTTP requests, eight model-heavy operations and a 55-second application deadline. No request text, answer, evidence, credential, network address or session identifier is logged or persisted by application code.
 
-The chat endpoint remains bounded: safety/refusal, language, clarification, assessment-redirection, greeting, and unsupported routes are deterministic and invoke no external provider. Only a routed scientific request reaches research; only an exact claim-verified question reaches generation. Broader scientific wording returns no adequate evidence, and the generator is forbidden from answering from pretrained knowledge. This boundary does not authorize questionnaire inference.
+The chat endpoint remains bounded: safety/refusal, language, clarification, assessment-redirection, greeting, and unsupported routes are deterministic and invoke no external provider. Only a routed scientific request reaches research; only an exact claim-verified question reaches generation. Broader scientific wording returns no adequate evidence, and the generator is forbidden from answering from pretrained knowledge. Chat cannot authorize questionnaire inference. Only the separate structured endpoint, with server-validated schema, completeness, attestations, protected routing, and pinned artifact checks, can invoke DCMFNet.
 
 ## Local verification
 
@@ -73,6 +76,6 @@ Deployment is intentionally a manual owner action because it creates a public UR
 - Run a deployed cold/warm latency and concurrent-load check. The local smoke is functional evidence, not a cloud SLO.
 - The deterministic safety/language/intent ports are demo scaffolding, not the evaluated release artifacts. Replace them with pinned, calibrated local artifacts and run the frozen safety/intent release suites before describing the chat route as production-ready.
 - The current trusted claim router recognizes only the five reviewed questions. Expand it only with reviewed claim mappings and gold judgments; do not let the LLM assign claim IDs.
-- Add validated SSE delivery; the present public chat route returns one validated JSON envelope and never streams raw model tokens.
-- Questionnaire submission remains blocked pending the same safety release work and public API integration of the protected assessment graph.
+- Replace the process-local assessment quota with an approved shared counter before scaling beyond one container; the current prototype enforces three assessment submissions per session/day and the global process ceiling.
+- The questionnaire endpoint is functional for the prototype. Formal safety/intent release evaluation, public usability testing, and deployment review remain required before external production exposure.
 - A single Modal container preserves the memory-only session boundary. Increasing `max_containers` requires approved session affinity; do not add a persistent shared session store.

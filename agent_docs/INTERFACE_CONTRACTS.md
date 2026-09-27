@@ -163,7 +163,7 @@ The MVP API is versioned and session-oriented:
 | Liveness | `GET /health/live` | Confirm the API process is running |
 | Readiness | `GET /health/ready` | Report required artifact/index/configuration readiness without secrets |
 
-The submit-turn request must be a discriminated union separating free text from structured questionnaire-answer updates. Structured questionnaire fields come from the accepted `prototype_questionnaire_v1` requirements. The public submit route remains disabled until the protected backend workflow and safety release tests pass. One request cannot silently mix arbitrary free text with questionnaire answers or unvalidated feature keys.
+The submit-turn request is a discriminated free-text shape. Structured questionnaire answers use the separate `POST /v1/assessments` route and the accepted `prototype_questionnaire_v1` requirements. The endpoint requires literal-true adult, self-assessment, and research-only attestations, but never accepts client completion or inference-authorization flags. The backend independently validates every opaque answer before the protected graph can invoke DCMFNet. One request cannot mix arbitrary free text with questionnaire answers or unvalidated feature keys.
 
 ### Bounded research API slice (2026-09-27)
 

@@ -24,6 +24,7 @@ class BackendSettings:
     max_model_concurrency: int = 8
     model_turns_per_hour: int = 10
     model_turns_per_day: int = 25
+    assessment_submissions_per_day: int = 3
     global_model_operations_per_day: int = 1000
     session_creations_per_network_hour: int = 5
 
