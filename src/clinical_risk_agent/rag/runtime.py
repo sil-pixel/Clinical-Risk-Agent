@@ -8,7 +8,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from clinical_risk_agent.contracts import RetrievalQuery
+from clinical_risk_agent.contracts import EvidenceStatus, RetrievalQuery
 
 from .answering import BoundedResearchAnswerer
 from .chunking import Passage
@@ -106,6 +106,10 @@ class ResearchRuntime:
                 hierarchical, lexical, qdrant, primary_sparse_searcher=qdrant,
                 dense_min_cosine=0.85, relevance_first=True, support_checker=support,
             )
+            self._general_retriever = HybridRetriever(
+                hierarchical, lexical, qdrant, primary_sparse_searcher=qdrant,
+                dense_min_cosine=0.85, relevance_first=True,
+            )
             self.answerer = BoundedResearchAnswerer(
                 claim_ids={item.claim_id for item in assertions},
                 retrieve_supported=lambda question, claim_id: retriever.retrieve(
@@ -120,6 +124,53 @@ class ResearchRuntime:
         except Exception:
             self._client.close()
             raise
+
+    def search_general(self, question: str) -> dict[str, Any]:
+        """Retrieve relevant appraised passages without claiming curated entailment."""
+        result = self._general_retriever.retrieve(
+            RetrievalQuery(question, source_cap=3), today=date.today(),
+        )
+        if result.status is EvidenceStatus.RETRIEVAL_UNAVAILABLE:
+            return {
+                "status": "retrieval_unavailable",
+                "answer": "Research retrieval is unavailable right now.",
+                "limitation": "No evidence-based answer was produced.",
+                "citations": [],
+                "corpus_version": result.corpus_version,
+            }
+        if result.status is EvidenceStatus.NO_ELIGIBLE_EVIDENCE or not result.items:
+            return {
+                "status": "no_adequate_evidence",
+                "answer": (
+                    "I could not find sufficiently relevant evidence in the current "
+                    "appraised corpus for that question."
+                ),
+                "limitation": "The corpus is limited; this is not evidence that no research exists.",
+                "citations": [],
+                "corpus_version": result.corpus_version,
+            }
+        displays = {item.citation_id: item for item in result.displays}
+        citations = []
+        for item in result.items:
+            display = displays[item.citation_id]
+            citations.append({
+                "citation_id": item.citation_id,
+                "pmid": item.pmid,
+                "chunk_id": item.chunk_id,
+                "title": display.title,
+                "exact_matched_text": display.exact_matched_text,
+                "bounded_use": self.corpus["source_review"][item.pmid]["bounded_use"],
+            })
+        return {
+            "status": "general_evidence_available",
+            "answer": None,
+            "limitation": (
+                "Research-only summary of the current appraised corpus; not a diagnosis, "
+                "individual risk estimate, or medical advice."
+            ),
+            "citations": citations,
+            "corpus_version": result.corpus_version,
+        }
 
     @property
     def corpus_version(self) -> str:

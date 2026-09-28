@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { API_BASE } from "./api.js";
 
 const suggestedQuestions = [
+  "Tell me about schizophrenia.",
   "Is childhood ADHD associated with later substance abuse or dependence?",
   "Did the MTA childhood ADHD cohort find more frequent cannabis use and smoking by age 25?",
   "Is fifth-grade peer victimization associated with later adolescent substance use?",
@@ -24,7 +25,7 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      text: "Hello. Ask one of the supported research questions, or open the optional questionnaire.",
+      text: "Hello. You can chat normally, ask a mental-health research question, or open the optional questionnaire.",
       citations: [],
     },
   ]);
@@ -74,7 +75,7 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
           if (eventData.type === "status") {
             setPhase(eventData.data.phase === "protected_preflight"
               ? "Checking request safety and scope…"
-              : "Searching evidence and validating the answer…");
+              : "Preparing and validating the response…");
           } else if (eventData.type === "validated_content") {
             assistant = {
               role: "assistant",
@@ -125,12 +126,12 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
 
       <main id="main" className="chat-main" aria-labelledby="chat-title">
         <header className="chat-hero">
-          <span className="eyebrow">Evidence-grounded conversation</span>
+          <span className="eyebrow">Conversation with evidence when available</span>
           <h1 id="chat-title">Clinical Risk Research Assistant</h1>
           <p>Research demonstration only—not diagnosis, medical advice, or emergency support.</p>
         </header>
 
-        <div className="suggestion-row" aria-label="Supported research questions">
+        <div className="suggestion-row" aria-label="Example research questions">
           {suggestedQuestions.map((question) => (
             <button key={question} type="button" disabled={busy || !token}
               onClick={(event) => submit(event, question)}>{question}</button>
@@ -141,6 +142,9 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
           {messages.map((message, index) => (
             <article className={`chat-message chat-message--${message.role}`} key={`${message.role}-${index}`}>
               <strong>{message.role === "user" ? "You" : "Assistant"}</strong>
+              {message.responseKind === "GENERAL_EDUCATION" && (
+                <small>General knowledge · no corpus citations</small>
+              )}
               <p>{message.text}</p>
               {message.actions?.some((action) => action.id.includes("questionnaire")) && (
                 <button className="button button--secondary" type="button" onClick={onOpenQuestionnaire}>
@@ -154,7 +158,9 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
                   <blockquote>{citation.exact_matched_text}</blockquote>
                 </details>
               ))}
-              {message.limitation && <small>{message.limitation}</small>}
+              {message.limitation && ["NO_ELIGIBLE_EVIDENCE", "RETRIEVAL_UNAVAILABLE"].includes(
+                message.responseKind,
+              ) && <small>{message.limitation}</small>}
             </article>
           ))}
           {phase && <div className="chat-status" role="status">{phase}</div>}
@@ -171,9 +177,9 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
         </section>
 
         <form className="chat-composer" onSubmit={submit}>
-          <label className="sr-only" htmlFor="chat-input">Ask a research question</label>
+          <label className="sr-only" htmlFor="chat-input">Message the assistant</label>
           <textarea id="chat-input" value={input} maxLength="500" rows="2"
-            placeholder="Ask a supported research question…"
+            placeholder="Ask a question or start a conversation…"
             onChange={(event) => setInput(event.target.value)} disabled={busy || !token} />
           <button className="button button--primary" type="submit"
             disabled={busy || !token || !input.trim()}>Send</button>

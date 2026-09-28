@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ChatWorkspace from "./ChatWorkspace.jsx";
 import { createSession, deleteSession, submitAssessment } from "./api.js";
 import {
-  DO_NOT_REMEMBER_ID,
   getOptionsForQuestion,
   questionnaireSections,
   totalQuestionCount,
@@ -333,17 +332,6 @@ function App() {
                           <span>{option.label}</span>
                         </label>
                       ))}
-                      <label className="option-card option-card--unknown">
-                        <input
-                          type="radio"
-                          name={item.id}
-                          value={DO_NOT_REMEMBER_ID}
-                          checked={answers[item.id] === DO_NOT_REMEMBER_ID}
-                          onChange={() => selectAnswer(item.id, DO_NOT_REMEMBER_ID)}
-                        />
-                        <span className="radio-mark" aria-hidden="true" />
-                        <span>I do not remember</span>
-                      </label>
                     </div>
                   </fieldset>
                 );
@@ -353,9 +341,6 @@ function App() {
             <div className="navigation-card">
               <div>
                 <strong>{sectionStatus.answered} of {currentSection.questions.length} answered</strong>
-                {sectionStatus.unknownIds.length > 0 && (
-                  <span>{sectionStatus.unknownIds.length} marked “I do not remember”</span>
-                )}
               </div>
               <div className="navigation-actions">
                 <button
@@ -390,7 +375,6 @@ function App() {
             <Notice tone={overallStatus.ready ? "success" : "warning"}>
               <strong id="calculation-status">Protected model calculation</strong>{" "}
               {overallStatus.unanswered > 0 && `${overallStatus.unanswered} questions remain unanswered. `}
-              {overallStatus.unknown > 0 && `${overallStatus.unknown} answers need clarification before a model could run. `}
               Complete all questions and attestations below before calculating.
             </Notice>
           )}
@@ -422,8 +406,9 @@ function App() {
                 <div><span>Positive-symptom estimate</span><strong>{assessmentResult.result.positive_symptom_research_probability}</strong></div>
                 <div><span>Negative-symptom estimate</span><strong>{assessmentResult.result.negative_symptom_research_probability}</strong></div>
               </div>
-              <p>{assessmentResult.prediction_note}</p>
-              <p><strong>Limitation:</strong> {assessmentResult.limitation}</p>
+              {assessmentResult.explanation && (
+                <p className="result-explanation">{assessmentResult.explanation}</p>
+              )}
             </section>
           )}
         </main>

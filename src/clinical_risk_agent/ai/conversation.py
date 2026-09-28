@@ -63,8 +63,8 @@ NO_PRIOR_RESULT_RESPONSE = (
     "research questionnaire if you would like to create one."
 )
 GENERAL_RESPONSE = (
-    "Hello. I can answer the supported research questions about substance use and ADHD or "
-    "bullying, or you can open the optional research questionnaire."
+    "Hello. You can chat normally, ask a mental-health research question, or open the "
+    "optional research questionnaire."
 )
 UNSUPPORTED_RESPONSE = (
     "That request is outside this prototype's bounded research scope. Ask one of the listed "
@@ -77,6 +77,7 @@ GENERATION_UNAVAILABLE = (
 
 class ConversationalResearchPort(Protocol):
     def answer_text(self, question: str) -> dict[str, Any]: ...
+    def search_general(self, question: str) -> dict[str, Any]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,6 +108,10 @@ class ConversationOutcome:
 
 class ResponseIntegrityError(ValueError):
     """A provider draft failed deterministic post-generation validation."""
+
+
+class EvidenceAbstention(ValueError):
+    """The generator cannot answer the question from the retrieved passages."""
 
 
 class ProtectedConversationOrchestrator:
@@ -156,9 +161,7 @@ class ProtectedConversationOrchestrator:
         if decision.route is Route.SCIENTIFIC_RETRIEVAL:
             return self._scientific(text, decision.route).public_dict()
         if decision.route is Route.GENERAL_GENERATION:
-            return ConversationOutcome(
-                "CONVERSATION", GENERAL_RESPONSE, route=decision.route.value,
-            ).public_dict()
+            return self._general(text, decision.route).public_dict()
         return ConversationOutcome(
             "UNSUPPORTED", UNSUPPORTED_RESPONSE, route=decision.route.value,
         ).public_dict()
@@ -180,12 +183,17 @@ class ProtectedConversationOrchestrator:
     def _scientific(self, text: str, route: Route) -> ConversationOutcome:
         result = self._research.answer_text(text)
         status = result.get("status")
+        if status == "no_adequate_evidence":
+            result = self._research.search_general(text)
+            status = result.get("status")
         if status == "retrieval_unavailable":
             return ConversationOutcome(
                 "RETRIEVAL_UNAVAILABLE", result["answer"],
                 limitation=result.get("limitation"), route=route.value,
             )
-        if status != "curated_support_available":
+        if status not in {"curated_support_available", "general_evidence_available"}:
+            if self._is_broad_education(text):
+                return self._education(text, route)
             return ConversationOutcome(
                 "NO_ELIGIBLE_EVIDENCE", result["answer"],
                 limitation=result.get("limitation"), route=route.value,
@@ -198,7 +206,24 @@ class ProtectedConversationOrchestrator:
                 corpus_version=result.get("corpus_version"),
             )
         try:
-            message = self._generate_validated(result)
+            if status == "curated_support_available":
+                message = self._generate_validated(result)
+                citations = tuple(result["citations"])
+            else:
+                message, used_ids = self._generate_general_evidence(text, result)
+                citations = tuple(
+                    item for item in result["citations"]
+                    if item["citation_id"] in used_ids
+                )
+        except EvidenceAbstention:
+            if self._is_broad_education(text):
+                return self._education(text, route)
+            return ConversationOutcome(
+                "NO_ELIGIBLE_EVIDENCE",
+                "The retrieved papers do not adequately support an answer to this question.",
+                limitation="The corpus is limited; other research may exist.",
+                route=route.value, corpus_version=result.get("corpus_version"),
+            )
         except Exception:
             return ConversationOutcome(
                 "GENERATION_UNAVAILABLE", GENERATION_UNAVAILABLE,
@@ -206,11 +231,199 @@ class ProtectedConversationOrchestrator:
                 corpus_version=result.get("corpus_version"),
             )
         return ConversationOutcome(
-            "GROUNDED_ANSWER", message, tuple(result["citations"]),
+            "GROUNDED_ANSWER", message, citations,
             result.get("limitation"), route=route.value,
             provider=self._generator.provider.value, model=self._generator.model,
             corpus_version=result.get("corpus_version"),
         )
+
+    @staticmethod
+    def _is_broad_education(text: str) -> bool:
+        return bool(re.search(
+            r"\b(tell me about|what is|what are|explain|describe|overview)\b",
+            text, re.IGNORECASE,
+        ))
+
+    def _education(self, text: str, route: Route) -> ConversationOutcome:
+        if self._generator is None:
+            return ConversationOutcome(
+                "GENERATION_UNAVAILABLE", GENERATION_UNAVAILABLE, route=route.value,
+            )
+        request = GenerationRequest(
+            "Provide a helpful, concise general educational answer about mental health using "
+            "your general knowledge. Explain the topic directly in plain language. Do not claim "
+            "that the local corpus supports the answer, invent citations, diagnose the user, or "
+            "recommend personalized treatment. Avoid blanket disclaimers; the interface displays "
+            "the research-demo notice. Return response_kind=conversation with no citation IDs.",
+            text,
+        )
+        try:
+            draft = self._generator.generate(request)
+            if draft.citation_ids or self._inline_citation_ids(draft.text):
+                raise ResponseIntegrityError("education_citation_mismatch")
+            return ConversationOutcome(
+                "GENERAL_EDUCATION", draft.text, route=route.value,
+                provider=self._generator.provider.value, model=self._generator.model,
+            )
+        except Exception:
+            return ConversationOutcome(
+                "GENERATION_UNAVAILABLE", GENERATION_UNAVAILABLE, route=route.value,
+            )
+
+    def _general(self, text: str, route: Route) -> ConversationOutcome:
+        if self._generator is None:
+            return ConversationOutcome(
+                "CONVERSATION", GENERAL_RESPONSE, route=route.value,
+            )
+        request = GenerationRequest(
+            (
+                "You are a friendly conversational assistant in a research demonstration. "
+                "Answer ordinary, non-clinical conversation naturally and concisely. Do not "
+                "diagnose, estimate personal health risk, prescribe treatment, or claim to have "
+                "searched evidence. If the user asks for medical advice, direct them to an "
+                "appropriate professional. Return response_kind=conversation and no citations."
+            ),
+            text,
+        )
+        try:
+            draft = self._generator.generate(request)
+            if (draft.response_kind != "conversation" or draft.citation_ids
+                    or re.search(r"\[[A-Za-z0-9_-]+\]", draft.text)):
+                raise ResponseIntegrityError("general_conversation_contract_mismatch")
+        except Exception:
+            return ConversationOutcome(
+                "GENERATION_UNAVAILABLE", GENERATION_UNAVAILABLE, route=route.value,
+            )
+        return ConversationOutcome(
+            "CONVERSATION", draft.text, route=route.value,
+            provider=self._generator.provider.value, model=self._generator.model,
+        )
+
+    def _generate_general_evidence(
+        self, question: str, result: dict[str, Any],
+    ) -> tuple[str, list[str]]:
+        citations = result["citations"]
+        allowed_ids = [item["citation_id"] for item in citations]
+        evidence = "\n\n".join(
+            f"{item['citation_id']} | PMID {item.get('pmid') or 'unavailable'} | "
+            f"Title: {item.get('title', '')} | Passage: {item.get('exact_matched_text', '')} | "
+            f"Approved use: {item.get('bounded_use', '')}"
+            for item in citations
+        )
+        request = GenerationRequest(
+            (
+                "You are answering a general mental-health research question from only the "
+                "retrieved appraised passages supplied below. Do not use outside knowledge. "
+                "Give a concise plain-language answer, distinguish association from causation, "
+                "and do not diagnose, prescribe, or personalize risk. Cite every factual paragraph "
+                "with one or more allowed IDs in square brackets. Do not repeat general disclaimers; "
+                "the interface already displays them. Return response_kind=grounded_answer and list "
+                "the citation IDs you used."
+            ),
+            question,
+            f"ALLOWED_CITATION_IDS: {allowed_ids}\n\n{evidence}",
+        )
+        draft = self._generator.generate(request)
+        if draft.response_kind == "refusal":
+            raise EvidenceAbstention("retrieved_passages_do_not_support_answer")
+        used_ids = self._validate_general_evidence_draft(
+            draft.response_kind, draft.text, draft.citation_ids, allowed_ids, citations,
+        )
+        text = draft.text.strip()
+        if not self._inline_citation_ids(text):
+            text = f"{text} {' '.join(f'[{item}]' for item in used_ids)}"
+        return text, used_ids
+
+    @staticmethod
+    def _inline_citation_ids(text: str) -> list[str]:
+        ids: list[str] = []
+        for group in re.findall(r"\[([^\]]+)\]", text):
+            ids.extend(re.findall(r"\bS\d+\b", group))
+        return ids
+
+    @staticmethod
+    def _validate_general_evidence_draft(
+        response_kind: str, text: str, citation_ids: list[str],
+        allowed_ids: list[str], citations: list[dict[str, Any]],
+    ) -> list[str]:
+        inline_ids = ProtectedConversationOrchestrator._inline_citation_ids(text)
+        reported_ids = [
+            match
+            for item in citation_ids
+            for match in re.findall(r"\bS\d+\b", item)
+        ]
+        if (response_kind not in {"grounded_answer", "conversation"}
+                or any(item not in allowed_ids for item in inline_ids)
+                or any(item not in allowed_ids for item in reported_ids)):
+            raise ResponseIntegrityError("general_evidence_contract_mismatch")
+        for citation in citations:
+            excerpt = citation.get("exact_matched_text")
+            if excerpt and len(excerpt) > 200 and excerpt in text:
+                raise ResponseIntegrityError("raw_evidence_excerpt_in_prose")
+        used_ids = list(dict.fromkeys(inline_ids))
+        if not used_ids:
+            used_ids = list(dict.fromkeys(reported_ids))
+        if not used_ids:
+            raise EvidenceAbstention("no_sources_identified_by_generator")
+        return used_ids
+
+    def explain_assessment(self, result: dict[str, Any]) -> dict[str, Any]:
+        positive = str(result["positive_symptom_research_probability"])
+        negative = str(result["negative_symptom_research_probability"])
+        profile = str(result.get("generic_profile_version", "generic_genetic_profile_v1"))
+        fallback = (
+            "The model result was calculated, but its plain-language explanation could not be "
+            "generated right now. The displayed values have not been changed."
+        )
+        if self._generator is None:
+            return {
+                "message": fallback, "provider": None, "model": None,
+                "generated_by_llm": False,
+            }
+        request = GenerationRequest(
+            (
+                "Explain two fixed research-model outputs in clear, calm language. Preserve both "
+                "percentage strings exactly and use no other percentages. State that they are "
+                "separate model estimates, not a combined score. Explain in everyday language that "
+                "the positive-symptom estimate concerns psychotic and manic symptom patterns and the "
+                "negative-symptom estimate concerns depressive symptom patterns. Explain what the two "
+                "specific values mean without inventing low/medium/high thresholds or causes. Mention "
+                "that a larger value means a larger model estimate for that symptom category; avoid "
+                "interpreting the percentage as how many similar people will develop a condition. "
+                "only once that this is a synthetic-data research model rather than a diagnosis. Refer "
+                f"to {profile} as a generic, non-personalized genetic baseline; do not expose the "
+                "internal identifier. Write one cohesive paragraph of at most four sentences. Do not "
+                "append a separate disclaimer or repeat any point. Return response_kind=conversation "
+                "and no citations."
+            ),
+            f"Positive-symptom output: {positive}\nNegative-symptom output: {negative}",
+        )
+        generated = False
+        message = fallback
+        for _attempt in range(2):
+            try:
+                draft = self._generator.generate(request)
+                percentages = re.findall(r"\d+(?:\.\d+)?%", draft.text)
+                lowered = draft.text.casefold()
+                required = (
+                    draft.response_kind == "conversation"
+                    and not draft.citation_ids
+                    and sorted(percentages) == sorted([positive, negative])
+                    and all(term in lowered for term in ("psychotic", "manic", "depressive"))
+                )
+                if not required:
+                    raise ResponseIntegrityError("assessment_explanation_contract_mismatch")
+                message = draft.text.strip()
+                generated = True
+                break
+            except Exception:
+                continue
+        return {
+            "message": message,
+            "provider": self._generator.provider.value if generated else None,
+            "model": self._generator.model if generated else None,
+            "generated_by_llm": generated,
+        }
 
     def _generate_validated(self, result: dict[str, Any]) -> str:
         answer = result["answer"]

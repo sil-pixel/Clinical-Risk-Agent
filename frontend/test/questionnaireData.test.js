@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  DO_NOT_REMEMBER_ID,
   allQuestions,
   getOptionsForQuestion,
   modelQuestionCount,
@@ -102,8 +101,8 @@ test("public questionnaire copy contains no internal model identifiers", () => {
   }
 });
 
-test("memory-unknown state is not a scored option", () => {
+test("questionnaire offers only scored options", () => {
   for (const item of allQuestions) {
-    assert.ok(getOptionsForQuestion(item).every((option) => option.id !== DO_NOT_REMEMBER_ID));
+    assert.ok(getOptionsForQuestion(item).every((option) => /^o\d{2}$/.test(option.id)));
   }
 });

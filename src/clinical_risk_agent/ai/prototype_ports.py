@@ -22,7 +22,7 @@ from .routing import (
 )
 
 POLICY_VERSION = "prototype-safety-rules-v1"
-ROUTER_VERSION = "prototype-bounded-router-v1"
+ROUTER_VERSION = "prototype-conversational-router-v2"
 
 
 def _normalized(text: str) -> str:
@@ -93,7 +93,8 @@ class PrototypeIntentPort:
     _topics = {
         "adhd", "autism", "asd", "bullying", "cyberbullying", "substance", "alcohol",
         "cannabis", "smoking", "nicotine", "genetic", "genetics", "depression",
-        "schizophrenia", "psychosis", "abuse", "adverse childhood", "ace",
+        "schizophrenia", "psychosis", "bipolar", "mania", "anxiety", "ocd", "ptsd",
+        "trauma", "mental health", "psychiatric", "abuse", "adverse childhood", "ace",
     }
     _research_terms = {
         "association", "associated", "research", "evidence", "study", "studies",
@@ -122,10 +123,14 @@ class PrototypeIntentPort:
             "explain my result", "explain my risk", "what does my score mean",
         )):
             return self._decision(Intent.EXPLAIN_MY_RISK, 1.0, False, "result_explanation")
-        if tokens & self._topics and (tokens & self._research_terms or "?" in text):
-            return self._decision(Intent.SCIENTIFIC_QUESTION, 0.95, False, "bounded_research")
+        educational_phrases = ("tell me about", "what is", "what are", "explain", "describe")
+        if tokens & self._topics and (
+            tokens & self._research_terms or "?" in text
+            or any(phrase in normalized for phrase in educational_phrases)
+        ):
+            return self._decision(Intent.SCIENTIFIC_QUESTION, 0.95, False, "research_education")
         if normalized in {"hi", "hello", "hey", "good morning", "good afternoon", "good evening"}:
             return self._decision(Intent.GENERAL_CONVERSATION, 1.0, False, "greeting")
         if len(tokens) < 3:
             return self._decision(Intent.UNSUPPORTED_OR_UNSAFE, 0.0, True, "too_ambiguous")
-        return self._decision(Intent.UNSUPPORTED_OR_UNSAFE, 1.0, False, "outside_bounded_scope")
+        return self._decision(Intent.GENERAL_CONVERSATION, 0.9, False, "general_conversation")

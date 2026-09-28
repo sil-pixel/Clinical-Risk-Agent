@@ -51,12 +51,14 @@ class ResearchService(Protocol):
     def ready(self) -> tuple[bool, str | None]: ...
     def answer(self, question_id: str) -> dict[str, Any]: ...
     def answer_text(self, question: str) -> dict[str, Any]: ...
+    def search_general(self, question: str) -> dict[str, Any]: ...
     def close(self) -> None: ...
 
 
 class ConversationService(Protocol):
     def handle(self, text: str, *, deployment_mode: str,
                session_valid: bool) -> dict[str, Any]: ...
+    def explain_assessment(self, result: dict[str, Any]) -> dict[str, Any]: ...
     def close(self) -> None: ...
 
 
@@ -174,6 +176,9 @@ class LocalResearchService:
 
     def answer_text(self, question: str) -> dict[str, Any]:
         return self._load().answerer.answer(question)
+
+    def search_general(self, question: str) -> dict[str, Any]:
+        return self._load().search_general(question)
 
     def close(self) -> None:
         if self._runtime is not None:
@@ -555,6 +560,19 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                     ),
                     timeout=settings.request_timeout_seconds,
                 )
+                if result.get("status") == "assessment_ready":
+                    explainer = getattr(conversation, "explain_assessment", None)
+                    if explainer is not None:
+                        explanation = await asyncio.wait_for(
+                            asyncio.to_thread(explainer, result["result"]),
+                            timeout=settings.request_timeout_seconds,
+                        )
+                        result["explanation"] = explanation["message"]
+                        result["explanation_provider"] = explanation.get("provider")
+                        result["explanation_model"] = explanation.get("model")
+                        result["explanation_generated_by_llm"] = explanation.get(
+                            "generated_by_llm", False,
+                        )
             except TimeoutError:
                 return _error("REQUEST_DEADLINE_EXPIRED", "The assessment timed out safely.",
                               "workflow", 504, retryable=True)

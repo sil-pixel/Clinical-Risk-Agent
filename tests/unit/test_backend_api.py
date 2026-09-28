@@ -49,6 +49,14 @@ class FakeResearch:
             "claim_id": None, "citations": [], "related_unverified_passages": [],
         }
 
+    def search_general(self, question: str):
+        self.calls.append(question)
+        return {
+            "status": "no_adequate_evidence", "answer": "No adequate evidence.",
+            "limitation": "Research only.", "citations": [],
+            "corpus_version": "fixture-corpus",
+        }
+
     def close(self):
         self.closed = True
 
@@ -66,6 +74,16 @@ class FakeConversation:
             "limitation": "Research only.", "actions": [],
             "route": "scientific_retrieval", "provider": "gemini",
             "model": "fixture-model", "corpus_version": "fixture-corpus",
+        }
+
+    def explain_assessment(self, result):
+        return {
+            "message": (
+                f"Separate fixture explanation for "
+                f"{result['positive_symptom_research_probability']} and "
+                f"{result['negative_symptom_research_probability']}."
+            ),
+            "provider": "gemini", "model": "fixture-model", "generated_by_llm": True,
         }
 
 
@@ -245,8 +263,10 @@ class BackendAPITests(unittest.TestCase):
 
     def test_public_questionnaire_contract_and_submission(self) -> None:
         assessment = FakeAssessment()
+        conversation = FakeConversation()
         with TestClient(create_app(
-            self.settings, service=self.service, assessment=assessment, clock=self.clock,
+            self.settings, service=self.service, conversation=conversation,
+            assessment=assessment, clock=self.clock,
         )) as client:
             token = client.post("/v1/session", headers=self.origin).json()["session_token"]
             requirements = client.get(
@@ -270,6 +290,8 @@ class BackendAPITests(unittest.TestCase):
             self.assertEqual(response.json()["result"][
                 "positive_symptom_research_probability"
             ], "12.3%")
+            self.assertIn("12.3%", response.json()["explanation"])
+            self.assertTrue(response.json()["explanation_generated_by_llm"])
             self.assertEqual(len(assessment.calls), 1)
             forged = client.post(
                 "/v1/assessments", headers=self.auth(token), json={

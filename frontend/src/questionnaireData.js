@@ -1,8 +1,6 @@
 const makeOptions = (labels) =>
   labels.map((label, index) => ({ id: `o${String(index + 1).padStart(2, "0")}`, label }));
 
-export const DO_NOT_REMEMBER_ID = "memory_unknown";
-
 export const optionSets = Object.freeze({
   tobaccoSix: makeOptions([
     "I had never used it",
