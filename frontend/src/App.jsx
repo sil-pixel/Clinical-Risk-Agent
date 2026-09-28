@@ -216,7 +216,7 @@ function App() {
       )}
 
       {view === "chat" ? (
-        <ChatWorkspace key={sessionToken || "no-session"} token={sessionToken}
+        <ChatWorkspace token={sessionToken}
           sessionError={sessionError} onOpenQuestionnaire={() => setView("questionnaire")}
           onReset={resetSession} />
       ) : (

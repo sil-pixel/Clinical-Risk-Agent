@@ -31,9 +31,12 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
   const [input, setInput] = useState("");
   const [phase, setPhase] = useState("");
   const [busy, setBusy] = useState(false);
-  const endRef = useRef(null);
+  const threadRef = useRef(null);
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [messages, phase]);
+  useEffect(() => {
+    const thread = threadRef.current;
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  }, [messages, phase]);
 
   const submit = async (event, suppliedText) => {
     event?.preventDefault();
@@ -134,7 +137,7 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
           ))}
         </div>
 
-        <section className="chat-thread" aria-live="polite">
+        <section className="chat-thread" aria-live="polite" ref={threadRef}>
           {messages.map((message, index) => (
             <article className={`chat-message chat-message--${message.role}`} key={`${message.role}-${index}`}>
               <strong>{message.role === "user" ? "You" : "Assistant"}</strong>
@@ -155,8 +158,16 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
             </article>
           ))}
           {phase && <div className="chat-status" role="status">{phase}</div>}
-          {sessionError && <div className="validation-summary" role="alert">{sessionError}</div>}
-          <div ref={endRef} />
+          {sessionError && (
+            <div className="validation-summary" role="alert">
+              <strong>Private session unavailable</strong>
+              <span>{sessionError}</span>
+              <button className="button button--secondary" type="button" onClick={onReset}>
+                Reconnect private session
+              </button>
+            </div>
+          )}
+          {!token && !sessionError && <div className="chat-status">Connecting private session…</div>}
         </section>
 
         <form className="chat-composer" onSubmit={submit}>

@@ -317,6 +317,19 @@ class BackendSettingsTests(unittest.TestCase):
                 **base, llm_provider="unknown", llm_model="model", llm_api_key="key",
             )
 
+    def test_local_session_creation_limit_is_configurable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".env").write_text(
+                "SESSION_SIGNING_KEY=fixture-session-signing-key-32-bytes\n"
+                "ALLOWED_ORIGINS=http://localhost:5173\n"
+                "SESSION_CREATIONS_PER_NETWORK_HOUR=25\n",
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                settings = BackendSettings.from_env(root=root)
+            self.assertEqual(settings.session_creations_per_network_hour, 25)
+
 
 if __name__ == "__main__":
     unittest.main()

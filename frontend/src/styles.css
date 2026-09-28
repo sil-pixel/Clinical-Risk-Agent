@@ -24,6 +24,8 @@ html { scroll-behavior: smooth; }
 
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 
+.startup-error { max-width: 680px; padding: 40px; margin: 64px auto; background: white; border: 1px solid #d8e3e1; border-radius: 16px; }
+
 button, input { font: inherit; }
 
 button { cursor: pointer; }

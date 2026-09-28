@@ -60,6 +60,14 @@ class BackendSettings:
         origins = tuple(item.strip() for item in os.getenv(
             "ALLOWED_ORIGINS", "http://localhost:5173",
         ).split(",") if item.strip())
+        try:
+            session_creation_limit = int(os.getenv(
+                "SESSION_CREATIONS_PER_NETWORK_HOUR", "5",
+            ))
+        except ValueError as error:
+            raise ValueError("SESSION_CREATIONS_PER_NETWORK_HOUR must be an integer") from error
+        if session_creation_limit < 1:
+            raise ValueError("SESSION_CREATIONS_PER_NETWORK_HOUR must be positive")
         return cls(
             root=resolved_root,
             session_signing_key=secret.encode("utf-8"),
@@ -67,4 +75,5 @@ class BackendSettings:
             llm_provider=os.getenv("LLM_PROVIDER") or None,
             llm_model=os.getenv("LLM_MODEL") or None,
             llm_api_key=os.getenv("LLM_API_KEY") or None,
+            session_creations_per_network_hour=session_creation_limit,
         )

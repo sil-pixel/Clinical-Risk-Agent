@@ -6,7 +6,10 @@ export async function createSession() {
   if (!pendingSession) {
     pendingSession = (async () => {
       const response = await fetch(`${API_BASE}/v1/session`, { method: "POST" });
-      if (!response.ok) throw new Error("Unable to create a private session.");
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload.error?.message || "Unable to create a private session.");
+      }
       return response.json();
     })().finally(() => {
       pendingSession = null;
