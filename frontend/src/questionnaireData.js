@@ -36,14 +36,14 @@ export const optionSets = Object.freeze({
     "This clearly described me",
   ]),
   bullyingFrequency: makeOptions([
-    "This did not happen during the few months around age 15",
+    "This did not happen during age 15",
     "It happened once or twice",
     "It happened two or three times a month",
     "It happened about once a week",
     "It happened several times a week",
   ]),
   bullyingPeople: makeOptions([
-    "I was not bullied during the few months around age 15",
+    "I was not bullied during age 15",
     "Usually one person was involved",
     "Usually two or three people were involved",
     "Usually four to nine people were involved",
@@ -51,7 +51,7 @@ export const optionSets = Object.freeze({
     "Different people or groups were involved at different times",
   ]),
   bullyingDuration: makeOptions([
-    "I was not bullied during the few months around age 15",
+    "I was not bullied during age 15",
     "It continued for one or two weeks",
     "It continued for about one month",
     "It continued for about six months",
@@ -90,10 +90,9 @@ export const optionSets = Object.freeze({
 /** Create a public question record without exposing internal model feature names. */
 const question = (id, prompt, optionSet, note) => ({ id, prompt, optionSet, note });
 
-export const questionnaireSections = Object.freeze([
+const sectionDefinitions = [
   {
     id: "s01",
-    eyebrow: "Section 1 of 9",
     title: "Substance use around age 15",
     description: "Thinking back now, choose the statement that best reflects what your substance use was like when you were around 15.",
     questions: [
@@ -112,7 +111,6 @@ export const questionnaireSections = Object.freeze([
   },
   {
     id: "s02",
-    eyebrow: "Section 2 of 9",
     title: "Experiences and wellbeing around age 15",
     description: "These questions ask about experiences and feelings. They do not diagnose or label you.",
     questions: [
@@ -143,7 +141,6 @@ export const questionnaireSections = Object.freeze([
   },
   {
     id: "s03",
-    eyebrow: "Section 3 of 9",
     title: "Attention and activity during childhood",
     description: "Think about yourself at around age 9 compared with other children of a similar age.",
     questions: [
@@ -170,7 +167,6 @@ export const questionnaireSections = Object.freeze([
   },
   {
     id: "s04",
-    eyebrow: "Section 4 of 9",
     title: "Communication and flexibility during childhood",
     description: "Think about yourself at around age 9 compared with other children of a similar age.",
     questions: [
@@ -195,7 +191,6 @@ export const questionnaireSections = Object.freeze([
   },
   {
     id: "s05",
-    eyebrow: "Section 5 of 9",
     title: "Bullying experiences around age 15",
     description: "Thinking back now, answer these questions about bullying during the few months around age 15.",
     questions: [
@@ -205,24 +200,32 @@ export const questionnaireSections = Object.freeze([
       question("q069", "During the few months around age 15, how often did someone spread an untrue or harmful story about you?", "bullyingFrequency"),
       question("q070", "When bullying happened around age 15, how many people were usually involved?", "bullyingPeople"),
       question("q071", "When bullying happened around age 15, how long did it continue?", "bullyingDuration"),
-      question("q072", "During the few months around age 15, how often were you bullied in a way not covered by the other examples in this section?", "bullyingFrequency"),
+      question(
+        "q072",
+        "During the few months around age 15, how often were you bullied in a way not covered by the other examples in this section?",
+        "bullyingFrequency",
+        "Other types include bullying related to race or ethnicity, sexual comments or behaviour, online bullying, bullying involving money or belongings, threats, or physical bullying such as hitting or pushing.",
+      ),
     ],
   },
   {
     id: "s06",
-    eyebrow: "Section 6 of 9",
     title: "Difficult or harmful experiences reported at age 18",
     description: "Thinking back, consider experiences that had happened by the time you were 18.",
     questions: [
       question("q073", "By age 18, had you experienced violence that you believed was motivated by prejudice against an aspect of your identity?", "occurrenceTwo"),
       question("q074", "By age 18, had someone repeatedly humiliated, rejected, intimidated, or emotionally harmed you?", "occurrenceTwo"),
       question("q075", "By age 18, had you directly witnessed a threatening or violent crime in person, rather than through media?", "occurrenceTwo"),
-      question("q076", "By age 18, had you experienced another serious or harmful event not covered by the other questions in this section?", "occurrenceTwo"),
+      question(
+        "q076",
+        "By age 18, had you experienced another serious or harmful event not covered by the other questions in this section?",
+        "occurrenceTwo",
+        "Other events include sexual abuse or assault, physical abuse, neglect of basic physical needs (such as food, clothing, shelter, or care), or witnessing physical violence.",
+      ),
     ],
   },
   {
     id: "s07",
-    eyebrow: "Section 7 of 9",
     title: "Substance use around age 18",
     description: "Thinking back now, choose the statement that best reflects your substance use when you were around 18.",
     questions: [
@@ -239,7 +242,6 @@ export const questionnaireSections = Object.freeze([
   },
   {
     id: "s08",
-    eyebrow: "Section 8 of 9",
     title: "Family background",
     description: "These questions ask about parental education and birthplace.",
     questions: [
@@ -251,7 +253,6 @@ export const questionnaireSections = Object.freeze([
   },
   {
     id: "s09",
-    eyebrow: "Section 9 of 9",
     title: "Sex supported by the current research model",
     description: "The current research model supports only the two training categories shown below.",
     questions: [
@@ -263,7 +264,18 @@ export const questionnaireSections = Object.freeze([
       ),
     ],
   },
-]);
+];
+
+// Begin with background questions, then progress through ages 9, 15 and 18.
+// Stable section/question IDs remain independent of their display positions.
+const sectionDisplayOrder = ["s09", "s08", "s03", "s04", "s01", "s02", "s05", "s06", "s07"];
+
+export const questionnaireSections = Object.freeze(
+  sectionDisplayOrder.map((id, index) => ({
+    ...sectionDefinitions.find((section) => section.id === id),
+    eyebrow: `Section ${index + 1} of ${sectionDisplayOrder.length}`,
+  })),
+);
 
 export const allQuestions = Object.freeze(
   questionnaireSections.flatMap((section) =>

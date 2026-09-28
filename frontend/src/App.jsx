@@ -379,6 +379,33 @@ function App() {
               })}
             </div>
 
+            {currentSectionIndex === questionnaireSections.length - 1 && (
+              <Notice tone={overallStatus.ready ? "success" : "warning"}>
+                <strong id="calculation-status">Protected model calculation</strong>{" "}
+                {overallStatus.unanswered > 0 && `${overallStatus.unanswered} questions remain unanswered. `}
+                Complete all questions and attestations below before calculating.
+              </Notice>
+            )}
+
+            {currentSectionIndex === questionnaireSections.length - 1 && (
+              <section className="attestation-card" aria-labelledby="attestation-title">
+                <h2 id="attestation-title">Before calculating</h2>
+                {[
+                  ["age_18_or_over", "I confirm that I am aged 18 or over."],
+                  ["self_assessment", "I am completing this questionnaire only about myself."],
+                  ["research_only_consent", "I understand this is a research demonstration, not clinical care."],
+                ].map(([id, label]) => (
+                  <label key={id}>
+                    <input type="checkbox" checked={attestations[id]}
+                      onChange={(event) => setAttestations((current) => ({
+                        ...current, [id]: event.target.checked,
+                      }))} />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </section>
+            )}
+
             <div className="navigation-card">
               <div>
                 <strong>{sectionStatus.answered} of {currentSection.questions.length} answered</strong>
@@ -411,33 +438,6 @@ function App() {
               </div>
             </div>
           </form>
-
-          {currentSectionIndex === questionnaireSections.length - 1 && (
-            <Notice tone={overallStatus.ready ? "success" : "warning"}>
-              <strong id="calculation-status">Protected model calculation</strong>{" "}
-              {overallStatus.unanswered > 0 && `${overallStatus.unanswered} questions remain unanswered. `}
-              Complete all questions and attestations below before calculating.
-            </Notice>
-          )}
-
-          {currentSectionIndex === questionnaireSections.length - 1 && (
-            <section className="attestation-card" aria-labelledby="attestation-title">
-              <h2 id="attestation-title">Before calculating</h2>
-              {[
-                ["age_18_or_over", "I confirm that I am aged 18 or over."],
-                ["self_assessment", "I am completing this questionnaire only about myself."],
-                ["research_only_consent", "I understand this is a research demonstration, not clinical care."],
-              ].map(([id, label]) => (
-                <label key={id}>
-                  <input type="checkbox" checked={attestations[id]}
-                    onChange={(event) => setAttestations((current) => ({
-                      ...current, [id]: event.target.checked,
-                    }))} />
-                  <span>{label}</span>
-                </label>
-              ))}
-            </section>
-          )}
 
           {assessmentResult && (
             <section className="result-card" aria-labelledby="result-title">

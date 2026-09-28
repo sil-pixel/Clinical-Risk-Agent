@@ -27,6 +27,25 @@ change. All other questions retain their previous feature mappings. The backend 
 by feature name and emits all 105 values in each checkpoint's original schema order.
 Neither checkpoint nor its metadata is renamed, reordered or retrained.
 
+## Section presentation order
+
+On 2026-09-28 Silpa requested the simple background sections first, followed by
+chronological recall sections. The displayed sequence is now:
+
+1. Family background (stable section ID s08)
+2. Sex supported by the current research model (s09)
+3. Attention and activity during childhood, around age 9 (s03)
+4. Communication and flexibility during childhood, around age 9 (s04)
+5. Substance use around age 15 (s01)
+6. Experiences and wellbeing around age 15 (s02)
+7. Bullying experiences around age 15 (s05)
+8. Difficult or harmful experiences reported at age 18 (s06)
+9. Substance use around age 18 (s07)
+
+Visible section numbers derive from presentation position. Section IDs, question
+IDs, option codes and backend feature mappings are unchanged, so this display-only
+reorder retains `prototype_questionnaire_v2` and the original checkpoint input order.
+
 ## Timeframe limitation
 
 The user revised q007 from age 9 to age 15. Its legacy checkpoint feature remains
