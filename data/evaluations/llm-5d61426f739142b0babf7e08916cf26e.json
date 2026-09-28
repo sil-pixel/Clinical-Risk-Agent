@@ -1,0 +1,59 @@
+{
+  "kind": "llm",
+  "dataset": "RAG_GENERAL_ASSOCIATION_GOLD_21_SOURCE.json",
+  "dataset_sha256": "59b8367b62f040aea6121da26acb02b1e5a14ba3418bf917cc308ecaa2a33a15",
+  "corpus_sha256": "3a0fb23ca8681f2918ed53cee7235df5e877468bcfa73cf156b4359b8b12c4a6",
+  "model": "gemini-3.5-flash-lite",
+  "provider": "gemini",
+  "judge_model": "gemini-3.5-flash-lite",
+  "metrics": {
+    "groundedness": null,
+    "correctness": null,
+    "answer_coverage": 0.0,
+    "n": 5,
+    "grounded_n": 0,
+    "judge_errors": 0,
+    "generation_errors": 5
+  },
+  "cases": [
+    {
+      "case_id": "GEN-01",
+      "response_kind": "GENERATION_UNAVAILABLE",
+      "groundedness": null,
+      "correctness": null,
+      "answered": false
+    },
+    {
+      "case_id": "GEN-02",
+      "response_kind": "GENERATION_UNAVAILABLE",
+      "groundedness": null,
+      "correctness": null,
+      "answered": false
+    },
+    {
+      "case_id": "GEN-03",
+      "response_kind": "GENERATION_UNAVAILABLE",
+      "groundedness": null,
+      "correctness": null,
+      "answered": false
+    },
+    {
+      "case_id": "GEN-04",
+      "response_kind": "GENERATION_UNAVAILABLE",
+      "groundedness": null,
+      "correctness": null,
+      "answered": false
+    },
+    {
+      "case_id": "GEN-05",
+      "response_kind": "GENERATION_UNAVAILABLE",
+      "groundedness": null,
+      "correctness": null,
+      "answered": false
+    }
+  ],
+  "note": "Initial 5 of 20 frozen gold cases: all generation calls failed, so quality metrics are unscored. Provider read timeout was separately reproduced. Generation failures are excluded from correctness; answer coverage is zero. Judge and answer generator use the same model. Groundedness excludes answers without corpus passages.",
+  "schema_version": 1,
+  "created_at": "2026-09-28T12:01:27.397657+00:00",
+  "run_id": "5d61426f739142b0babf7e08916cf26e"
+}

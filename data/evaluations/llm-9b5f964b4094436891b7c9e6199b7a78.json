@@ -1,0 +1,31 @@
+{
+  "kind": "llm",
+  "dataset": "RAG_GENERAL_ASSOCIATION_GOLD_21_SOURCE.json",
+  "dataset_sha256": "59b8367b62f040aea6121da26acb02b1e5a14ba3418bf917cc308ecaa2a33a15",
+  "corpus_sha256": "3a0fb23ca8681f2918ed53cee7235df5e877468bcfa73cf156b4359b8b12c4a6",
+  "model": "gemini-3.5-flash-lite",
+  "provider": "gemini",
+  "judge_model": "gemini-3.5-flash-lite",
+  "metrics": {
+    "groundedness": 1.0,
+    "correctness": 0.9,
+    "answer_coverage": 1.0,
+    "n": 1,
+    "grounded_n": 1,
+    "generation_errors": 0,
+    "judge_errors": 0
+  },
+  "cases": [
+    {
+      "case_id": "GEN-01",
+      "response_kind": "GROUNDED_ANSWER",
+      "groundedness": 1.0,
+      "correctness": 0.9,
+      "answered": true
+    }
+  ],
+  "note": "Automated judge on 1 of 20 frozen research-only gold cases. Judge and answer generator use the same model; scores are not independent. Abstention on answerable cases counts as zero correctness; generation and judge errors are excluded and reported. Groundedness excludes answers without corpus passages.",
+  "schema_version": 1,
+  "created_at": "2026-09-28T12:11:50.038172+00:00",
+  "run_id": "9b5f964b4094436891b7c9e6199b7a78"
+}

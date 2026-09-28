@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import threading
 import time
@@ -38,6 +39,7 @@ from clinical_risk_agent.rag.runtime import ResearchRuntime
 
 from .sessions import SessionStore
 from .settings import BackendSettings
+from .monitoring import Monitor
 
 API_VERSION = "v1"
 USAGE_LIMIT_MESSAGE = (
@@ -95,6 +97,9 @@ class LocalAssessmentService:
                     routing, MLAssessmentAdapter(positive, negative),
                 )
             return self._graph
+
+    def warmup(self) -> None:
+        self._load()
 
     @staticmethod
     def requirements() -> dict[str, Any]:
@@ -269,19 +274,66 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     model_capacity = CapacityGate(settings.max_model_concurrency)
     http_capacity = CapacityGate(settings.max_http_concurrency)
     now = clock
+    monitor = Monitor(settings.root)
+    assessment_results: dict[str, tuple[float, dict[str, Any]]] = {}
+    explanation_tasks: set[asyncio.Task] = set()
+    explanation_capacity = asyncio.Semaphore(settings.max_model_concurrency)
+
+    def assessment_key(token: str) -> str:
+        return hashlib.sha256(token.encode()).hexdigest()
+
+    def prune_assessments() -> None:
+        cutoff = time.monotonic() - settings.session_ttl_seconds
+        for key, (created, _) in tuple(assessment_results.items()):
+            if created < cutoff:
+                del assessment_results[key]
+
+    async def explain_result(result: dict[str, Any]):
+        started = time.monotonic()
+        async def generate():
+            async with explanation_capacity:
+                return await asyncio.to_thread(conversation.explain_assessment, dict(result["result"]))
+        try:
+            explanation = await asyncio.wait_for(
+                generate(),
+                timeout=settings.request_timeout_seconds,
+            )
+            result.update({
+                "explanation": explanation["message"],
+                "explanation_provider": explanation.get("provider"),
+                "explanation_model": explanation.get("model"),
+                "explanation_generated_by_llm": explanation.get("generated_by_llm", False),
+                "explanation_status": "ready" if explanation.get("generated_by_llm") else "unavailable",
+            })
+            monitor.record("assessment_explanation", result["explanation_status"],
+                           time.monotonic() - started)
+        except Exception:
+            result["explanation_status"] = "unavailable"
+            result["explanation"] = "Your scores are ready, but the explanation is temporarily unavailable."
+            monitor.record("assessment_explanation", "error", time.monotonic() - started)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         try:
+            warmup = getattr(assessment, "warmup", None)
+            if warmup is not None:
+                started = time.monotonic()
+                await asyncio.to_thread(warmup)
+                monitor.record("model_startup", "ready", time.monotonic() - started)
             yield
         finally:
+            for task in explanation_tasks:
+                task.cancel()
+            if explanation_tasks:
+                await asyncio.gather(*explanation_tasks, return_exceptions=True)
+            assessment_results.clear()
             research.close()
             close_conversation = getattr(conversation, "close", None)
             if close_conversation is not None:
                 close_conversation()
 
     app = FastAPI(
-        title="Clinical Risk Research API", version="0.1.0", lifespan=lifespan,
+        title="Bodhica API", version="0.1.0", lifespan=lifespan,
         docs_url=None, redoc_url=None, openapi_url=None,
     )
     app.add_middleware(
@@ -379,6 +431,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     @app.delete("/v1/session")
     async def delete_session(token: str = Depends(bearer)):
         sessions.delete(token)
+        assessment_results.pop(assessment_key(token), None)
         return {"api_version": API_VERSION, "status": "session_cleared"}
 
     @app.get("/v1/research/questions")
@@ -428,6 +481,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.post("/v1/messages")
     async def submit_message(payload: MessageRequest, token: str = Depends(bearer)):
+        started = time.monotonic()
         if not model_capacity.acquire():
             return _error("MODEL_CAPACITY_EXHAUSTED", "The research service is busy. Try again.",
                           "capacity", 503, retryable=True)
@@ -444,10 +498,13 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                     ),
                     timeout=settings.request_timeout_seconds,
                 )
+                monitor.record("chat", result["response_kind"], time.monotonic() - started)
             except TimeoutError:
+                monitor.record("chat", "timeout", time.monotonic() - started)
                 return _error("REQUEST_DEADLINE_EXPIRED", "The request timed out safely.",
                               "workflow", 504, retryable=True)
             except Exception:
+                monitor.record("chat", "error", time.monotonic() - started)
                 return _error("WORKFLOW_UNAVAILABLE", "The conversation workflow is unavailable.",
                               "workflow", 503, retryable=True)
         finally:
@@ -477,6 +534,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                 raise
 
             async def events():
+                started = time.monotonic()
                 try:
                     yield _sse("status", {"phase": "protected_preflight"}, 1)
                     yield _sse("status", {"phase": "retrieval_and_generation"}, 2)
@@ -488,7 +546,9 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                             ),
                             timeout=settings.request_timeout_seconds,
                         )
+                        monitor.record("chat", result["response_kind"], time.monotonic() - started)
                     except TimeoutError:
+                        monitor.record("chat", "timeout", time.monotonic() - started)
                         yield _sse("error", {
                             "code": "REQUEST_DEADLINE_EXPIRED",
                             "message": "The request timed out safely.",
@@ -496,6 +556,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                         }, 3)
                         return
                     except Exception:
+                        monitor.record("chat", "error", time.monotonic() - started)
                         yield _sse("error", {
                             "code": "WORKFLOW_UNAVAILABLE",
                             "message": "The conversation workflow is unavailable.",
@@ -541,6 +602,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.post("/v1/assessments")
     async def submit_assessment(payload: AssessmentRequest, token: str = Depends(bearer)):
+        started = time.monotonic()
         if not model_capacity.acquire():
             return _error("MODEL_CAPACITY_EXHAUSTED", "The model service is busy. Try again.",
                           "capacity", 503, retryable=True)
@@ -561,22 +623,23 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                     timeout=settings.request_timeout_seconds,
                 )
                 if result.get("status") == "assessment_ready":
+                    monitor.record("assessment_inference", "ready", time.monotonic() - started)
+                    prune_assessments()
+                    assessment_results[assessment_key(token)] = (time.monotonic(), result)
                     explainer = getattr(conversation, "explain_assessment", None)
                     if explainer is not None:
-                        explanation = await asyncio.wait_for(
-                            asyncio.to_thread(explainer, result["result"]),
-                            timeout=settings.request_timeout_seconds,
-                        )
-                        result["explanation"] = explanation["message"]
-                        result["explanation_provider"] = explanation.get("provider")
-                        result["explanation_model"] = explanation.get("model")
-                        result["explanation_generated_by_llm"] = explanation.get(
-                            "generated_by_llm", False,
-                        )
+                        result["explanation_status"] = "pending"
+                        task = asyncio.create_task(explain_result(result))
+                        explanation_tasks.add(task)
+                        task.add_done_callback(explanation_tasks.discard)
+                    else:
+                        result["explanation_status"] = "unavailable"
             except TimeoutError:
+                monitor.record("assessment_inference", "timeout", time.monotonic() - started)
                 return _error("REQUEST_DEADLINE_EXPIRED", "The assessment timed out safely.",
                               "workflow", 504, retryable=True)
             except Exception:
+                monitor.record("assessment_inference", "error", time.monotonic() - started)
                 return _error("INFERENCE_UNAVAILABLE", "The assessment is unavailable.",
                               "inference", 503, retryable=True)
         finally:
@@ -593,6 +656,42 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
             "inactivity_expires_in_seconds": settings.session_ttl_seconds,
             **result,
         })
+
+    @app.get("/v1/assessments/latest")
+    async def latest_assessment(token: str = Depends(bearer)):
+        sessions.authorize(token, renew=False, now=now() if now else None)
+        prune_assessments()
+        cached = assessment_results.get(assessment_key(token))
+        if cached is None:
+            return _error("ASSESSMENT_NOT_FOUND", "No assessment is available in this session.",
+                          "assessment", 404)
+        return {"api_version": API_VERSION, **cached[1]}
+
+    @app.get("/v1/evaluations/dashboard")
+    async def evaluation_dashboard(request: Request):
+        if (not request.client or request.client.host not in {"127.0.0.1", "::1", "testclient"}
+                or request.headers.get("x-forwarded-for")):
+            return _error("LOCAL_ACCESS_REQUIRED", "The evaluation dashboard is local-only.",
+                          "authorization", 403)
+        return await asyncio.to_thread(monitor.snapshot)
+
+    @app.post("/v1/assessments/explanation")
+    async def retry_explanation(token: str = Depends(bearer)):
+        sessions.authorize(token, renew=False, now=now() if now else None)
+        prune_assessments()
+        cached = assessment_results.get(assessment_key(token))
+        if cached is None:
+            return _error("ASSESSMENT_NOT_FOUND", "No assessment is available in this session.",
+                          "assessment", 404)
+        result = cached[1]
+        if result.get("explanation_status") != "pending":
+            sessions.consume_model_operation(token, now=now() if now else None)
+            result["explanation_status"] = "pending"
+            result.pop("explanation", None)
+            task = asyncio.create_task(explain_result(result))
+            explanation_tasks.add(task)
+            task.add_done_callback(explanation_tasks.discard)
+        return {"api_version": API_VERSION, **result}
 
     return app
 

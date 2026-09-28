@@ -1,0 +1,101 @@
+{
+  "kind": "ml",
+  "dataset": "Archived Thesis test results, five seeds",
+  "evaluation_type": "historical_multi_seed",
+  "targets": {
+    "positive": {
+      "rmse": 0.08929284312219223,
+      "mse": 0.007976795919239521,
+      "r2": 0.2232577919960022,
+      "spearman_rho": 0.4594070324284362,
+      "runs": [
+        {
+          "seed": 42,
+          "rmse": 0.0857051015346032,
+          "mse": 0.007345364429056644,
+          "r2": 0.2720823884010315,
+          "spearman_rho": 0.49645173023135897
+        },
+        {
+          "seed": 43,
+          "rmse": 0.09023158184699158,
+          "mse": 0.00814173836261034,
+          "r2": 0.2292678952217102,
+          "spearman_rho": 0.4784603469508856
+        },
+        {
+          "seed": 44,
+          "rmse": 0.091028635994204,
+          "mse": 0.00828621257096529,
+          "r2": 0.2135358452796936,
+          "spearman_rho": 0.44155858865490566
+        },
+        {
+          "seed": 45,
+          "rmse": 0.09035663785091935,
+          "mse": 0.008164322003722193,
+          "r2": 0.19323885440826416,
+          "spearman_rho": 0.4447088691925646
+        },
+        {
+          "seed": 46,
+          "rmse": 0.08914225838424299,
+          "mse": 0.00794634222984314,
+          "r2": 0.20816397666931152,
+          "spearman_rho": 0.43585562711246634
+        }
+      ]
+    },
+    "negative": {
+      "rmse": 0.15467160059046106,
+      "mse": 0.023926213011145593,
+      "r2": 0.21447540521621705,
+      "spearman_rho": 0.45239641813185616,
+      "runs": [
+        {
+          "seed": 42,
+          "rmse": 0.1519630149427486,
+          "mse": 0.023092757910490036,
+          "r2": 0.232477068901062,
+          "spearman_rho": 0.4452987512605477
+        },
+        {
+          "seed": 43,
+          "rmse": 0.1570240398668544,
+          "mse": 0.02465654909610748,
+          "r2": 0.2435898780822754,
+          "spearman_rho": 0.48300538129960446
+        },
+        {
+          "seed": 44,
+          "rmse": 0.15578941170787358,
+          "mse": 0.02427034080028534,
+          "r2": 0.21287518739700317,
+          "spearman_rho": 0.44499312587968654
+        },
+        {
+          "seed": 45,
+          "rmse": 0.15455051290488064,
+          "mse": 0.02388586103916168,
+          "r2": 0.19350939989089966,
+          "spearman_rho": 0.42575309683502316
+        },
+        {
+          "seed": 46,
+          "rmse": 0.15403102352994807,
+          "mse": 0.02372555620968342,
+          "r2": 0.18992549180984497,
+          "spearman_rho": 0.462931735384419
+        }
+      ]
+    }
+  },
+  "source_hashes": {
+    "Pos_test_results_per_seed.csv": "40734a7c54c99f8e0dc3c21f7d26a732ff35ba63330c489d94715af59ca3f007",
+    "Neg_test_results_per_seed.csv": "1e0056e69b1d6ef004bde7e5ad64442edf7330e017011797c0d427dea74a0731"
+  },
+  "note": "Historical thesis benchmarks; checkpoint identity is not linked to the deployed artifacts. Metrics are means across seeds; MSE is the mean of each seed's RMSE squared. These are not live accuracy measurements.",
+  "schema_version": 1,
+  "created_at": "2026-09-28T11:58:09.236381+00:00",
+  "run_id": "9d6f2b7200054a98be814c5db812f1c1"
+}

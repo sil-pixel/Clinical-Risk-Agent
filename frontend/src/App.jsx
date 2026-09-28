@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import ChatWorkspace from "./ChatWorkspace.jsx";
-import { createSession, deleteSession, submitAssessment } from "./api.js";
+import EvaluationDashboard from "./EvaluationDashboard.jsx";
+import { createSession, deleteSession, submitAssessment, getLatestAssessment,
+  retryAssessmentExplanation } from "./api.js";
 import {
   getOptionsForQuestion,
   questionnaireSections,
@@ -49,7 +51,8 @@ function Notice({ tone = "info", children }) {
 }
 
 function App() {
-  const [view, setView] = useState("chat");
+  const [view, setView] = useState(() =>
+    new URLSearchParams(window.location.search).get("view") === "evaluation" ? "evaluation" : "chat");
   const [sessionToken, setSessionToken] = useState("");
   const [sessionError, setSessionError] = useState("");
   const [answers, setAnswers] = useState({});
@@ -66,6 +69,25 @@ function App() {
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const inactivityTimer = useRef(null);
   const mainHeadingRef = useRef(null);
+
+  useEffect(() => {
+    if (assessmentResult?.explanation_status !== "pending" || !sessionToken) return;
+    let cancelled = false;
+    let timer;
+    const poll = async () => {
+      try {
+        const result = await getLatestAssessment(sessionToken);
+        if (!cancelled) setAssessmentResult(result);
+        if (!cancelled && result.explanation_status === "pending") {
+          timer = window.setTimeout(poll, 1500);
+        }
+      } catch {
+        if (!cancelled) timer = window.setTimeout(poll, 3000);
+      }
+    };
+    timer = window.setTimeout(poll, 1000);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [assessmentResult?.explanation_status, sessionToken]);
 
   const currentSection = questionnaireSections[currentSectionIndex];
   const overallStatus = useMemo(() => getQuestionnaireStatus(answers), [answers]);
@@ -190,10 +212,10 @@ function App() {
   return (
     <div className="app-shell">
       <header className="site-header">
-        <a className="brand" href="#main" aria-label="Clinical Risk Research Assistant home">
+        <a className="brand" href="#main" aria-label="Bodhica home">
           <ShieldIcon />
           <span>
-            <strong>Clinical Risk Research Assistant</strong>
+            <strong>Bodhica</strong>
             <small>Private, research-only demonstration</small>
           </span>
         </a>
@@ -202,6 +224,8 @@ function App() {
             type="button" onClick={() => setView("chat")}>Chat</button>
           <button className={`button ${view === "questionnaire" ? "button--primary" : "button--quiet"}`}
             type="button" onClick={() => setView("questionnaire")}>Questionnaire</button>
+          <button className={`button ${view === "evaluation" ? "button--primary" : "button--quiet"}`}
+            type="button" onClick={() => setView("evaluation")}>Evaluations</button>
           <button className="button button--quiet" type="button" onClick={resetSession}>
             Reset session
           </button>
@@ -214,7 +238,7 @@ function App() {
         </div>
       )}
 
-      {view === "chat" ? (
+      {view === "evaluation" ? <EvaluationDashboard /> : view === "chat" ? (
         <ChatWorkspace token={sessionToken}
           sessionError={sessionError} onOpenQuestionnaire={() => setView("questionnaire")}
           onReset={resetSession} />
@@ -403,11 +427,20 @@ function App() {
               <span className="eyebrow eyebrow--dark">Simulated research output</span>
               <h2 id="result-title">Assessment result</h2>
               <div className="result-grid">
-                <div><span>Positive-symptom estimate</span><strong>{assessmentResult.result.positive_symptom_research_probability}</strong></div>
-                <div><span>Negative-symptom estimate</span><strong>{assessmentResult.result.negative_symptom_research_probability}</strong></div>
+                <div><span>Positive-symptom estimate</span><strong>{assessmentResult.result.positive_symptom_research_probability}</strong><small>Includes hallucinations, delusions, psychotic and manic symptom patterns.</small></div>
+                <div><span>Negative-symptom estimate</span><strong>{assessmentResult.result.negative_symptom_research_probability}</strong><small>This model’s target reflects depressive symptoms, such as low mood and loss of interest.</small></div>
               </div>
               {assessmentResult.explanation && (
                 <p className="result-explanation">{assessmentResult.explanation}</p>
+              )}
+              {assessmentResult.explanation_status === "pending" && (
+                <p role="status">Your scores are ready. Preparing the explanation…</p>
+              )}
+              {assessmentResult.explanation_status === "unavailable" && (
+                <button className="button button--secondary" type="button" onClick={async () => {
+                  try { setAssessmentResult(await retryAssessmentExplanation(sessionToken)); }
+                  catch (error) { setValidationMessage(error.message); }
+                }}>Retry explanation</button>
               )}
             </section>
           )}

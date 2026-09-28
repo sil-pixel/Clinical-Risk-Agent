@@ -43,3 +43,19 @@ export async function submitAssessment(token, payload) {
   }
   return body;
 }
+
+export async function getLatestAssessment(token) {
+  const response = await fetch(`${API_BASE}/v1/assessments/latest`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error("Explanation unavailable");
+  return response.json();
+}
+
+export async function retryAssessmentExplanation(token) {
+  const response = await fetch(`${API_BASE}/v1/assessments/explanation`, {
+    method: "POST", headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error("Unable to retry the explanation right now.");
+  return response.json();
+}

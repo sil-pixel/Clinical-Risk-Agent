@@ -114,7 +114,7 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
       <aside className="chat-sidebar">
         <span className="eyebrow eyebrow--dark">Optional assessment</span>
         <h2>Research questionnaire</h2>
-        <p>Complete the protected questionnaire to calculate separate simulated research estimates.</p>
+          <p>Complete this protected questionnaire to find out your symptom severity risk estimate to exhibit psychotic, manic and depressive symptoms characterised by schizophrenia</p>
         <button className="button button--primary" type="button" onClick={onOpenQuestionnaire}>
           Open questionnaire
         </button>
@@ -126,8 +126,8 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
 
       <main id="main" className="chat-main" aria-labelledby="chat-title">
         <header className="chat-hero">
-          <span className="eyebrow">Conversation with evidence when available</span>
-          <h1 id="chat-title">Clinical Risk Research Assistant</h1>
+          <span className="eyebrow">Enlighten about mental health with grounded explanation and evaluation</span>
+          <h1 id="chat-title">Bodhica</h1>
           <p>Research demonstration only—not diagnosis, medical advice, or emergency support.</p>
         </header>
 

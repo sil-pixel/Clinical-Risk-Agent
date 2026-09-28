@@ -92,7 +92,11 @@ class GeminiGenerator:
         if models is None:
             from google import genai
 
-            self._client = genai.Client(api_key=api_key)
+            from google.genai import types
+
+            self._client = genai.Client(api_key=api_key, http_options=types.HttpOptions(
+                timeout=45000, retry_options=types.HttpRetryOptions(attempts=1),
+            ))
             models = self._client.models
         self._models = models
 
@@ -154,7 +158,7 @@ class OpenAIGenerator:
         if responses is None:
             from openai import OpenAI
 
-            self._client = OpenAI(api_key=api_key)
+            self._client = OpenAI(api_key=api_key, timeout=45.0, max_retries=0)
             responses = self._client.responses
         self._responses = responses
 
@@ -194,7 +198,7 @@ class AnthropicGenerator:
         if messages is None:
             from anthropic import Anthropic
 
-            self._client = Anthropic(api_key=api_key)
+            self._client = Anthropic(api_key=api_key, timeout=45.0, max_retries=0)
             messages = self._client.messages
         self._messages = messages
 

@@ -386,13 +386,21 @@ class ProtectedConversationOrchestrator:
                 "percentage strings exactly and use no other percentages. State that they are "
                 "separate model estimates, not a combined score. Explain in everyday language that "
                 "the positive-symptom estimate concerns psychotic and manic symptom patterns and the "
-                "negative-symptom estimate concerns depressive symptom patterns. Explain what the two "
-                "specific values mean without inventing low/medium/high thresholds or causes. Mention "
+                "negative-symptom estimate concerns depressive symptom patterns in THIS model. "
+                "Briefly define hallucinations as seeing or hearing things others do not, delusions "
+                "as firmly held beliefs inconsistent with reality, and manic symptoms as unusually "
+                "elevated mood or energy. Define depressive symptoms with examples such as low mood "
+                "and loss of interest. Do not equate this model's depressive target with the clinical "
+                "definition of negative symptoms in schizophrenia. Explain what the two "
+                "specific values mean without inventing low/medium/high thresholds or causes. Do not "
+                "describe these instructions or say that you are avoiding thresholds or causes. Explain "
                 "that a larger value means a larger model estimate for that symptom category; avoid "
                 "interpreting the percentage as how many similar people will develop a condition. "
-                "only once that this is a synthetic-data research model rather than a diagnosis. Refer "
+                "Mention only once that this is a synthetic-data research model rather than a diagnosis. Refer "
                 f"to {profile} as a generic, non-personalized genetic baseline; do not expose the "
-                "internal identifier. Write one cohesive paragraph of at most four sentences. Do not "
+                "internal identifier. Start with the user's two scores and their meaning. Write one "
+                "friendly paragraph of at most four short sentences and 120 words. Avoid policy "
+                "language and long introductory disclaimers. Do not "
                 "append a separate disclaimer or repeat any point. Return response_kind=conversation "
                 "and no citations."
             ),
@@ -400,24 +408,22 @@ class ProtectedConversationOrchestrator:
         )
         generated = False
         message = fallback
-        for _attempt in range(2):
-            try:
-                draft = self._generator.generate(request)
-                percentages = re.findall(r"\d+(?:\.\d+)?%", draft.text)
-                lowered = draft.text.casefold()
-                required = (
-                    draft.response_kind == "conversation"
-                    and not draft.citation_ids
-                    and sorted(percentages) == sorted([positive, negative])
-                    and all(term in lowered for term in ("psychotic", "manic", "depressive"))
-                )
-                if not required:
-                    raise ResponseIntegrityError("assessment_explanation_contract_mismatch")
-                message = draft.text.strip()
-                generated = True
-                break
-            except Exception:
-                continue
+        try:
+            draft = self._generator.generate(request)
+            percentages = re.findall(r"\d+(?:\.\d+)?%", draft.text)
+            lowered = draft.text.casefold()
+            required = (
+                draft.response_kind == "conversation"
+                and not draft.citation_ids
+                and sorted(percentages) == sorted([positive, negative])
+                and all(term in lowered for term in ("psychotic", "manic", "depressive"))
+            )
+            if not required:
+                raise ResponseIntegrityError("assessment_explanation_contract_mismatch")
+            message = draft.text.strip()
+            generated = True
+        except Exception:
+            pass
         return {
             "message": message,
             "provider": self._generator.provider.value if generated else None,

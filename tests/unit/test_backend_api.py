@@ -5,6 +5,7 @@ from __future__ import annotations
 import unittest
 import os
 import tempfile
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -290,8 +291,13 @@ class BackendAPITests(unittest.TestCase):
             self.assertEqual(response.json()["result"][
                 "positive_symptom_research_probability"
             ], "12.3%")
-            self.assertIn("12.3%", response.json()["explanation"])
-            self.assertTrue(response.json()["explanation_generated_by_llm"])
+            for _ in range(20):
+                latest = client.get("/v1/assessments/latest", headers=self.auth(token)).json()
+                if latest.get("explanation_status") != "pending":
+                    break
+                time.sleep(0.01)
+            self.assertIn("12.3%", latest["explanation"])
+            self.assertTrue(latest["explanation_generated_by_llm"])
             self.assertEqual(len(assessment.calls), 1)
             forged = client.post(
                 "/v1/assessments", headers=self.auth(token), json={
@@ -305,6 +311,52 @@ class BackendAPITests(unittest.TestCase):
                 },
             )
             self.assertEqual(forged.status_code, 422)
+
+    def test_explanation_timeout_preserves_scores_and_session_isolation(self):
+        class SlowConversation(FakeConversation):
+            def explain_assessment(self, result):
+                time.sleep(0.1)
+                return super().explain_assessment(result)
+
+        from dataclasses import replace
+        assessment = FakeAssessment()
+        with TestClient(create_app(
+            replace(self.settings, request_timeout_seconds=0.03), service=self.service,
+            assessment=assessment, conversation=SlowConversation(), clock=self.clock,
+        )) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            response = client.post("/v1/assessments", headers=self.auth(token), json={
+                "questionnaire_version": "prototype_questionnaire_v1", "answers": {"q001": "o01"},
+                "attestations": {"age_18_or_over": True, "self_assessment": True,
+                                 "research_only_consent": True},
+            })
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["explanation_status"], "pending")
+            time.sleep(0.06)
+            latest = client.get("/v1/assessments/latest", headers=self.auth(token)).json()
+            self.assertEqual(latest["result"]["positive_symptom_research_probability"], "12.3%")
+            self.assertEqual(latest["explanation_status"], "unavailable")
+            retried = client.post("/v1/assessments/explanation", headers=self.auth(token))
+            self.assertEqual(retried.status_code, 200)
+            self.assertEqual(retried.json()["explanation_status"], "pending")
+            self.assertEqual(len(assessment.calls), 1)
+            other = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            self.assertEqual(client.get("/v1/assessments/latest", headers=self.auth(other)).status_code, 404)
+            client.delete("/v1/session", headers=self.auth(token))
+            self.assertEqual(client.get("/v1/assessments/latest", headers=self.auth(token)).status_code, 401)
+
+    def test_dashboard_records_aggregates_without_request_text(self):
+        with TestClient(create_app(self.settings, service=self.service,
+                                  conversation=FakeConversation(), assessment=FakeAssessment())) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            client.post("/v1/messages", headers=self.auth(token),
+                        json={"kind": "free_text", "text": "Synthetic private fixture"})
+            response = client.get("/v1/evaluations/dashboard")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["operations"][0]["count"], 1)
+            self.assertNotIn("Synthetic private fixture", response.text)
+            self.assertEqual(client.get("/v1/evaluations/dashboard",
+                                        headers={"X-Forwarded-For": "203.0.113.1"}).status_code, 403)
 
 
 class BackendSettingsTests(unittest.TestCase):
