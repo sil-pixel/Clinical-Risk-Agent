@@ -262,6 +262,57 @@ class BackendAPITests(unittest.TestCase):
             self.assertIn("event: done", body)
             self.assertNotIn("event: token", body)
 
+    def test_sse_generation_failure_is_error_not_validated_answer(self):
+        class UnavailableConversation(FakeConversation):
+            def handle(self, *args, **kwargs):
+                return {"response_kind": "GENERATION_UNAVAILABLE", "message": "Fixture failure"}
+        with TestClient(create_app(self.settings, service=self.service,
+                                   conversation=UnavailableConversation())) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            response = client.post("/v1/messages:stream", headers=self.auth(token),
+                                   json={"kind": "free_text", "text": "Fixture"})
+            self.assertIn("event: error", response.text)
+            self.assertIn("GENERATION_UNAVAILABLE", response.text)
+            self.assertNotIn("event: validated_content", response.text)
+            self.assertNotIn("event: done", response.text)
+
+    def test_live_quality_runs_for_both_message_endpoints(self):
+        class JudgedConversation(FakeConversation):
+            def evaluate_response(self, text, result):
+                return {"groundedness": .7, "correctness": .9, "judge_model": "fixture"}
+        with TestClient(create_app(self.settings, service=self.service,
+                                   conversation=JudgedConversation())) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            for endpoint in ("/v1/messages", "/v1/messages:stream"):
+                client.post(endpoint, headers=self.auth(token),
+                            json={"kind": "free_text", "text": "Fixture private question"})
+                for _ in range(50):
+                    quality = client.get("/v1/evaluations/dashboard").json()["live_quality"]
+                    if quality["pending"] == 0:
+                        break
+                    time.sleep(.01)
+            self.assertEqual(quality["evaluated"], 2)
+            self.assertEqual(quality["correctness"]["mean"], .9)
+            self.assertNotIn("Fixture private question", str(quality))
+
+    def test_live_judge_failure_does_not_fail_chat(self):
+        class FailedJudge(FakeConversation):
+            def evaluate_response(self, text, result):
+                raise RuntimeError("Synthetic judge failure")
+        with TestClient(create_app(self.settings, service=self.service,
+                                   conversation=FailedJudge())) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            response = client.post("/v1/messages", headers=self.auth(token),
+                                   json={"kind": "free_text", "text": "Fixture"})
+            self.assertEqual(response.status_code, 200)
+            for _ in range(50):
+                quality = client.get("/v1/evaluations/dashboard").json()["live_quality"]
+                if quality["pending"] == 0:
+                    break
+                time.sleep(.01)
+            self.assertEqual(quality["errors"], 1)
+            self.assertIsNone(quality["correctness"]["mean"])
+
     def test_public_questionnaire_contract_and_submission(self) -> None:
         assessment = FakeAssessment()
         conversation = FakeConversation()

@@ -17,7 +17,7 @@ class BackendSettings:
     llm_api_key: str | None = field(default=None, repr=False)
     deployment_mode: str = "prototype_demo"
     session_ttl_seconds: int = 1800
-    request_timeout_seconds: float = 55.0
+    request_timeout_seconds: float = 115.0
     max_request_bytes: int = 4096
     max_active_sessions: int = 50
     max_http_concurrency: int = 50

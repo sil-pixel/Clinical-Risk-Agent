@@ -6,6 +6,33 @@ Add administrator authentication before exposing the dashboard through a deploym
 
 ## Scores and provenance
 
+### Live dashboard
+
+The dashboard displays live service responses, not archived benchmark scores. After a
+generated response is delivered through either message endpoint, a background LLM judge
+estimates correctness (factual accuracy, relevance and completeness, **without a gold
+reference**) and groundedness against that response's exact cited passages. Correctness
+is a same-model automated estimate, not independent verification. Groundedness is null
+for replies without source passages. Nulls and failed evaluations do not enter means.
+Scores, individual score counts, pending jobs, skipped jobs and errors are displayed.
+
+The judge uses the configured provider/model and makes an additional paid provider call.
+Only one live evaluation runs at a time; replies arriving while it is busy are explicitly
+counted as skipped. No evaluation queue accumulates private chat content. Prompts, answers
+and passages are sent to the configured provider transiently for judging but are never
+written to evaluation files or monitoring logs. Only scalar scores, response type, judge
+identity and timestamp are retained, in a bounded 2,000-reply memory window reset at
+server restart. This is server-wide local developer telemetry, not a per-user dashboard.
+The latest 20 score records are shown without chat text. Safety refusals, abstentions and
+generation failures are not scored as generated answers; request failures appear in operations.
+
+Live ML accuracy cannot be inferred from questionnaire predictions without observed
+reference outcomes. Its cards remain unscored rather than substituting benchmark scores.
+Existing offline reports remain on disk and available through the read-only local API,
+but are no longer displayed in the live dashboard.
+
+### Archived offline evaluations
+
 - **Groundedness**: automated judge estimates support for generated factual claims in the supplied corpus passages. Only corpus-cited answers enter this mean.
 - **Correctness**: automated judge compares the generated answer with the frozen reference answer. Abstention on an answerable case scores zero; generation and judge failures are excluded and reported separately.
 - Judge model, generator model, corpus hash, dataset hash, sample size, and date accompany each report. The default judge is the configured generator model, so the judgment is not independent or human-validated.
@@ -37,6 +64,11 @@ These commands do not retrain or modify either checkpoint. Reports survive serve
 operational aggregates reset at startup.
 
 ## Assessment latency recovery
+
+Gemini calls have a 100-second provider deadline with automatic retries disabled.
+The backend request deadline is 115 seconds so a single provider call has time to
+complete with retrieval/validation overhead. Multi-call workflows still share that
+overall backend deadline.
 
 Both ML models load during backend startup. Assessment submission returns scores immediately
 after protected inference; an asynchronous explanation uses only the validated display values.

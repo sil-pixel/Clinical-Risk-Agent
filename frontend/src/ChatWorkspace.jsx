@@ -48,6 +48,7 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
     setPhase("Starting protected checks…");
     setMessages((current) => [...current, { role: "user", text, citations: [] }]);
     let assistant = null;
+    let completed = false;
     try {
       const response = await fetch(`${API_BASE}/v1/messages:stream`, {
         method: "POST",
@@ -94,11 +95,14 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
                 : message
             )));
           } else if (eventData.type === "error") {
-            throw new Error(eventData.data.message || "The request failed safely.");
+            throw new Error(`${eventData.data.message || "The request failed safely."}${eventData.data.code ? ` (${eventData.data.code})` : ''}`);
+          } else if (eventData.type === "done") {
+            completed = true;
           }
         }
         if (done) break;
       }
+      if (!completed) throw new Error("The chat connection ended before the response completed. Please try again.");
     } catch (error) {
       setMessages((current) => [...current, {
         role: "assistant", text: error.message, citations: [], responseKind: "ERROR",
@@ -140,7 +144,7 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
 
         <section className="chat-thread" aria-live="polite" ref={threadRef}>
           {messages.map((message, index) => (
-            <article className={`chat-message chat-message--${message.role}`} key={`${message.role}-${index}`}>
+            <article className={`chat-message chat-message--${message.role}`} key={`${message.role}-${index}`} role={message.responseKind === "ERROR" ? "alert" : undefined}>
               <strong>{message.role === "user" ? "You" : "Assistant"}</strong>
               {message.responseKind === "GENERAL_EDUCATION" && (
                 <small>General knowledge · no corpus citations</small>

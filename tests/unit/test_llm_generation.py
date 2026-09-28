@@ -69,6 +69,14 @@ class LLMGenerationTests(unittest.TestCase):
         self.assertEqual(result.citation_ids, ["S1"])
         self.assertIn("Verified evidence", port.call["contents"])
 
+    def test_gemini_uses_100_second_deadline_without_automatic_retries(self):
+        with patch("google.genai.Client") as client:
+            generator = GeminiGenerator("fixture-secret", "explicit-model")
+            options = client.call_args.kwargs["http_options"]
+            self.assertEqual(options.timeout, 100000)
+            self.assertEqual(options.retry_options.attempts, 1)
+            generator.close()
+
     def test_gemini_accepts_sdk_parsed_output(self) -> None:
         port = FakeModels(parsed=PAYLOAD)
         result = GeminiGenerator("fixture", "model", models=port).generate(self.request)

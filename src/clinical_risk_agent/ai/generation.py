@@ -95,7 +95,7 @@ class GeminiGenerator:
             from google.genai import types
 
             self._client = genai.Client(api_key=api_key, http_options=types.HttpOptions(
-                timeout=45000, retry_options=types.HttpRetryOptions(attempts=1),
+                timeout=100000, retry_options=types.HttpRetryOptions(attempts=1),
             ))
             models = self._client.models
         self._models = models

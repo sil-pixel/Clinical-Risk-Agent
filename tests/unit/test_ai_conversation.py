@@ -75,6 +75,33 @@ def orchestrator(research=None, generator=None):
 
 
 class ConversationTests(unittest.TestCase):
+    def test_live_judge_context_and_no_passage_groundedness(self):
+        generator = FakeGenerator([AssistantDraft(
+            response_kind="conversation", citation_ids=[],
+            text='{"correctness": 0.8, "groundedness": 1}',
+        )])
+        service = orchestrator(generator=generator)
+        scores = service.evaluate_response("Fixture question", {
+            "message": "Fixture answer", "citations": [],
+        })
+        self.assertEqual(scores["correctness"], .8)
+        self.assertIsNone(scores["groundedness"])
+        self.assertNotIn("Fixture answer", str(scores))
+        self.assertIn("NO verified reference", generator.calls[0].system_instruction)
+
+    def test_live_judge_rejects_malformed_scores(self):
+        for text in ('{"correctness": true, "groundedness": 0.5}',
+                     '{"correctness": 1.1, "groundedness": null}',
+                     '{"correctness": 0.5}', '[]'):
+            with self.subTest(text=text):
+                generator = FakeGenerator([AssistantDraft(
+                    response_kind="conversation", citation_ids=[], text=text,
+                )])
+                with self.assertRaises(ValueError):
+                    orchestrator(generator=generator).evaluate_response("Fixture", {
+                        "message": "Fixture answer", "citations": [],
+                    })
+
     def test_curated_question_reaches_rag_then_validated_generator(self) -> None:
         research = FakeResearch()
         generator = FakeGenerator()

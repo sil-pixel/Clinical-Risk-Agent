@@ -277,7 +277,34 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     monitor = Monitor(settings.root)
     assessment_results: dict[str, tuple[float, dict[str, Any]]] = {}
     explanation_tasks: set[asyncio.Task] = set()
+    quality_tasks: set[asyncio.Task] = set()
+    quality_capacity = CapacityGate(1)
     explanation_capacity = asyncio.Semaphore(settings.max_model_concurrency)
+
+    def evaluate_live(text: str, result: dict[str, Any]):
+        if result.get("response_kind") not in {"GROUNDED_ANSWER", "GENERAL_EDUCATION", "CONVERSATION"}:
+            return
+        evaluator = getattr(conversation, "evaluate_response", None)
+        if evaluator is None or not result.get("model") or not quality_capacity.acquire():
+            monitor.quality_finished("skipped", result["response_kind"])
+            return
+        monitor.quality_started()
+
+        async def evaluate():
+            started = time.monotonic()
+            try:
+                verdict = await asyncio.to_thread(evaluator, text, result)
+                monitor.quality_finished("scored", result["response_kind"], verdict)
+                monitor.record("live_quality_judge", "scored", time.monotonic() - started)
+            except Exception:
+                monitor.quality_finished("error", result["response_kind"])
+                monitor.record("live_quality_judge", "error", time.monotonic() - started)
+            finally:
+                quality_capacity.release()
+
+        task = asyncio.create_task(evaluate())
+        quality_tasks.add(task)
+        task.add_done_callback(quality_tasks.discard)
 
     def assessment_key(token: str) -> str:
         return hashlib.sha256(token.encode()).hexdigest()
@@ -322,10 +349,10 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                 monitor.record("model_startup", "ready", time.monotonic() - started)
             yield
         finally:
-            for task in explanation_tasks:
+            for task in explanation_tasks | quality_tasks:
                 task.cancel()
-            if explanation_tasks:
-                await asyncio.gather(*explanation_tasks, return_exceptions=True)
+            if explanation_tasks or quality_tasks:
+                await asyncio.gather(*explanation_tasks, *quality_tasks, return_exceptions=True)
             assessment_results.clear()
             research.close()
             close_conversation = getattr(conversation, "close", None)
@@ -519,6 +546,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
             "inactivity_expires_in_seconds": settings.session_ttl_seconds,
             **result,
         }
+        evaluate_live(payload.text, result)
         return JSONResponse(status_code=status_code, content=body)
 
     @app.post("/v1/messages:stream")
@@ -563,6 +591,14 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                             "component": "workflow", "retryable": True,
                         }, 3)
                         return
+                    if result["response_kind"] in {"RETRIEVAL_UNAVAILABLE", "GENERATION_UNAVAILABLE"}:
+                        yield _sse("error", {
+                            "code": result["response_kind"], "message": result["message"],
+                            "component": "generation" if result["response_kind"] == "GENERATION_UNAVAILABLE" else "retrieval",
+                            "retryable": True,
+                        }, 3)
+                        return
+                    evaluate_live(payload.text, result)
                     yield _sse("validated_content", {
                         key: result.get(key) for key in (
                             "response_kind", "message", "limitation", "actions", "route",

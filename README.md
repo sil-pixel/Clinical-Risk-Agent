@@ -26,4 +26,4 @@ Open `http://localhost:5173`. Chat uses validated SSE events from `POST /v1/mess
 
 Assessment scores return before LLM explanation generation. The browser polls the session's cached result and can retry the explanation without repeating inference. Models preload during backend startup.
 
-Open **Evaluations**, or `http://localhost:5173/?view=evaluation`, for LLM groundedness/correctness, separate ML RMSE/MSE/R²/Spearman metrics, benchmark history, and aggregate latency/error monitoring. See [evaluation monitoring](agent_docs/BODHICA_EVALUATION_MONITOR.md) for evaluation commands and score provenance.
+Open **Evaluations**, or `http://localhost:5173/?view=evaluation`, for background live-chat groundedness/correctness estimates, individual score records, and aggregate latency/error monitoring. Archived benchmark scores are not displayed; live ML accuracy requires observed outcome labels. See [evaluation monitoring](agent_docs/BODHICA_EVALUATION_MONITOR.md) for score provenance and offline evaluation commands.
