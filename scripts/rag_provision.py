@@ -11,6 +11,7 @@ from pathlib import Path
 
 
 def provision(path: Path) -> tuple[Path, tuple[str, ...]]:
+    """Download, verify and pin local MedCPT artifacts for offline corpus ingestion."""
     from qdrant_client import QdrantClient
 
     resolved = path.resolve()
@@ -28,6 +29,7 @@ def provision(path: Path) -> tuple[Path, tuple[str, ...]]:
 
 
 def main() -> None:
+    """Run the command-line workflow: Provision an isolated local Qdrant store for versioned public-science collections."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--path", type=Path,

@@ -20,12 +20,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _summary(values: list[float]) -> dict:
+    """Summarize MCP call counts and latency distribution measurements."""
     ordered = sorted(values)
     return {"calls": len(values), "median_ms": round(statistics.median(values), 2),
             "p95_ms": round(ordered[math.ceil(.95 * len(ordered)) - 1], 2)}
 
 
 async def main() -> None:
+    """Run the command-line workflow: Evaluate the local MCP transport, tools, boundaries and warm latency."""
     corpus = json.loads((ROOT / "data/indexes/rag_corpus_manifest.json").read_text())
     catalog = json.loads((ROOT / "agent_docs/RAG_21_SOURCE_CLAIM_SUPPORT_CATALOG.json").read_text())
     passages = {item["chunk_id"]: item["exact_text"]
@@ -49,6 +51,7 @@ async def main() -> None:
         checks["tool_schema"] += 1
 
         async def call(name: str, arguments: dict, *, expected_error: bool = False) -> dict:
+            """Invoke an MCP tool and validate its structured response for the diagnostic run."""
             began = time.perf_counter()
             result = await client.call_tool(name, arguments)
             elapsed = (time.perf_counter() - began) * 1000

@@ -17,7 +17,9 @@ from rag_general_benchmark import _answerable, _relevance_first, _scores, _valid
 
 
 class SourceMetricTests(unittest.TestCase):
+    """Provide source metric tests fixtures and assertions."""
     def test_locked_context_only_case_and_tamper_detection(self):
+        """Verify locked context only case and tamper detection."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "source.json"
@@ -39,16 +41,19 @@ class SourceMetricTests(unittest.TestCase):
                 _validate(gold, corpus, path, corpus_path)
 
     def test_context_only_is_not_answerable(self):
+        """Verify context only is not answerable."""
         self.assertFalse(_answerable({"grades": {"10": 1}}))
         self.assertTrue(_answerable({"grades": {"10": 2}}))
 
     def test_ranking_preserves_legacy_and_honors_new_lock(self):
+        """Verify ranking preserves legacy and honors new lock."""
         self.assertFalse(_relevance_first({"predeclared_run": {}}))
         self.assertTrue(_relevance_first({"predeclared_run": {"ranking": "relevance_first"}}))
         with self.assertRaises(ValueError):
             _relevance_first({"predeclared_run": {"ranking": "unknown"}})
 
     def test_direct_source_at_first_rank(self) -> None:
+        """Verify direct source at first rank."""
         values = _scores(["pmid:10", "pmid:20", "pmid:30"], {"10": 2, "20": 1}, 5)
         self.assertEqual(values["precision_at_5"], 0.2)
         self.assertEqual(values["recall_at_5"], 1.0)
@@ -56,6 +61,7 @@ class SourceMetricTests(unittest.TestCase):
         self.assertEqual(values["ndcg_at_5"], 1.0)
 
     def test_context_is_graded_but_not_direct_hit(self) -> None:
+        """Verify context is graded but not direct hit."""
         values = _scores(["pmid:20", "pmid:30", "pmid:10"], {"10": 2, "20": 1}, 5)
         self.assertEqual(values["precision_at_5"], 0.2)
         self.assertEqual(values["recall_at_5"], 1.0)
@@ -63,6 +69,7 @@ class SourceMetricTests(unittest.TestCase):
         self.assertTrue(0 < values["ndcg_at_5"] < 1)
 
     def test_missing_direct_source(self) -> None:
+        """Verify missing direct source."""
         values = _scores(["pmid:20"], {"10": 2, "20": 1}, 5)
         self.assertEqual(values["precision_at_5"], 0.0)
         self.assertEqual(values["recall_at_5"], 0.0)

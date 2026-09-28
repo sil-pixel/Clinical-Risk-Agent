@@ -14,6 +14,7 @@ from .pubmed import PubMedClient, QualityAppraisal
 
 @dataclass(frozen=True, slots=True)
 class ApprovedSource:
+    """Pair an appraised publication with its approved storage and ingestion metadata."""
     pmid: str
     appraisal: QualityAppraisal
     reviewer: str

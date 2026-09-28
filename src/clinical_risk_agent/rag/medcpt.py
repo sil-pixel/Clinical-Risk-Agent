@@ -10,6 +10,7 @@ from .chunking import Passage
 
 
 def _verified_artifact(path: Path, expected_sha256: str) -> None:
+    """Verify the local safetensors artifact against its pinned SHA-256 digest."""
     if len(expected_sha256) != 64 or any(c not in "0123456789abcdef" for c in expected_sha256):
         raise ValueError("Expected a lowercase SHA-256 digest")
     artifact = path / "model.safetensors"
@@ -30,6 +31,7 @@ class MedCPTEncoder:
         self, query_tokenizer: object, query_model: object,
         article_tokenizer: object, article_model: object,
     ) -> None:
+        """Bind separate query and article tokenizers and embedding models."""
         self.query_tokenizer = query_tokenizer
         self.query_model = query_model
         self.article_tokenizer = article_tokenizer
@@ -40,6 +42,7 @@ class MedCPTEncoder:
         cls, query_dir: Path, article_dir: Path, *,
         query_sha256: str, article_sha256: str,
     ) -> MedCPTEncoder:
+        """Load tokenizer and model resources from checksum-verified local artifacts."""
         from transformers import AutoModel, AutoTokenizer
 
         _verified_artifact(query_dir, query_sha256)
@@ -57,6 +60,7 @@ class MedCPTEncoder:
     @staticmethod
     def _encode(tokenizer: object, model: object, texts: Sequence[object],
                 *, max_length: int) -> tuple[tuple[float, ...], ...]:
+        """Encode a batch of texts using the model CLS representation."""
         import torch
 
         if not texts:
@@ -72,15 +76,18 @@ class MedCPTEncoder:
         return tuple(tuple(float(value) for value in row) for row in vectors)
 
     def embed_query(self, query: str) -> tuple[float, ...]:
+        """Encode a query as a dense semantic-search vector."""
         return self._encode(self.query_tokenizer, self.query_model, (query,), max_length=64)[0]
 
     def embed_passages(self, passages: Sequence[Passage]) -> tuple[tuple[float, ...], ...]:
+        """Encode passage title-text pairs as dense article vectors."""
         pairs = [list(passage.embedding_pair) for passage in passages]
         return self._encode(
             self.article_tokenizer, self.article_model, pairs, max_length=512
         )
 
     def count_article_tokens(self, text: str) -> int:
+        """Count article tokens without adding tokenizer special tokens."""
         return len(self.article_tokenizer.encode(text, add_special_tokens=False))
 
 
@@ -88,11 +95,13 @@ class MedCPTReranker:
     """Local MedCPT cross-encoder logits; higher means more relevant."""
 
     def __init__(self, tokenizer: object, model: object) -> None:
+        """Bind the tokenizer and cross-encoder used for passage relevance scoring."""
         self.tokenizer = tokenizer
         self.model = model
 
     @classmethod
     def from_local(cls, model_dir: Path, *, sha256: str) -> MedCPTReranker:
+        """Load tokenizer and model resources from checksum-verified local artifacts."""
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
         _verified_artifact(model_dir, sha256)
@@ -103,11 +112,13 @@ class MedCPTReranker:
         return cls(tokenizer, model)
 
     def score(self, query: str, passage: Passage) -> float:
+        """Return the relevance score for one query-passage pair."""
         return self.score_many(query, (passage,))[0]
 
     def score_many(
         self, query: str, passages: Sequence[Passage], *, batch_size: int = 8
     ) -> tuple[float, ...]:
+        """Return relevance scores for a batch of query-passage pairs."""
         import torch
 
         if batch_size < 1:

@@ -17,7 +17,9 @@ from clinical_risk_agent.rag.answering import CURATED_QUESTIONS
 
 
 class FakeResearch:
+    """Provide fake research fixtures and assertions."""
     def __init__(self, result=None, general_result=None) -> None:
+        """Initialize the synthetic test fixture and its observable state."""
         self.calls = []
         self.result = result or {
             "status": "curated_support_available",
@@ -42,19 +44,23 @@ class FakeResearch:
         }
 
     def answer_text(self, question):
+        """Answer a free-text research question through the bounded evidence workflow."""
         self.calls.append(question)
         return self.result
 
     def search_general(self, question):
+        """Retrieve broader corpus passages for a general research question."""
         self.calls.append(f"general:{question}")
         return self.general_result
 
 
 class FakeGenerator:
+    """Provide fake generator fixtures and assertions."""
     provider = LLMProvider.OPENAI
     model = "fixture-model"
 
     def __init__(self, drafts=None) -> None:
+        """Initialize the synthetic test fixture and its observable state."""
         self.calls = []
         self.drafts = list(drafts or [AssistantDraft(
             response_kind="grounded_answer",
@@ -63,11 +69,13 @@ class FakeGenerator:
         )])
 
     def generate(self, request):
+        """Generate and validate an assistant draft using the configured provider."""
         self.calls.append(request)
         return self.drafts.pop(0)
 
 
 def orchestrator(research=None, generator=None):
+    """Provide orchestrator behavior for synthetic test fixtures."""
     return ProtectedConversationOrchestrator(
         RoutingGraph(PrototypeSafetyPort(), PrototypeLanguagePort(), PrototypeIntentPort()),
         research or FakeResearch(), generator if generator is not None else FakeGenerator(),
@@ -75,7 +83,9 @@ def orchestrator(research=None, generator=None):
 
 
 class ConversationTests(unittest.TestCase):
+    """Provide conversation tests fixtures and assertions."""
     def test_live_judge_context_and_no_passage_groundedness(self):
+        """Verify live judge context and no passage groundedness."""
         generator = FakeGenerator([AssistantDraft(
             response_kind="conversation", citation_ids=[],
             text='{"correctness": 0.8, "groundedness": 1}',
@@ -90,6 +100,7 @@ class ConversationTests(unittest.TestCase):
         self.assertIn("NO verified reference", generator.calls[0].system_instruction)
 
     def test_live_judge_rejects_malformed_scores(self):
+        """Verify live judge rejects malformed scores."""
         for text in ('{"correctness": true, "groundedness": 0.5}',
                      '{"correctness": 1.1, "groundedness": null}',
                      '{"correctness": 0.5}', '[]'):
@@ -103,6 +114,7 @@ class ConversationTests(unittest.TestCase):
                     })
 
     def test_curated_question_reaches_rag_then_validated_generator(self) -> None:
+        """Verify curated question reaches rag then validated generator."""
         research = FakeResearch()
         generator = FakeGenerator()
         result = orchestrator(research, generator).handle(
@@ -118,6 +130,7 @@ class ConversationTests(unittest.TestCase):
         self.assertNotIn(CURATED_QUESTIONS[0].question, repr(generator.calls[0]))
 
     def test_invalid_generated_claim_retries_once_then_fails_closed(self) -> None:
+        """Verify invalid generated claim retries once then fails closed."""
         invalid = AssistantDraft(
             response_kind="grounded_answer", text="Invented claim [S1].", citation_ids=["S1"],
         )
@@ -131,6 +144,7 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(len(generator.calls), 2)
 
     def test_invalid_first_draft_can_recover_once(self) -> None:
+        """Verify invalid first draft can recover once."""
         generator = FakeGenerator([
             AssistantDraft(
                 response_kind="grounded_answer", text="Changed [S1].", citation_ids=["S1"],
@@ -148,6 +162,7 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(len(generator.calls), 2)
 
     def test_no_evidence_never_reaches_generator(self) -> None:
+        """Verify no evidence never reaches generator."""
         no_evidence = {
             "status": "no_adequate_evidence", "answer": "No adequate evidence.",
             "limitation": "Research only.", "citations": [],
@@ -162,6 +177,7 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(len(generator.calls), 0)
 
     def test_schizophrenia_education_uses_general_corpus_retrieval(self) -> None:
+        """Verify schizophrenia education uses general corpus retrieval."""
         research = FakeResearch({
             "status": "no_adequate_evidence", "answer": "No adequate evidence.",
             "limitation": "Research only.", "citations": [],
@@ -180,6 +196,7 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(len(research.calls), 2)
 
     def test_general_evidence_normalizes_missing_inline_citation_without_retry(self) -> None:
+        """Verify general evidence normalizes missing inline citation without retry."""
         no_curated = {
             "status": "no_adequate_evidence", "answer": "No adequate evidence.",
             "limitation": "Research only.", "citations": [],
@@ -199,6 +216,7 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(len(generator.calls), 1)
 
     def test_regular_conversation_uses_llm_without_retrieval(self) -> None:
+        """Verify regular conversation uses llm without retrieval."""
         research = FakeResearch()
         generator = FakeGenerator([AssistantDraft(
             response_kind="conversation", text="That sounds like a good place to start.",
@@ -213,6 +231,7 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(len(generator.calls), 1)
 
     def test_corpus_abstention_falls_back_to_labeled_general_education(self) -> None:
+        """Verify corpus abstention falls back to labeled general education."""
         research = FakeResearch({
             "status": "no_adequate_evidence", "answer": "No adequate evidence.",
             "citations": [],
@@ -229,6 +248,7 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(result["message"], "A general educational overview.")
 
     def test_specific_research_abstention_does_not_use_general_knowledge(self) -> None:
+        """Verify specific research abstention does not use general knowledge."""
         research = FakeResearch({
             "status": "no_adequate_evidence", "answer": "No adequate evidence.",
             "citations": [],
@@ -244,6 +264,7 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(len(generator.calls), 1)
 
     def test_assessment_explanation_preserves_exact_values(self) -> None:
+        """Verify assessment explanation preserves exact values."""
         text = (
             "The separate outputs are 12.3% and 45.6%. Psychotic and manic patterns inform the "
             "positive category, while depressive patterns inform the negative category. They are "
@@ -262,6 +283,7 @@ class ConversationTests(unittest.TestCase):
         self.assertTrue(result["generated_by_llm"])
 
     def test_safety_language_and_assessment_routes_deny_tools(self) -> None:
+        """Verify safety language and assessment routes deny tools."""
         fixtures = (
             ("What medication should I start?", "PRESCRIPTIVE_REFUSAL"),
             ("I want to kill myself", "CRITICAL_SAFETY_REDIRECTION"),

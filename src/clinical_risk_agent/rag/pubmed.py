@@ -15,16 +15,19 @@ from .corpus import ScientificSource
 
 @dataclass(frozen=True, slots=True)
 class QualityAppraisal:
+    """Record the quality assessment and reviewer approval for a publication."""
     passed: bool
     score: float
     rubric_version: str
 
 
 def _text(element: ET.Element | None) -> str:
+    """Extract normalized text from a PubMed XML element."""
     return " ".join("".join(element.itertext()).split()) if element is not None else ""
 
 
 def _publication_date(article: ET.Element) -> date | None:
+    """Resolve a publication date from PubMed journal and article metadata."""
     paths = (
         "./MedlineCitation/Article/ArticleDate",
         "./MedlineCitation/Article/Journal/JournalIssue/PubDate",
@@ -54,6 +57,7 @@ def _publication_date(article: ET.Element) -> date | None:
 
 
 def _study_design(publication_types: set[str]) -> str:
+    """Map PubMed publication types to the supported study-design categories."""
     if "practice guideline" in publication_types or "guideline" in publication_types:
         return "clinical_guideline"
     if "meta-analysis" in publication_types:
@@ -137,10 +141,12 @@ class PubMedClient:
     """Bounded EFetch client for approved PMIDs; callers own rate limiting."""
 
     def __init__(self, fetch: Callable[[str], bytes] | None = None) -> None:
+        """Configure PubMed fetching with an optional injected transport."""
         self._fetch = fetch or self._http_fetch
 
     @staticmethod
     def _http_fetch(url: str) -> bytes:
+        """Fetch PubMed XML for the requested identifiers through NCBI EFetch."""
         request = urllib.request.Request(url, headers={"User-Agent": "ClinicalRiskResearch/0.1"})
         with urllib.request.urlopen(request, timeout=15) as response:
             return response.read(10_000_001)
@@ -152,6 +158,7 @@ class PubMedClient:
         checked_on: date,
         appraisals: Mapping[str, QualityAppraisal],
     ) -> tuple[ScientificSource, ...]:
+        """Fetch and parse publication records for explicitly requested PubMed identifiers."""
         if not pmids or len(pmids) > 200 or any(not item.isdigit() for item in pmids):
             raise ValueError("Supply 1 to 200 numeric PMIDs")
         parameters = urllib.parse.urlencode({

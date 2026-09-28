@@ -20,20 +20,26 @@ TODAY = date(2026, 9, 24)
 
 
 class FakeEncoder:
+    """Provide fake encoder fixtures and assertions."""
     @staticmethod
     def _vector(text: str) -> list[float]:
+        """Provide vector behavior for synthetic test fixtures."""
         return [1.0, 0.0] if "bullying" in text.lower() else [0.0, 1.0]
 
     def embed_query(self, query: str) -> list[float]:
+        """Encode a query as a dense semantic-search vector."""
         return self._vector(query)
 
     def embed_passages(self, passages: object) -> list[list[float]]:
+        """Encode passage title-text pairs as dense article vectors."""
         return [self._vector(item.exact_text) for item in passages]
 
 
 @unittest.skipUnless(importlib.util.find_spec("qdrant_client"), "qdrant-client unavailable")
 class QdrantAdapterTests(unittest.TestCase):
+    """Provide qdrant adapter tests fixtures and assertions."""
     def test_dense_sparse_and_isolation_filter(self) -> None:
+        """Verify dense sparse and isolation filter."""
         from qdrant_client import QdrantClient
 
         snapshot = CorpusSnapshot.build((

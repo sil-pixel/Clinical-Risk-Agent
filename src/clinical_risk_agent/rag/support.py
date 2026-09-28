@@ -14,6 +14,7 @@ from .index import CorpusSnapshot
 
 @dataclass(frozen=True, slots=True)
 class SupportAssertion:
+    """Describe a bounded claim-support assertion anchored to a source passage."""
     claim_id: str
     source_id: str
     chunk_id: str
@@ -30,6 +31,7 @@ class CuratedClaimSupport:
 
     def __init__(self, snapshot: CorpusSnapshot, assertions: Sequence[SupportAssertion],
                  *, expected_version: str) -> None:
+        """Load and validate approved claim assertions against their source catalog."""
         if snapshot.version != expected_version:
             raise ValueError("Support assertions target a different corpus version")
         passages = {item.chunk_id: item for item in snapshot.passages}
@@ -49,4 +51,5 @@ class CuratedClaimSupport:
 
     def supports(self, query: RetrievalQuery, source: ScientificSource,
                  passage: Passage) -> bool:
+        """Check whether a passage supports the requested bounded claim."""
         return (query.claim_id, source.source_id, passage.chunk_id) in self._assertions

@@ -9,10 +9,12 @@ DOCS = ROOT / "agent_docs"
 
 
 def sha(path):
+    """Compute a file SHA-256 digest for frozen review provenance."""
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main():
+    """Run the command-line workflow: Consolidate authorized provisional AI judgments and lock before retrieval."""
     names = ["RAG_GENERAL_ASSOCIATION_GOLD_16_SOURCE.json",
              "RAG_GENERAL_ASSOCIATION_GOLD_EXPANSION_REVIEW_DRAFT.json",
              "RAG_GENERAL_ASSOCIATION_GOLD_INDEPENDENT_AI_FIRST_PASS.json",

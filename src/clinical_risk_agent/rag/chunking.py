@@ -16,6 +16,7 @@ WORD_TOKEN = re.compile(r"\b\w+(?:[-']\w+)*\b")
 
 @dataclass(frozen=True, slots=True)
 class Passage:
+    """Represent an exact text chunk with its parent section and source identity."""
     source_id: str
     parent_id: str
     chunk_id: str
@@ -28,6 +29,7 @@ class Passage:
 
     @property
     def embedding_pair(self) -> tuple[str, str]:
+        """Return the passage title and exact text for article embedding."""
         return self.title, self.exact_text
 
 
@@ -37,17 +39,20 @@ def approximate_tokens(text: str) -> int:
 
 
 def _stable_id(*parts: str) -> str:
+    """Create a deterministic chunk or parent identifier from its component values."""
     raw = "\x1f".join(parts).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:24]
 
 
 def _sentences(text: str) -> list[str]:
+    """Normalize whitespace and split text at sentence boundaries."""
     return [item.strip() for item in SENTENCE_BOUNDARY.split(" ".join(text.split())) if item.strip()]
 
 
 def _split_long_sentence(
     sentence: str, max_tokens: int, count_tokens: Callable[[str], int]
 ) -> list[str]:
+    """Split an oversized sentence into token-bounded word sequences."""
     if count_tokens(sentence) <= max_tokens:
         return [sentence]
     words = sentence.split()
@@ -72,6 +77,7 @@ def _child_texts(
     overlap_tokens: int,
     count_tokens: Callable[[str], int],
 ) -> tuple[str, ...]:
+    """Build token-bounded child chunks with controlled sentence overlap."""
     sentences = [piece for sentence in _sentences(text)
                  for piece in _split_long_sentence(sentence, max_tokens, count_tokens)]
     if not sentences:
@@ -105,6 +111,7 @@ def chunk_source(
     strategy: str,
     count_tokens: Callable[[str], int] = approximate_tokens,
 ) -> tuple[Passage, ...]:
+    """Create document or hierarchical passages from eligible source sections."""
     if strategy not in {"document", "hierarchical"}:
         raise ValueError("Unsupported chunking strategy")
     sections = []

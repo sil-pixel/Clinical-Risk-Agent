@@ -13,11 +13,13 @@ from dataclasses import dataclass
 
 
 def _b64(data: bytes) -> str:
+    """Encode bytes as unpadded URL-safe Base64."""
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
 
 @dataclass(slots=True)
 class SessionState:
+    """Track volatile session activity, usage quotas and state version."""
     last_activity: float
     hourly_operations: deque[float]
     daily_operations: deque[float]
@@ -31,6 +33,7 @@ class SessionStore:
     def __init__(self, key: bytes, *, ttl_seconds: int, max_sessions: int,
                  hourly_limit: int, daily_limit: int, global_daily_limit: int,
                  create_limit: int, assessment_daily_limit: int = 3) -> None:
+        """Configure signed volatile sessions, inactivity expiry and usage quotas."""
         self._key = key
         self._ttl = ttl_seconds
         self._max_sessions = max_sessions
@@ -45,23 +48,28 @@ class SessionStore:
         self._lock = threading.Lock()
 
     def network_digest(self, value: str) -> str:
+        """Hash a network identifier without retaining its original value."""
         return hmac.new(self._key, value.encode("utf-8"), hashlib.sha256).hexdigest()
 
     def _signature(self, session_id: str) -> str:
+        """Compute the keyed signature for an opaque session identifier."""
         return _b64(hmac.new(self._key, session_id.encode("ascii"), hashlib.sha256).digest())
 
     @staticmethod
     def _prune(values: deque[float], cutoff: float) -> None:
+        """Discard quota timestamps older than the supplied cutoff."""
         while values and values[0] <= cutoff:
             values.popleft()
 
     def _prune_sessions(self, now: float) -> None:
+        """Remove sessions whose inactivity limit has expired."""
         expired = [sid for sid, state in self._sessions.items()
                    if now - state.last_activity >= self._ttl]
         for sid in expired:
             del self._sessions[sid]
 
     def create(self, network_key: str, *, now: float | None = None) -> tuple[str, int]:
+        """Create a signed memory-only session subject to network and capacity limits."""
         now = time.monotonic() if now is None else now
         with self._lock:
             self._prune_sessions(now)
@@ -80,6 +88,7 @@ class SessionStore:
         return f"{session_id}.{self._signature(session_id)}", self._ttl
 
     def _session_id(self, token: str) -> str:
+        """Verify a signed credential and extract its session identifier."""
         try:
             session_id, signature = token.split(".", 1)
         except ValueError as error:
@@ -90,6 +99,7 @@ class SessionStore:
 
     def authorize(self, token: str, *, renew: bool = True,
                   now: float | None = None) -> SessionState:
+        """Validate a live session and optionally renew its activity timestamp."""
         now = time.monotonic() if now is None else now
         session_id = self._session_id(token)
         with self._lock:
@@ -103,6 +113,7 @@ class SessionStore:
             return state
 
     def consume_model_operation(self, token: str, *, now: float | None = None) -> SessionState:
+        """Authorize and charge a model operation against session and global quotas."""
         now = time.monotonic() if now is None else now
         session_id = self._session_id(token)
         with self._lock:
@@ -127,6 +138,7 @@ class SessionStore:
             return state
 
     def consume_assessment_operation(self, token: str, *, now: float | None = None) -> SessionState:
+        """Authorize and charge a questionnaire submission against assessment quotas."""
         now = time.monotonic() if now is None else now
         session_id = self._session_id(token)
         with self._lock:
@@ -147,6 +159,7 @@ class SessionStore:
             return state
 
     def delete(self, token: str) -> None:
+        """Invalidate the session associated with a verified credential."""
         session_id = self._session_id(token)
         with self._lock:
             self._sessions.pop(session_id, None)

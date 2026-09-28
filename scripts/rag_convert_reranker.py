@@ -8,6 +8,7 @@ from pathlib import Path
 
 
 def sha256(path: Path) -> str:
+    """Compute a file SHA-256 digest for artifact provenance."""
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
@@ -16,6 +17,7 @@ def sha256(path: Path) -> str:
 
 
 def main() -> None:
+    """Run the command-line workflow: Convert a pinned, trusted MedCPT weight file to local safetensors once."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("model_dir", type=Path)
     parser.add_argument("--source-sha256", required=True)

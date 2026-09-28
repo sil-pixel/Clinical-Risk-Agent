@@ -11,6 +11,7 @@ import numpy as np
 
 @dataclass(frozen=True, slots=True)
 class FeatureSchema:
+    """Describe ordered feature groups and their flattened model input layout."""
     modality_names: tuple[str, ...]
     feature_names: tuple[tuple[str, ...], ...]
     medians: tuple[tuple[float, ...], ...]
@@ -18,6 +19,7 @@ class FeatureSchema:
     scales: tuple[tuple[float, ...], ...]
 
     def __post_init__(self) -> None:
+        """Validate feature groups and enforce unique ordered feature names."""
         group_count = len(self.modality_names)
         fields = (self.feature_names, self.medians, self.means, self.scales)
         if any(len(field) != group_count for field in fields):
@@ -39,14 +41,17 @@ class FeatureSchema:
 
     @property
     def sizes(self) -> tuple[int, ...]:
+        """Return the number of features in each ordered group."""
         return tuple(len(names) for names in self.feature_names)
 
     @property
     def flat_feature_names(self) -> tuple[str, ...]:
+        """Return feature names flattened in model input order."""
         return tuple(name for group in self.feature_names for name in group)
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "FeatureSchema":
+        """Construct a validated feature schema from serialized metadata."""
         return cls(
             modality_names=tuple(str(item) for item in value["modality_names"]),
             feature_names=tuple(

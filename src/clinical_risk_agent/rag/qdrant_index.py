@@ -15,11 +15,17 @@ from .retrieval import DenseHit
 
 
 class PassageEncoder(Protocol):
-    def embed_query(self, query: str) -> Sequence[float]: ...
-    def embed_passages(self, passages: Sequence[Passage]) -> Sequence[Sequence[float]]: ...
+    """Define query and passage embedding operations for a scientific index."""
+    def embed_query(self, query: str) -> Sequence[float]:
+        """Encode a query as a dense semantic-search vector."""
+        ...
+    def embed_passages(self, passages: Sequence[Passage]) -> Sequence[Sequence[float]]:
+        """Encode passage title-text pairs as dense article vectors."""
+        ...
 
 
 class QdrantScientificIndex:
+    """Search named dense and sparse vectors in a Qdrant corpus collection."""
     def __init__(
         self,
         client: object,
@@ -27,6 +33,7 @@ class QdrantScientificIndex:
         encoder: PassageEncoder,
         lexical_index: BM25Index,
     ) -> None:
+        """Bind the Qdrant collection, encoder and frozen corpus identity."""
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,120}", collection_name):
             raise ValueError("Invalid scientific collection name")
         self.client = client
@@ -36,6 +43,7 @@ class QdrantScientificIndex:
         self.corpus_version = lexical_index.version.removeprefix("bm25-")
 
     def _filter(self) -> object:
+        """Build Qdrant filters that enforce corpus identity and scientific-data isolation."""
         from qdrant_client import models
 
         return models.Filter(must=[
@@ -110,6 +118,7 @@ class QdrantScientificIndex:
             self.client.upsert(self.collection_name, wait=True, points=points)
 
     def search(self, query: str, *, limit: int) -> tuple[DenseHit, ...]:
+        """Return ranked dense-vector passage matches from the configured Qdrant collection."""
         vector = list(self.encoder.embed_query(query))
         if not vector or not all(math.isfinite(value) for value in vector):
             raise ValueError("Query encoder returned an invalid vector")
@@ -125,6 +134,7 @@ class QdrantScientificIndex:
                      for item in results.points if item.payload and "chunk_id" in item.payload)
 
     def sparse_search(self, query: str, *, limit: int) -> tuple[LexicalHit, ...]:
+        """Return ranked lexical matches from the sparse scientific index."""
         from qdrant_client import models
 
         indices, values = self.lexical_index.sparse_query(query)

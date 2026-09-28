@@ -7,6 +7,7 @@ import { createSession, deleteSession, submitAssessment, getLatestAssessment,
 import {
   getOptionsForQuestion,
   questionnaireSections,
+  questionnaireVersion,
   totalQuestionCount,
 } from "./questionnaireData.js";
 import {
@@ -17,6 +18,7 @@ import {
 
 const activityEvents = ["pointerdown", "keydown", "touchstart"];
 
+/** Render a decorative arrow oriented for questionnaire navigation. */
 function ArrowIcon({ direction = "right" }) {
   return (
     <svg
@@ -29,6 +31,7 @@ function ArrowIcon({ direction = "right" }) {
   );
 }
 
+/** Render the decorative questionnaire completion indicator. */
 function CheckIcon() {
   return (
     <svg aria-hidden="true" className="status-icon" viewBox="0 0 20 20">
@@ -37,6 +40,7 @@ function CheckIcon() {
   );
 }
 
+/** Render the decorative Bodhica privacy-themed brand mark. */
 function ShieldIcon() {
   return (
     <svg aria-hidden="true" className="brand-mark" viewBox="0 0 32 32">
@@ -46,10 +50,12 @@ function ShieldIcon() {
   );
 }
 
+/** Render a notice with the requested visual tone and content. */
 function Notice({ tone = "info", children }) {
   return <div className={`notice notice--${tone}`}>{children}</div>;
 }
 
+/** Coordinate private sessions, chat, questionnaire assessment and live evaluation views. */
 function App() {
   const [view, setView] = useState(() =>
     new URLSearchParams(window.location.search).get("view") === "evaluation" ? "evaluation" : "chat");
@@ -74,6 +80,7 @@ function App() {
     if (assessmentResult?.explanation_status !== "pending" || !sessionToken) return;
     let cancelled = false;
     let timer;
+    /** Refresh a pending explanation until it completes or the effect is cancelled. */
     const poll = async () => {
       try {
         const result = await getLatestAssessment(sessionToken);
@@ -96,6 +103,7 @@ function App() {
     [answers, currentSection],
   );
 
+  /** Clear questionnaire answers, attestations and results from browser memory. */
   const resetQuestionnaire = useCallback((reason = "Your answers have been cleared.") => {
     setAnswers({});
     setCurrentSectionIndex(0);
@@ -110,6 +118,7 @@ function App() {
     requestAnimationFrame(() => mainHeadingRef.current?.focus());
   }, []);
 
+  /** Establish a private session and expose connection failures to the interface. */
   const startSession = useCallback(async () => {
     try {
       setSessionError("");
@@ -120,6 +129,7 @@ function App() {
     }
   }, []);
 
+  /** Delete the previous session, clear local answers and create a fresh session. */
   const resetSession = useCallback(async () => {
     const previous = sessionToken;
     setSessionToken("");
@@ -129,6 +139,7 @@ function App() {
   }, [resetQuestionnaire, sessionToken, startSession]);
 
   useEffect(() => {
+    /** Reschedule questionnaire clearing after thirty minutes without user activity. */
     const scheduleExpiry = () => {
       window.clearTimeout(inactivityTimer.current);
       inactivityTimer.current = window.setTimeout(() => {
@@ -145,7 +156,9 @@ function App() {
   }, [resetQuestionnaire]);
 
   useEffect(() => {
+    /** Mark the browser as online so a missing private session can reconnect. */
     const handleOnline = () => setIsOnline(true);
+    /** Mark the browser as offline while preserving volatile interface state. */
     const handleOffline = () => setIsOnline(false);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
@@ -159,12 +172,14 @@ function App() {
     if (isOnline && !sessionToken) startSession();
   }, [isOnline, sessionToken, startSession]);
 
+  /** Save a selected option in memory and clear outdated validation notices. */
   const selectAnswer = (questionId, optionId) => {
     setAnswers((current) => ({ ...current, [questionId]: optionId }));
     setValidationMessage("");
     setSystemMessage("");
   };
 
+  /** Open a questionnaire section and move focus to its heading. */
   const goToSection = (index) => {
     setCurrentSectionIndex(index);
     setValidationMessage("");
@@ -172,6 +187,7 @@ function App() {
     requestAnimationFrame(() => mainHeadingRef.current?.focus());
   };
 
+  /** Advance only after the current section's required questions are complete. */
   const goForward = () => {
     if (sectionStatus.unansweredIds.length > 0) {
       const firstMissingId = sectionStatus.unansweredIds[0];
@@ -189,6 +205,7 @@ function App() {
   const progressPercent = Math.round((overallStatus.answered / totalQuestionCount) * 100);
   const attestationsComplete = Object.values(attestations).every(Boolean);
 
+  /** Submit a complete consented questionnaire and display its protected model result. */
   const calculateAssessment = async () => {
     if (!overallStatus.ready || !attestationsComplete || !sessionToken || assessmentBusy) return;
     setAssessmentBusy(true);
@@ -196,7 +213,7 @@ function App() {
     setAssessmentResult(null);
     try {
       const result = await submitAssessment(sessionToken, {
-        questionnaire_version: "prototype_questionnaire_v1",
+        questionnaire_version: questionnaireVersion,
         answers,
         attestations,
       });

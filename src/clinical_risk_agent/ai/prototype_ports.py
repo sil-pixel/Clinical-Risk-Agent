@@ -26,6 +26,7 @@ ROUTER_VERSION = "prototype-conversational-router-v2"
 
 
 def _normalized(text: str) -> str:
+    """Normalize transient input text for deterministic prototype classification."""
     return re.sub(r"\s+", " ", text.strip().rstrip("?!. ").casefold())
 
 
@@ -33,6 +34,7 @@ class PrototypeSafetyPort:
     """High-precision deterministic intercepts with architecture-defined priority."""
 
     def evaluate(self, request: PreflightRequest) -> SafetyDecision:
+        """Classify text against the prototype safety interception rules."""
         text = (request.text or "").casefold()
         rules = (
             (SafetyCategory.EMERGENCY_REDIRECTION, (
@@ -76,6 +78,7 @@ class PrototypeLanguagePort:
     """Bounded English gate for the demo; intentionally abstains on non-ASCII input."""
 
     def classify(self, text: str) -> LanguageDecision:
+        """Classify English support using the bounded prototype language rules."""
         letters = re.findall(r"[A-Za-z]", text)
         if text.isascii() and len(letters) >= 2:
             status = LanguageStatus.SUPPORTED_ENGLISH
@@ -103,6 +106,7 @@ class PrototypeIntentPort:
 
     @staticmethod
     def _decision(intent: Intent, confidence: float, clarify: bool, rationale: str):
+        """Create a prototype intent decision with stable calibration provenance."""
         return IntentDecision(
             intent, confidence, clarify, "deterministic-prototype-rules",
             "not-applicable-no-model-artifact", "prototype-rules-not-calibrated",
@@ -110,6 +114,7 @@ class PrototypeIntentPort:
         )
 
     def classify(self, text: str) -> IntentDecision:
+        """Classify assessment, research, education or conversational intent."""
         normalized = _normalized(text)
         tokens = set(re.findall(r"[a-z]+", normalized))
         if normalized in self._curated:

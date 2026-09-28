@@ -4,6 +4,7 @@ import numpy as np
 
 
 def _ranks(values):
+    """Assign average ranks to tied values for Spearman correlation."""
     order = np.argsort(values, kind="stable")
     ranks = np.empty(len(values), dtype=float)
     start = 0
@@ -17,6 +18,7 @@ def _ranks(values):
 
 
 def regression_metrics(actual, predicted):
+    """Compute MSE, RMSE, R-squared and tie-aware Spearman correlation."""
     y, p = np.asarray(actual, dtype=float), np.asarray(predicted, dtype=float)
     if y.ndim != 1 or y.shape != p.shape or len(y) < 2:
         raise ValueError("At least two paired observations are required")

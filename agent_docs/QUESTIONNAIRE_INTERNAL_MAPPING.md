@@ -1,5 +1,10 @@
 # Questionnaire Internal Feature Mapping — Do Not Render
 
+Current public-ID mapping: [questionnaire mapping v2](QUESTIONNAIRE_MAPPING_V2.md).
+The source-oriented field labels below remain an internal historical reference;
+they are not the revised public question-ID order. In particular, q007 now uses
+age-15 wording while retaining the legacy checkpoint feature documented in v2.
+
 > **Internal implementation document.** Backend code may use these feature keys, model groups, numeric encodings, and stable variables to map validated questionnaire answers into the model schema. A-TAC identifiers and other internal codes must never appear in rendered questionnaire text, option labels, accessibility labels, user-visible errors, analytics, logs, URLs, or screenshots. Public copy lives in [`questionnaire.md`](../questionnaire.md).
 
 **Status:** Archived internal mapping reference. None of this wording or its identifiers is approved for public rendering. On 2026-09-24 the product owner accepted the current public option order as a prototype machine mapping; the private local adapter implements that assumption. Independent training-column and measurement-equivalence evidence remain unresolved. Public DCMFNet submission stays disabled pending the protected backend workflow and safety release gates; see [`ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md`](ML_QUESTIONNAIRE_COMPATIBILITY_AUDIT.md).

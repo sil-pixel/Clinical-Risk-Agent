@@ -11,7 +11,9 @@ import numpy as np
 
 
 class Monitor:
+    """Aggregate bounded in-memory operational and live-quality telemetry."""
     def __init__(self, root: Path):
+        """Initialize bounded telemetry windows and synchronization for live monitoring."""
         self.root = root
         self.started = datetime.now(timezone.utc).isoformat()
         self._samples = deque(maxlen=2000)
@@ -20,15 +22,18 @@ class Monitor:
         self._lock = threading.Lock()
 
     def record(self, operation: str, status: str, seconds: float):
+        """Record an operation outcome and latency without retaining request content."""
         with self._lock:
             self._samples.append((operation, status, max(0, seconds), time.time()))
 
     def quality_started(self):
+        """Increment the number of live answer evaluations in progress."""
         with self._lock:
             self._pending += 1
 
     def quality_finished(self, status: str, response_kind: str, verdict=None):
         # Explicit allowlist: never retain questions, answers, passages or tokens.
+        """Record allowlisted live quality metadata and settle its pending count."""
         row = {"status": status, "response_kind": response_kind,
                "created_at": datetime.now(timezone.utc).isoformat()}
         if verdict:
@@ -40,11 +45,13 @@ class Monitor:
             self._quality.append(row)
 
     def snapshot(self):
+        """Return aggregate operations, live quality scores and archived evaluation reports."""
         with self._lock:
             samples = list(self._samples)
             quality = list(self._quality)
             pending = self._pending
         def quality_mean(key):
+            """Average available live scores and count the scored replies for one metric."""
             values = [row[key] for row in quality if row.get(key) is not None]
             return {"mean": sum(values) / len(values) if values else None, "n": len(values)}
         operations = []

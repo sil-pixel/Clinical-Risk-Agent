@@ -77,12 +77,18 @@ GENERATION_UNAVAILABLE = (
 
 
 class ConversationalResearchPort(Protocol):
-    def answer_text(self, question: str) -> dict[str, Any]: ...
-    def search_general(self, question: str) -> dict[str, Any]: ...
+    """Define bounded research answering and broader corpus search for chat."""
+    def answer_text(self, question: str) -> dict[str, Any]:
+        """Answer a free-text research question through the bounded evidence workflow."""
+        ...
+    def search_general(self, question: str) -> dict[str, Any]:
+        """Retrieve broader corpus passages for a general research question."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
 class ConversationOutcome:
+    """Package a public assistant response with citations and generation provenance."""
     response_kind: str
     message: str
     citations: tuple[dict[str, Any], ...] = field(default_factory=tuple)
@@ -94,6 +100,7 @@ class ConversationOutcome:
     corpus_version: str | None = None
 
     def public_dict(self) -> dict[str, Any]:
+        """Serialize the outcome into the public response contract."""
         return {
             "response_kind": self.response_kind,
             "message": self.message,
@@ -116,13 +123,16 @@ class EvidenceAbstention(ValueError):
 
 
 class ProtectedConversationOrchestrator:
+    """Route protected requests into research, education or conversational generation."""
     def __init__(self, router: RoutingGraph, research: ConversationalResearchPort,
                  generator: StructuredGenerator | None) -> None:
+        """Bind the protected router, research service and optional LLM generator."""
         self._router = router
         self._research = research
         self._generator = generator
 
     def close(self) -> None:
+        """Release the owned runtime or provider resources."""
         if self._generator is not None:
             self._generator.close()
 
@@ -166,6 +176,7 @@ class ProtectedConversationOrchestrator:
                 "judge_provider": self._generator.provider.value}
 
     def handle(self, text: str, *, deployment_mode: str, session_valid: bool) -> dict[str, Any]:
+        """Run protected routing and return the appropriate public conversational outcome."""
         decision = self._router.advance(PreflightRequest(
             kind=RequestKind.FREE_TEXT, deployment_mode=deployment_mode,
             session_valid=session_valid, text=text,
@@ -208,6 +219,7 @@ class ProtectedConversationOrchestrator:
 
     @staticmethod
     def _safety(category: SafetyCategory | None) -> ConversationOutcome:
+        """Return the approved terminal message for the selected safety category."""
         response = {
             SafetyCategory.EMERGENCY_REDIRECTION: EMERGENCY_RESPONSE,
             SafetyCategory.CRITICAL_SAFETY_REDIRECTION: CRISIS_RESPONSE,
@@ -221,6 +233,7 @@ class ProtectedConversationOrchestrator:
         return ConversationOutcome(kind, response, route=Route.SAFETY_TERMINAL.value)
 
     def _scientific(self, text: str, route: Route) -> ConversationOutcome:
+        """Retrieve support and generate a validated research or general-education answer."""
         result = self._research.answer_text(text)
         status = result.get("status")
         if status == "no_adequate_evidence":
@@ -279,12 +292,14 @@ class ProtectedConversationOrchestrator:
 
     @staticmethod
     def _is_broad_education(text: str) -> bool:
+        """Identify overview-style questions eligible for general-knowledge education."""
         return bool(re.search(
             r"\b(tell me about|what is|what are|explain|describe|overview)\b",
             text, re.IGNORECASE,
         ))
 
     def _education(self, text: str, route: Route) -> ConversationOutcome:
+        """Generate a mental-health overview without claiming local-corpus support."""
         if self._generator is None:
             return ConversationOutcome(
                 "GENERATION_UNAVAILABLE", GENERATION_UNAVAILABLE, route=route.value,
@@ -311,6 +326,7 @@ class ProtectedConversationOrchestrator:
             )
 
     def _general(self, text: str, route: Route) -> ConversationOutcome:
+        """Generate a bounded conversational reply without research citations."""
         if self._generator is None:
             return ConversationOutcome(
                 "CONVERSATION", GENERAL_RESPONSE, route=route.value,
@@ -342,6 +358,7 @@ class ProtectedConversationOrchestrator:
     def _generate_general_evidence(
         self, question: str, result: dict[str, Any],
     ) -> tuple[str, list[str]]:
+        """Generate a passage-grounded answer and validate its used citation identifiers."""
         citations = result["citations"]
         allowed_ids = [item["citation_id"] for item in citations]
         evidence = "\n\n".join(
@@ -376,6 +393,7 @@ class ProtectedConversationOrchestrator:
 
     @staticmethod
     def _inline_citation_ids(text: str) -> list[str]:
+        """Extract supported source identifiers from inline citation groups."""
         ids: list[str] = []
         for group in re.findall(r"\[([^\]]+)\]", text):
             ids.extend(re.findall(r"\bS\d+\b", group))
@@ -386,6 +404,7 @@ class ProtectedConversationOrchestrator:
         response_kind: str, text: str, citation_ids: list[str],
         allowed_ids: list[str], citations: list[dict[str, Any]],
     ) -> list[str]:
+        """Reject unknown citations and return the source identifiers used by a draft."""
         inline_ids = ProtectedConversationOrchestrator._inline_citation_ids(text)
         reported_ids = [
             match
@@ -408,6 +427,7 @@ class ProtectedConversationOrchestrator:
         return used_ids
 
     def explain_assessment(self, result: dict[str, Any]) -> dict[str, Any]:
+        """Generate a plain-language explanation of validated research-model display values."""
         positive = str(result["positive_symptom_research_probability"])
         negative = str(result["negative_symptom_research_probability"])
         profile = str(result.get("generic_profile_version", "generic_genetic_profile_v1"))
@@ -472,6 +492,7 @@ class ProtectedConversationOrchestrator:
         }
 
     def _generate_validated(self, result: dict[str, Any]) -> str:
+        """Generate an approved curated-claim answer with one integrity-repair attempt."""
         answer = result["answer"]
         citations = result["citations"]
         allowed_ids = [item["citation_id"] for item in citations]
@@ -505,6 +526,7 @@ class ProtectedConversationOrchestrator:
     def _validate_draft(response_kind: str, text: str, citation_ids: list[str],
                         approved_answer: str, allowed_ids: list[str],
                         citations: list[dict[str, Any]]) -> None:
+        """Check a curated draft against the approved wording and citation contract."""
         inline_ids = re.findall(r"\[([A-Za-z0-9_-]+)\]", text)
         if (response_kind != "grounded_answer" or text != approved_answer
                 or citation_ids != allowed_ids or inline_ids != allowed_ids

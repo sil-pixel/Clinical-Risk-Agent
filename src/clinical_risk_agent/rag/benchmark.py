@@ -14,14 +14,20 @@ from clinical_risk_agent.contracts import EvidenceResult, EvidenceStatus, Retrie
 
 
 class Retriever(Protocol):
-    def retrieve(self, query: RetrievalQuery, *, today: date) -> EvidenceResult: ...
+    """Define evidence retrieval and source ranking for strategy evaluation."""
+    def retrieve(self, query: RetrievalQuery, *, today: date) -> EvidenceResult:
+        """Retrieve eligible evidence with relevance and claim-support gates."""
+        ...
     def rank_source_ids_for_evaluation(
         self, query: RetrievalQuery, *, today: date, limit: int = 20
-    ) -> tuple[str, ...]: ...
+    ) -> tuple[str, ...]:
+        """Return source identifiers ranked for non-user benchmark scoring."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
 class RelevanceCase:
+    """Describe a benchmark query and its source-level relevance judgments."""
     case_id: str
     query: str
     relevant_source_ids: frozenset[str]
@@ -30,6 +36,7 @@ class RelevanceCase:
 
 @dataclass(frozen=True, slots=True)
 class StrategyMetrics:
+    """Hold aggregate retrieval quality and latency measurements for one strategy."""
     strategy: str
     cases: int
     recall_at_5: float
@@ -45,6 +52,7 @@ class StrategyMetrics:
 
 
 def _dcg(ids: Sequence[str], relevant: frozenset[str], cutoff: int) -> float:
+    """Compute discounted cumulative gain for a ranked sequence of relevance grades."""
     return sum(1 / math.log2(rank + 2) for rank, source_id in enumerate(ids[:cutoff])
                if source_id in relevant)
 
@@ -56,6 +64,7 @@ def evaluate_strategy(
     *,
     today: date,
 ) -> StrategyMetrics:
+    """Measure retrieval quality and latency against a non-user relevance set."""
     if not cases or len({case.case_id for case in cases}) != len(cases):
         raise ValueError("Benchmark needs unique, nonempty frozen cases")
     recall_5: list[float] = []
@@ -111,6 +120,7 @@ def compare_strategies(
     *,
     today: date,
 ) -> tuple[StrategyMetrics, StrategyMetrics]:
+    """Evaluate document and hierarchical retrieval under the same frozen judgments."""
     if set(retrievers) != {"document", "hierarchical"}:
         raise ValueError("Both approved chunking strategies are required")
     return (

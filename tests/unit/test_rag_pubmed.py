@@ -33,7 +33,9 @@ XML = b"""<PubmedArticleSet><PubmedArticle><MedlineCitation>
 
 
 class PubMedTests(unittest.TestCase):
+    """Provide pub med tests fixtures and assertions."""
     def test_appraisal_is_mandatory_and_metadata_is_preserved(self) -> None:
+        """Verify appraisal is mandatory and metadata is preserved."""
         missing = parse_pubmed_xml(XML, checked_on=TODAY, appraisals={})[0]
         self.assertIn("quality_appraisal_missing_or_failed",
                       source_rejection_reasons(missing, today=TODAY))
@@ -45,6 +47,7 @@ class PubMedTests(unittest.TestCase):
         self.assertEqual(source_rejection_reasons(source, today=TODAY), ())
 
     def test_bounded_fetch_rejects_missing_records(self) -> None:
+        """Verify bounded fetch rejects missing records."""
         client = PubMedClient(fetch=lambda url: XML)
         with self.assertRaisesRegex(ValueError, "did not match"):
             client.fetch_pmids(("12345", "54321"), checked_on=TODAY, appraisals={})
@@ -52,6 +55,7 @@ class PubMedTests(unittest.TestCase):
             client.fetch_pmids(("patient name",), checked_on=TODAY, appraisals={})
 
     def test_retraction_refresh_fails_closed_on_missing_or_changed_identity(self) -> None:
+        """Verify retraction refresh fails closed on missing or changed identity."""
         source = parse_pubmed_xml(XML, checked_on=TODAY, appraisals={})[0]
         self.assertEqual(refresh_retraction_status((source,), ())[0].retraction_state,
                          "unverified")
@@ -63,6 +67,7 @@ class PubMedTests(unittest.TestCase):
                          "retracted")
 
     def test_pubmed_processing_date_never_substitutes_for_publication_date(self) -> None:
+        """Verify pubmed processing date never substitutes for publication date."""
         xml = b"""<PubmedArticleSet><PubmedArticle><MedlineCitation><PMID>55</PMID>
         <DateCompleted><Year>2026</Year><Month>08</Month><Day>01</Day></DateCompleted>
         <Article><Journal><JournalIssue><PubDate><MedlineDate>2003 Jan-Feb</MedlineDate>

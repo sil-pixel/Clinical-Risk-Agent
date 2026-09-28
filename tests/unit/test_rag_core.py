@@ -36,6 +36,7 @@ TODAY = date(2026, 9, 24)
 
 
 def synthetic_source(number: int, abstract: str, **overrides: object) -> ScientificSource:
+    """Provide synthetic source behavior for synthetic test fixtures."""
     values = dict(
         source_id=f"synthetic-source-{number}",
         title=f"Synthetic study {number}",
@@ -61,23 +62,30 @@ def synthetic_source(number: int, abstract: str, **overrides: object) -> Scienti
 
 
 class FakeDense:
+    """Provide fake dense fixtures and assertions."""
     def __init__(self, hits: tuple[DenseHit, ...] = (), fails: bool = False) -> None:
+        """Initialize the synthetic test fixture and its observable state."""
         self.hits = hits
         self.fails = fails
 
     def search(self, query: str, *, limit: int) -> tuple[DenseHit, ...]:
+        """Provide search behavior for synthetic test fixtures."""
         if self.fails:
             raise RuntimeError("fixture dense outage")
         return self.hits[:limit]
 
 
 class FakeReranker:
+    """Provide fake reranker fixtures and assertions."""
     def score(self, query: str, passage: object) -> float:
+        """Return the relevance score for one query-passage pair."""
         return 1.0 if "bullying" in passage.exact_text.lower() else 0.1
 
 
 class RAGCoreTests(unittest.TestCase):
+    """Provide ragcore tests fixtures and assertions."""
     def test_claim_support_filters_primary_and_fallback_and_validates_anchor(self) -> None:
+        """Verify claim support filters primary and fallback and validates anchor."""
         sources = (
             synthetic_source(1, "Synthetic victimization predicts experimentation only."),
             synthetic_source(2, "Synthetic victimization predicts diagnosed disorder."),
@@ -109,7 +117,9 @@ class RAGCoreTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "different corpus"):
             CuratedClaimSupport(snapshot, (valid,), expected_version="wrong-version")
         class BrokenSupport:
+            """Provide broken support fixtures and assertions."""
             def supports(self, query, source, passage):
+                """Check whether a passage supports the requested bounded claim."""
                 raise RuntimeError("fixture checker unavailable")
         broken = HybridRetriever(snapshot, lexical, dense,
                                  support_checker=BrokenSupport()).retrieve(query, today=TODAY)
@@ -117,6 +127,7 @@ class RAGCoreTests(unittest.TestCase):
         self.assertFalse(broken.items)
 
     def test_relevance_first_is_default_and_legacy_order_can_be_reproduced(self) -> None:
+        """Verify relevance first is default and legacy order can be reproduced."""
         sources = (
             synthetic_source(1, "Older direct evidence.", published_on=date(2021, 1, 1)),
             synthetic_source(2, "Newer weak evidence.", published_on=date(2025, 1, 1)),
@@ -138,6 +149,7 @@ class RAGCoreTests(unittest.TestCase):
         self.assertEqual(new[0].source.source_id, "synthetic-source-1")
 
     def test_eligibility_rejects_stale_retraction_and_unlicensed_full_text(self) -> None:
+        """Verify eligibility rejects stale retraction and unlicensed full text."""
         source = synthetic_source(1, "Bullying evidence fixture.")
         self.assertEqual(source_rejection_reasons(source, today=TODAY), ())
         stale = replace(source, retraction_checked_on=TODAY - timedelta(days=15))
@@ -153,6 +165,7 @@ class RAGCoreTests(unittest.TestCase):
             replace(source, retraction_state="retracted"), today=TODAY))
 
     def test_document_and_hierarchical_chunks_keep_source_and_section_identity(self) -> None:
+        """Verify document and hierarchical chunks keep source and section identity."""
         abstract = " ".join(f"Sentence {i} describes bullying evidence." for i in range(100))
         source = synthetic_source(1, abstract)
         whole = chunk_source(source, strategy="document")
@@ -165,6 +178,7 @@ class RAGCoreTests(unittest.TestCase):
         self.assertNotEqual(children[0].chunk_id, whole[0].chunk_id)
 
     def test_hybrid_and_fallback_return_only_current_citable_sources(self) -> None:
+        """Verify hybrid and fallback return only current citable sources."""
         sources = (
             synthetic_source(1, "Bullying and mental health association in a synthetic fixture."),
             synthetic_source(2, "Unrelated synthetic chemistry record."),
@@ -192,6 +206,7 @@ class RAGCoreTests(unittest.TestCase):
         self.assertEqual(fallback.items[0].source_id, "synthetic-source-1")
 
     def test_no_evidence_and_dual_outage_are_distinct(self) -> None:
+        """Verify no evidence and dual outage are distinct."""
         snapshot = CorpusSnapshot.build(
             (synthetic_source(1, "Synthetic bullying evidence."),),
             strategy="document", today=TODAY,
@@ -207,6 +222,7 @@ class RAGCoreTests(unittest.TestCase):
         self.assertEqual(outage.fallback_status, AttemptStatus.ZERO_MATCH)
 
     def test_explicit_opposing_stance_survives_source_cap(self) -> None:
+        """Verify explicit opposing stance survives source cap."""
         sources = tuple(
             synthetic_source(number, "Synthetic bullying evidence.",
                              stance="refutes" if number == 4 else "supports",
@@ -230,6 +246,7 @@ class RAGCoreTests(unittest.TestCase):
         self.assertEqual({item.stance for item in unscoped.items}, {None})
 
     def test_document_and_hierarchical_benchmark_use_same_cases(self) -> None:
+        """Verify document and hierarchical benchmark use same cases."""
         sources = (
             synthetic_source(1, "Synthetic bullying research passage."),
             synthetic_source(2, "Synthetic attention research passage."),

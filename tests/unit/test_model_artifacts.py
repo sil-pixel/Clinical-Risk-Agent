@@ -22,7 +22,9 @@ from clinical_risk_agent.inference import (  # noqa: E402
 
 
 class ModelArtifactInspectionTests(unittest.TestCase):
+    """Provide model artifact inspection tests fixtures and assertions."""
     def test_repository_artifacts_load_safely_and_match_known_integrity_facts(self) -> None:
+        """Verify repository artifacts load safely and match known integrity facts."""
         expected = {
             "dcmfnet_neg": {
                 "target": "SCZ18_Neg_Norm",
@@ -57,6 +59,7 @@ class ModelArtifactInspectionTests(unittest.TestCase):
                 self.assertEqual(inspection.tensor_dtypes, ("torch.float32",))
 
     def test_sidecar_checkpoint_mismatch_fails_closed(self) -> None:
+        """Verify sidecar checkpoint mismatch fails closed."""
         source_metadata = REPOSITORY_ROOT / "model_artifacts" / "dcmfnet_neg.metadata.json"
         checkpoint = REPOSITORY_ROOT / "model_artifacts" / "dcmfnet_neg.pt"
         metadata = json.loads(source_metadata.read_text(encoding="utf-8"))
@@ -71,6 +74,7 @@ class ModelArtifactInspectionTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, ArtifactErrorCode.METADATA_MISMATCH)
 
     def test_invalid_feature_group_length_fails_before_inference(self) -> None:
+        """Verify invalid feature group length fails before inference."""
         source_metadata = REPOSITORY_ROOT / "model_artifacts" / "dcmfnet_neg.metadata.json"
         checkpoint = REPOSITORY_ROOT / "model_artifacts" / "dcmfnet_neg.pt"
         metadata = json.loads(source_metadata.read_text(encoding="utf-8"))
@@ -85,6 +89,7 @@ class ModelArtifactInspectionTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, ArtifactErrorCode.INVALID_METADATA)
 
     def test_non_finite_state_dict_fails_closed(self) -> None:
+        """Verify non finite state dict fails closed."""
         source_checkpoint = REPOSITORY_ROOT / "model_artifacts" / "dcmfnet_neg.pt"
         source_metadata = REPOSITORY_ROOT / "model_artifacts" / "dcmfnet_neg.metadata.json"
         payload = torch.load(source_checkpoint, map_location="cpu", weights_only=True)
@@ -101,6 +106,7 @@ class ModelArtifactInspectionTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, ArtifactErrorCode.INVALID_STATE_DICT)
 
     def test_layer_count_array_must_match_configured_modalities(self) -> None:
+        """Verify layer count array must match configured modalities."""
         source_metadata = REPOSITORY_ROOT / "model_artifacts" / "dcmfnet_pos.metadata.json"
         checkpoint = REPOSITORY_ROOT / "model_artifacts" / "dcmfnet_pos.pt"
         metadata = json.loads(source_metadata.read_text(encoding="utf-8"))
@@ -115,6 +121,7 @@ class ModelArtifactInspectionTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, ArtifactErrorCode.INVALID_METADATA)
 
     def test_unsafe_or_corrupt_checkpoint_has_no_fallback_loader(self) -> None:
+        """Verify unsafe or corrupt checkpoint has no fallback loader."""
         source_metadata = REPOSITORY_ROOT / "model_artifacts" / "dcmfnet_neg.metadata.json"
         with tempfile.TemporaryDirectory() as directory:
             invalid_checkpoint = Path(directory) / "invalid.pt"

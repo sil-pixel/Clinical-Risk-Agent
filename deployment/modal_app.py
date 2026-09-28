@@ -62,6 +62,7 @@ runtime_secret = modal.Secret.from_name("clinical-risk-agent-secrets")
 @modal.concurrent(max_inputs=50)
 @modal.asgi_app()
 def web():
+    """Construct the configured Bodhica ASGI application inside the Modal container."""
     from clinical_risk_agent.backend import BackendSettings, create_app
 
     return create_app(BackendSettings.from_env(root=Path(REMOTE_ROOT)))

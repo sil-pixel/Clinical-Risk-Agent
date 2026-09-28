@@ -1,5 +1,11 @@
 # ML Questionnaire Compatibility Audit
 
+Current revision: Silpa approved the revised questionnaire mapping on 2026-09-28.
+The active contract is `prototype_questionnaire_v2`; see
+[mapping v2](QUESTIONNAIRE_MAPPING_V2.md) for question-ID changes and the explicit
+q007 age-15 wording/legacy age-9 feature limitation. The dated v1 decisions below
+are historical; they do not describe the current backend's integration status.
+
 Status: Prototype mapping accepted by product owner on 2026-09-24; independent source-codebook and measurement-equivalence evidence remain unresolved
 
 Owner: ML Engineer

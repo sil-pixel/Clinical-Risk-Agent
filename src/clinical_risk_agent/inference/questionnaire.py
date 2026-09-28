@@ -25,11 +25,14 @@ from .runtime import DCMFNetPredictor
 
 
 def _numbered(group: str, count: int) -> tuple[str, ...]:
+    """Create zero-padded stable identifiers for a public option sequence."""
     return tuple(f"{group}_var_{index}" for index in range(1, count + 1))
 
 
-# Public IDs are intentionally unrelated to feature names. The age-18 experience
-# section renders q074-q076 before q073; IDs still map to artifact column order.
+# Public IDs follow the revised UI order, not the checkpoint's feature order.
+# Record assembly below restores the immutable artifact order by feature name.
+# q007's revised age-15 wording retains a legacy age-9 checkpoint field; this
+# product-approved prototype alias does not establish measurement equivalence.
 MANUAL_FEATURE_NAMES = (
     "SUD15_Cigarettes15", "SUD15_Snuff15", "SUD15_Alcohol15",
     "SUD15_Cannabis15", "SUD15_OtherDrugs15", "SUD15_Painkillers_opioids15",
@@ -46,12 +49,12 @@ MANUAL_FEATURE_NAMES = (
     "SCZ15_easily_scared15",
     *_numbered("ADHD9", 19),
     *_numbered("ASD9", 17),
-    "ACE15_other_bullying15", "ACE15_bullied_often15",
-    "ACE15_tease_bullying15", "ACE15_emotional_bullying15",
-    "ACE15_rumours_bullying15", "ACE15_bullying_by_num15",
-    "ACE15_bullying_time15",
-    "ACE18_other_abuse18", "ACE18_hate_crime18",
-    "ACE18_emotional_abuse18", "ACE18_witness_crime18",
+    "ACE15_bullied_often15", "ACE15_tease_bullying15",
+    "ACE15_emotional_bullying15", "ACE15_rumours_bullying15",
+    "ACE15_bullying_by_num15", "ACE15_bullying_time15",
+    "ACE15_other_bullying15",
+    "ACE18_hate_crime18", "ACE18_emotional_abuse18",
+    "ACE18_witness_crime18", "ACE18_other_abuse18",
     "SUD18_cigarettes18", "SUD18_snuff18", "SUD18_alcohol_often18",
     "SUD18_drugs_often18", "SES_education_father",
     "SES_birth_country_father", "SES_education_mother",
@@ -63,7 +66,7 @@ MANUAL_FEATURE_NAMES = (
 OPTION_GROUPS = (
     (1, 2, 6, 0), (3, 6, 4, 0), (7, 14, 3, 0),
     (15, 24, 4, 0), (25, 29, 3, 0), (30, 65, 3, 0),
-    (66, 70, 5, 1), (71, 72, 6, 1), (73, 76, 2, 0),
+    (66, 69, 5, 1), (70, 71, 6, 1), (72, 72, 5, 1), (73, 76, 2, 0),
     (77, 78, 8, 0), (79, 80, 5, 0), (81, 81, 5, 1),
     (82, 82, 2, 0), (83, 83, 5, 1), (84, 84, 2, 0),
     (85, 85, 2, 1),
@@ -72,15 +75,18 @@ OPTION_GROUPS = (
 
 @dataclass(frozen=True, slots=True)
 class _PrivateQuestion:
+    """Hold internal questionnaire mapping details hidden from the public interface."""
     feature_name: str
     codes: tuple[int, ...]
 
 
 def _question_id(index: int) -> str:
+    """Create the stable public identifier for a numbered questionnaire question."""
     return f"q{index:03d}"
 
 
 def _make_mapping() -> dict[str, _PrivateQuestion]:
+    """Build the internal mapping from public options to ordered model features."""
     by_index: dict[int, tuple[int, ...]] = {}
     for first, last, count, start in OPTION_GROUPS:
         for index in range(first, last + 1):
@@ -101,6 +107,7 @@ _PRIVATE_MAPPING = _make_mapping()
 
 
 def questionnaire_requirements() -> QuestionnaireRequirements:
+    """Return the versioned public questions and their supported option identifiers."""
     return QuestionnaireRequirements(
         version=QUESTIONNAIRE_VERSION,
         questions=tuple(
@@ -116,6 +123,7 @@ def questionnaire_requirements() -> QuestionnaireRequirements:
 def validate_questionnaire(
     answers: Mapping[str, str], *, version: str = QUESTIONNAIRE_VERSION
 ) -> QuestionnaireValidationResult:
+    """Check answer identifiers, completeness and the training feature-map contract."""
     if version != QUESTIONNAIRE_VERSION:
         raise ValueError("Unsupported questionnaire version")
     if not isinstance(answers, Mapping):

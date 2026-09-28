@@ -23,6 +23,7 @@ SOURCE_TYPES = {"journal_article", "pubmed_record", "authority_publication", "cl
 
 @dataclass(frozen=True, slots=True)
 class SourceSection:
+    """Represent an identifiable full-text section and its exact content."""
     name: str
     text: str
     locator: str
@@ -30,6 +31,7 @@ class SourceSection:
 
 @dataclass(frozen=True, slots=True)
 class ScientificSource:
+    """Describe a publication with provenance, eligibility and quality metadata."""
     source_id: str
     title: str
     authors: tuple[str, ...]
@@ -60,6 +62,7 @@ class ScientificSource:
 
 
 def _twenty_year_cutoff(today: date) -> date:
+    """Compute the earliest eligible publication date with leap-day handling."""
     try:
         return today.replace(year=today.year - 20)
     except ValueError:  # February 29
@@ -116,4 +119,5 @@ def source_rejection_reasons(source: ScientificSource, *, today: date) -> tuple[
 
 
 def eligible_source(source: ScientificSource, *, today: date) -> bool:
+    """Report whether a source satisfies every corpus admission requirement."""
     return not source_rejection_reasons(source, today=today)

@@ -47,6 +47,7 @@ class DCMFNetPredictor:
         *,
         device: str = "cpu",
     ) -> None:
+        """Verify artifacts, reconstruct the model and load weights for inference."""
         self.device = torch.device(device)
         if self.device.type != "cpu":
             raise InferenceError(
@@ -70,6 +71,7 @@ class DCMFNetPredictor:
             ) from exc
 
     def input_schema(self) -> InferenceInputSchema:
+        """Return the feature contract required by this predictor."""
         return InferenceInputSchema(
             target=self.target,
             groups=tuple(
@@ -88,6 +90,7 @@ class DCMFNetPredictor:
     def predict(
         self, records: Sequence[Mapping[str, float]]
     ) -> InferenceResult:
+        """Validate input records and run normalized symptom-severity inference."""
         try:
             arrays = transform_records(records, self.schema)
         except (TypeError, ValueError) as exc:

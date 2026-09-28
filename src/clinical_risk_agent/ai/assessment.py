@@ -46,6 +46,7 @@ INTERNAL_VARIANCE_MESSAGE = (
 
 
 class AssessmentStatus(str, Enum):
+    """Enumerate protected assessment completion and rejection outcomes."""
     READY = "assessment_ready"
     UNAUTHORIZED = "assessment_unauthorized"
     SAFETY_TERMINAL = "safety_terminal"
@@ -68,6 +69,7 @@ class AssessmentSubmission:
     deadline_monotonic: float
 
     def __post_init__(self) -> None:
+        """Validate the structured submission shape and freeze its transient answer mapping."""
         if self.preflight.kind is not RequestKind.STRUCTURED_ASSESSMENT:
             raise ValueError("Assessment requires a structured request")
         if not isinstance(self.answers, Mapping):
@@ -82,6 +84,7 @@ class AssessmentSubmission:
 
 @dataclass(frozen=True, slots=True, repr=False)
 class ValidatedAssessmentDisplay:
+    """Hold validated display percentages for the two separate model targets."""
     positive_percent: str
     negative_percent: str
     generic_profile_version: str
@@ -100,17 +103,23 @@ class ProtectedAssessmentOutcome:
 
 
 class AssessmentMLPort(Protocol):
-    def validate(self, answers: Mapping[str, str], *, version: str) -> QuestionnaireValidationResult: ...
+    """Define questionnaire validation and paired research-model inference."""
+    def validate(self, answers: Mapping[str, str], *, version: str) -> QuestionnaireValidationResult:
+        """Validate questionnaire answers against the versioned ML input contract."""
+        ...
 
     def predict(
         self, answers: Mapping[str, str], *, version: str
-    ) -> QuestionnaireAssessmentResult: ...
+    ) -> QuestionnaireAssessmentResult:
+        """Run the positive and negative predictors on validated questionnaire inputs."""
+        ...
 
 
 class MLAssessmentAdapter:
     """Thin bridge to ML-owned validation and paired inference; no feature mapping here."""
 
     def __init__(self, positive: DCMFNetPredictor, negative: DCMFNetPredictor) -> None:
+        """Require compatible positive and negative predictors for paired inference."""
         if (positive.target is not ModelTarget.POSITIVE_SYMPTOM_SEVERITY
                 or negative.target is not ModelTarget.NEGATIVE_SYMPTOM_SEVERITY):
             raise ValueError("Assessment predictor targets are incompatible")
@@ -118,17 +127,20 @@ class MLAssessmentAdapter:
         self._negative = negative
 
     def validate(self, answers: Mapping[str, str], *, version: str) -> QuestionnaireValidationResult:
+        """Validate questionnaire answers against the versioned ML input contract."""
         return validate_questionnaire(answers, version=version)
 
     def predict(
         self, answers: Mapping[str, str], *, version: str
     ) -> QuestionnaireAssessmentResult:
+        """Run the positive and negative predictors on validated questionnaire inputs."""
         return predict_questionnaire(
             answers, self._positive, self._negative, version=version,
         )
 
 
 class _State(TypedDict, total=False):
+    """Carry volatile assessment graph state between protected stages."""
     submission: AssessmentSubmission
     status: AssessmentStatus
     validation: QuestionnaireValidationResult
@@ -140,6 +152,7 @@ class ProtectedAssessmentGraph:
     """Runs authorized validation and inference once, without persistence or retries."""
 
     def __init__(self, routing: RoutingGraph, ml: AssessmentMLPort) -> None:
+        """Compile authorization, questionnaire validation, inference and presentation stages."""
         if routing is None or ml is None:
             raise ValueError("Routing and ML ports are required")
         self._routing = routing
@@ -164,13 +177,16 @@ class ProtectedAssessmentGraph:
 
     @staticmethod
     def _expired(submission: AssessmentSubmission) -> bool:
+        """Check whether the submission has passed its monotonic deadline."""
         return time.monotonic() >= submission.deadline_monotonic
 
     @staticmethod
     def _next(state: _State) -> str:
+        """Choose whether the assessment graph continues or ends after the current stage."""
         return "end" if "status" in state else "continue"
 
     def _authorize(self, state: _State) -> _State:
+        """Require an authorized assessment route before processing questionnaire answers."""
         submission = state["submission"]
         if self._expired(submission):
             return {"status": AssessmentStatus.DEADLINE_EXPIRED}
@@ -186,6 +202,7 @@ class ProtectedAssessmentGraph:
         return {}
 
     def _validate(self, state: _State) -> _State:
+        """Check questionnaire completeness and validity before invoking the model."""
         submission = state["submission"]
         if self._expired(submission):
             return {"status": AssessmentStatus.DEADLINE_EXPIRED}
@@ -212,6 +229,7 @@ class ProtectedAssessmentGraph:
         return {"validation": validation}
 
     def _invoke(self, state: _State) -> _State:
+        """Run paired model inference if authorization and deadline checks still pass."""
         submission = state["submission"]
         if self._expired(submission):
             return {"status": AssessmentStatus.DEADLINE_EXPIRED}
@@ -237,6 +255,7 @@ class ProtectedAssessmentGraph:
         return {"result": result}
 
     def _present(self, state: _State) -> _State:
+        """Validate prediction targets and convert separate estimates into display percentages."""
         submission = state["submission"]
         if self._expired(submission):
             return {"result": None, "status": AssessmentStatus.DEADLINE_EXPIRED}
@@ -278,6 +297,7 @@ class ProtectedAssessmentGraph:
         return {"display": display, "status": AssessmentStatus.READY}
 
     def run(self, submission: AssessmentSubmission) -> ProtectedAssessmentOutcome:
+        """Execute the protected assessment graph and return its bounded outcome."""
         if external_tracing_enabled():
             return ProtectedAssessmentOutcome(AssessmentStatus.PRECONDITION_UNAVAILABLE)
         state = self._graph.invoke({"submission": submission})

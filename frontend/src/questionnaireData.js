@@ -1,3 +1,6 @@
+export const questionnaireVersion = "prototype_questionnaire_v2";
+
+/** Assign stable opaque option identifiers to an ordered set of answer labels. */
 const makeOptions = (labels) =>
   labels.map((label, index) => ({ id: `o${String(index + 1).padStart(2, "0")}`, label }));
 
@@ -84,6 +87,7 @@ export const optionSets = Object.freeze({
   sexTwo: makeOptions(["Male", "Female"]),
 });
 
+/** Create a public question record without exposing internal model feature names. */
 const question = (id, prompt, optionSet, note) => ({ id, prompt, optionSet, note });
 
 export const questionnaireSections = Object.freeze([
@@ -112,7 +116,7 @@ export const questionnaireSections = Object.freeze([
     title: "Experiences and wellbeing around age 15",
     description: "These questions ask about experiences and feelings. They do not diagnose or label you.",
     questions: [
-      question("q007", "At around age 9, did you see something that people near you did not seem to see?", "experienceThree"),
+      question("q007", "At around age 15, did you see something that people near you did not seem to see?", "experienceThree"),
       question("q008", "At around age 15, did you feel as though somebody was secretly watching or tracking you?", "experienceThree"),
       question("q009", "At around age 15, did it seem possible that another person knew your thoughts without you telling them?", "experienceThree"),
       question("q010", "At around age 15, did ordinary media, signs, or events appear to contain a message intended specifically for you?", "experienceThree"),
@@ -195,13 +199,13 @@ export const questionnaireSections = Object.freeze([
     title: "Bullying experiences around age 15",
     description: "Thinking back now, answer these questions about bullying during the few months around age 15.",
     questions: [
-      question("q066", "During the few months around age 15, how often were you bullied in a way not covered by the other examples in this section?", "bullyingFrequency"),
-      question("q067", "During the few months around age 15, how often were you repeatedly bullied?", "bullyingFrequency"),
-      question("q068", "During the few months around age 15, how often did someone mock you, use a hurtful nickname, or deliberately embarrass you?", "bullyingFrequency"),
-      question("q069", "During the few months around age 15, how often were you deliberately excluded, ignored, or treated in another emotionally harmful way?", "bullyingFrequency"),
-      question("q070", "During the few months around age 15, how often did someone spread an untrue or harmful story about you?", "bullyingFrequency"),
-      question("q071", "When bullying happened around age 15, how many people were usually involved?", "bullyingPeople"),
-      question("q072", "When bullying happened around age 15, how long did it continue?", "bullyingDuration"),
+      question("q066", "During the few months around age 15, how often were you repeatedly bullied?", "bullyingFrequency"),
+      question("q067", "During the few months around age 15, how often did someone mock you, use a hurtful nickname, or deliberately embarrass you?", "bullyingFrequency"),
+      question("q068", "During the few months around age 15, how often were you deliberately excluded, ignored, or treated in another emotionally harmful way?", "bullyingFrequency"),
+      question("q069", "During the few months around age 15, how often did someone spread an untrue or harmful story about you?", "bullyingFrequency"),
+      question("q070", "When bullying happened around age 15, how many people were usually involved?", "bullyingPeople"),
+      question("q071", "When bullying happened around age 15, how long did it continue?", "bullyingDuration"),
+      question("q072", "During the few months around age 15, how often were you bullied in a way not covered by the other examples in this section?", "bullyingFrequency"),
     ],
   },
   {
@@ -210,10 +214,10 @@ export const questionnaireSections = Object.freeze([
     title: "Difficult or harmful experiences reported at age 18",
     description: "Thinking back, consider experiences that had happened by the time you were 18.",
     questions: [
-      question("q074", "By age 18, had you experienced violence that you believed was motivated by prejudice against an aspect of your identity?", "occurrenceTwo"),
-      question("q075", "By age 18, had someone repeatedly humiliated, rejected, intimidated, or emotionally harmed you?", "occurrenceTwo"),
-      question("q076", "By age 18, had you directly witnessed a threatening or violent crime in person, rather than through media?", "occurrenceTwo"),
-      question("q073", "By age 18, had you experienced another serious or harmful event not covered by the other questions in this section?", "occurrenceTwo"),
+      question("q073", "By age 18, had you experienced violence that you believed was motivated by prejudice against an aspect of your identity?", "occurrenceTwo"),
+      question("q074", "By age 18, had someone repeatedly humiliated, rejected, intimidated, or emotionally harmed you?", "occurrenceTwo"),
+      question("q075", "By age 18, had you directly witnessed a threatening or violent crime in person, rather than through media?", "occurrenceTwo"),
+      question("q076", "By age 18, had you experienced another serious or harmful event not covered by the other questions in this section?", "occurrenceTwo"),
     ],
   },
   {
@@ -271,6 +275,7 @@ export const totalQuestionCount = allQuestions.length;
 
 export const modelQuestionCount = allQuestions.length;
 
+/** Return the supported answer choices for a public questionnaire question. */
 export function getOptionsForQuestion(item) {
   const options = optionSets[item.optionSet];
   if (!options) {

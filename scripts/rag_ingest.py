@@ -22,6 +22,7 @@ from clinical_risk_agent.rag.qdrant_index import QdrantScientificIndex
 
 
 def _collection_name(strategy: str, version: str) -> str:
+    """Build a versioned Qdrant collection name for one chunking strategy."""
     return f"scientific_{strategy}_{version.replace('-', '_')}"
 
 
@@ -34,6 +35,7 @@ def _system_trust_fetch(url: str) -> bytes:
 
 
 def main() -> None:
+    """Run the command-line workflow: Build both versioned Qdrant collections from reviewed public PubMed sources."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--query-model", type=Path, required=True)

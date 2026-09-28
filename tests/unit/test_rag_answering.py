@@ -20,6 +20,7 @@ from clinical_risk_agent.rag.answering import (  # noqa: E402
 
 def supported_result(pmid: str = "21382538", *, citation_id: str = "S1",
                      excerpt: str = "Synthetic exact passage") -> SimpleNamespace:
+    """Provide supported result behavior for synthetic test fixtures."""
     item = SimpleNamespace(
         pmid=pmid, citation_id=citation_id, source_id=f"pmid:{pmid}",
         chunk_id="synthetic-chunk", exact_matched_text=excerpt,
@@ -35,15 +36,19 @@ def supported_result(pmid: str = "21382538", *, citation_id: str = "S1",
 
 
 class AnsweringTests(unittest.TestCase):
+    """Provide answering tests fixtures and assertions."""
     def setUp(self) -> None:
+        """Prepare isolated fixtures before each test."""
         self.calls: list[tuple] = []
         self.result = supported_result()
 
         def retrieve(question: str, claim_id: str) -> SimpleNamespace:
+            """Retrieve eligible evidence with relevance and claim-support gates."""
             self.calls.append(("supported", question, claim_id))
             return self.result
 
         def explore(question: str, limit: int) -> dict:
+            """Provide explore behavior for synthetic test fixtures."""
             self.calls.append(("explore", question, limit))
             return {"match_status": "matches_found", "matches": [
                 {"pmid": "fixture", "citation_id": "S1"},
@@ -56,6 +61,7 @@ class AnsweringTests(unittest.TestCase):
         )
 
     def test_exact_question_returns_cited_bounded_answer(self) -> None:
+        """Verify exact question returns cited bounded answer."""
         question = CURATED_QUESTIONS[0].question.upper().rstrip("?") + "!"
         result = self.answerer.answer(question)
         self.assertEqual(result["status"], "curated_support_available")
@@ -67,6 +73,7 @@ class AnsweringTests(unittest.TestCase):
         self.assertEqual([call[0] for call in self.calls], ["supported"])
 
     def test_near_misses_abstain_without_trusted_claim_routing(self) -> None:
+        """Verify near misses abstain without trusted claim routing."""
         for question in (
             "Is childhood ADHD associated with later diagnosed alcohol use disorder?",
             "Did the MTA childhood ADHD cohort find more diagnosed substance use disorder by age 25?",
@@ -83,6 +90,7 @@ class AnsweringTests(unittest.TestCase):
         self.assertTrue(all(call[0] == "explore" for call in self.calls))
 
     def test_wrong_source_or_citation_abstains(self) -> None:
+        """Verify wrong source or citation abstains."""
         for result in (supported_result(pmid="99999999"),
                        supported_result(citation_id="S2"),
                        supported_result(excerpt="changed")):
@@ -95,6 +103,7 @@ class AnsweringTests(unittest.TestCase):
                 self.assertEqual(answer["citations"], [])
 
     def test_support_failure_and_exploration_outage_fail_closed(self) -> None:
+        """Verify support failure and exploration outage fail closed."""
         self.result = SimpleNamespace(status=EvidenceStatus.RETRIEVAL_UNAVAILABLE)
         result = self.answerer.answer(CURATED_QUESTIONS[0].question)
         self.assertEqual(result["status"], "retrieval_unavailable")
@@ -110,6 +119,7 @@ class AnsweringTests(unittest.TestCase):
                          "retrieval_unavailable")
 
     def test_invalid_question_and_missing_catalog_fail_closed(self) -> None:
+        """Verify invalid question and missing catalog fail closed."""
         with self.assertRaisesRegex(ValueError, "3 to 500"):
             self.answerer.answer("  ")
         with self.assertRaisesRegex(ValueError, "catalog"):

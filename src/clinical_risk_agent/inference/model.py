@@ -16,11 +16,13 @@ class GatedModule(nn.Module):
     """Update a modality representation with a learned feature gate."""
 
     def __init__(self, n_features_m: int) -> None:
+        """Create the learned update and feature-gating layers for one modality."""
         super().__init__()
         self.W_update = nn.Linear(n_features_m, n_features_m)
         self.W_gate = nn.Linear(2 * n_features_m, n_features_m)
 
     def forward(self, F_curr: Tensor, G_prev: Tensor) -> Tensor:
+        """Apply the learned gate to the projected modality features."""
         update = torch.sigmoid(self.W_update(F_curr + G_prev))
         gated = F_curr * update
         return torch.tanh(self.W_gate(torch.cat((F_curr, gated), dim=1)))
@@ -30,11 +32,13 @@ class FusionModule(nn.Module):
     """Bilinearly fuse the anchor and current modality representations."""
 
     def __init__(self, n_features_x: int, n_features_m: int) -> None:
+        """Create projections for multiplicative anchor-modality fusion."""
         super().__init__()
         self.W1 = nn.Linear(n_features_x, n_features_m)
         self.W2 = nn.Linear(n_features_m, n_features_m)
 
     def forward(self, X: Tensor, G_prev: Tensor) -> Tensor:
+        """Fuse the modality projections through the learned fusion transform."""
         return torch.tanh(torch.tanh(self.W1(X)) * torch.tanh(self.W2(G_prev)))
 
 
@@ -42,11 +46,13 @@ class GatedFusionLayer(nn.Module):
     """One fusion step followed by a gated representation update."""
 
     def __init__(self, n_features_x: int, n_features_m: int) -> None:
+        """Compose the modality fusion and gated-update layers."""
         super().__init__()
         self.fusion_layer = FusionModule(n_features_x, n_features_m)
         self.gated_layer = GatedModule(n_features_m)
 
     def forward(self, X: Tensor, G_prev: Tensor) -> tuple[Tensor, Tensor]:
+        """Combine gated modality features with their learned fused representation."""
         fused = self.fusion_layer(X, G_prev)
         return fused, self.gated_layer(fused, G_prev)
 
@@ -61,6 +67,7 @@ class SEAttention(nn.Module):
         dropout: float = 0.3,
         hidden_dim_min: int = 8,
     ) -> None:
+        """Build the feature-channel excitation network with validated dimensions."""
         super().__init__()
         if n_features <= 0:
             raise ValueError("n_features must be positive")
@@ -78,6 +85,7 @@ class SEAttention(nn.Module):
         )
 
     def forward(self, inputs: Tensor) -> Tensor:
+        """Reweight feature channels using squeeze-and-excitation attention."""
         return inputs * self.excitation(inputs)
 
 
@@ -93,6 +101,7 @@ class IterativeGatedFusionModule(nn.Module):
         dropout: float = 0.3,
         hidden_dim_min: int = 8,
     ) -> None:
+        """Build repeated fusion layers and attention over their concatenated outputs."""
         super().__init__()
         if L <= 0:
             raise ValueError("L must be positive")
@@ -108,6 +117,7 @@ class IterativeGatedFusionModule(nn.Module):
         )
 
     def forward(self, X: Tensor, X_modality: Tensor) -> Tensor:
+        """Refine the cross-modal representation through repeated gated fusion."""
         previous = X_modality
         fused_outputs: list[Tensor] = []
         for layer in self.gated_fusion_layers:
@@ -128,6 +138,7 @@ class DeepCrossModalFusionModel(nn.Module):
         dropout: float = 0.3,
         hidden_dim_min: int = 8,
     ) -> None:
+        """Build validated modality-fusion, attention and regression layers."""
         super().__init__()
         if M <= 0:
             raise ValueError("M must be positive")
@@ -184,6 +195,7 @@ class DeepCrossModalFusionModel(nn.Module):
         self.fc = nn.Linear(final_dim, 1)
 
     def forward(self, inputs: Sequence[Tensor]) -> Tensor:
+        """Project feature groups and predict normalized symptom severity."""
         if len(inputs) != self.M + 2:
             raise ValueError(f"Expected {self.M + 2} modality tensors")
         anchor = inputs[0]

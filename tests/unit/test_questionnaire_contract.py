@@ -24,16 +24,20 @@ from clinical_risk_agent.inference.questionnaire import (  # noqa: E402
 
 
 def complete_answers() -> dict[str, str]:
+    """Provide complete answers behavior for synthetic test fixtures."""
     return {item.question_id: item.option_ids[0] for item in questionnaire_requirements().questions}
 
 
 def predictor(stem: str) -> DCMFNetPredictor:
+    """Provide predictor behavior for synthetic test fixtures."""
     root = REPOSITORY_ROOT / "model_artifacts"
     return DCMFNetPredictor(root / f"{stem}.pt", root / f"{stem}.metadata.json")
 
 
 class QuestionnaireContractTests(unittest.TestCase):
+    """Provide questionnaire contract tests fixtures and assertions."""
     def test_public_requirements_have_opaque_ids_and_exact_option_counts(self) -> None:
+        """Verify public requirements have opaque ids and exact option counts."""
         requirements = questionnaire_requirements()
         self.assertEqual(len(requirements.questions), 85)
         self.assertEqual(
@@ -47,12 +51,13 @@ class QuestionnaireContractTests(unittest.TestCase):
         self.assertEqual(len(requirements.questions[84].option_ids), 2)
 
     def test_backend_option_contract_matches_rendered_frontend(self) -> None:
+        """Verify backend option contract matches rendered frontend."""
         if shutil.which("node") is None:
             self.skipTest("Node.js is unavailable")
         script = (
-            "import { allQuestions, getOptionsForQuestion } from './src/questionnaireData.js';"
-            "console.log(JSON.stringify(allQuestions.map(q => "
-            "[q.id, getOptionsForQuestion(q).map(o => o.id)])))"
+            "import { allQuestions, getOptionsForQuestion, questionnaireVersion } from './src/questionnaireData.js';"
+            "console.log(JSON.stringify({version: questionnaireVersion, questions: allQuestions.map(q => "
+            "[q.id, getOptionsForQuestion(q).map(o => o.id)])}))"
         )
         completed = subprocess.run(
             ["node", "--input-type=module", "-e", script],
@@ -61,7 +66,9 @@ class QuestionnaireContractTests(unittest.TestCase):
             capture_output=True,
             text=True,
         )
-        frontend_contract = dict(json.loads(completed.stdout))
+        frontend = json.loads(completed.stdout)
+        self.assertEqual(frontend["version"], questionnaire_requirements().version)
+        frontend_contract = dict(frontend["questions"])
         backend_contract = {
             item.question_id: list(item.option_ids)
             for item in questionnaire_requirements().questions
@@ -69,6 +76,7 @@ class QuestionnaireContractTests(unittest.TestCase):
         self.assertEqual(frontend_contract, backend_contract)
 
     def test_validation_rejects_missing_unknown_and_unscored_answers(self) -> None:
+        """Verify validation rejects missing unknown and unscored answers."""
         answers = complete_answers()
         self.assertTrue(validate_questionnaire(answers).authorizes_inference)
         answers.pop("q001")
@@ -82,8 +90,11 @@ class QuestionnaireContractTests(unittest.TestCase):
         self.assertEqual(validate_questionnaire(answers).unknown_question_ids, ("q999",))
         with self.assertRaises(ValueError):
             validate_questionnaire(answers, version="wrong")
+        with self.assertRaises(ValueError):
+            validate_questionnaire(answers, version="prototype_questionnaire_v1")
 
     def test_mapping_covers_both_artifacts_and_uses_target_specific_hidden_medians(self) -> None:
+        """Verify mapping covers both artifacts and uses target specific hidden medians."""
         answers = complete_answers()
         for stem in ("dcmfnet_pos", "dcmfnet_neg"):
             with self.subTest(stem=stem):
@@ -110,12 +121,13 @@ class QuestionnaireContractTests(unittest.TestCase):
                 model.predict([record])
 
     def test_option_codes_and_public_order_are_explicit(self) -> None:
+        """Verify option codes and public order are explicit."""
         model = predictor("dcmfnet_pos")
         answers = complete_answers()
         answers.update({
             "q003": "o04", "q015": "o04", "q030": "o03",
-            "q066": "o05", "q071": "o06", "q073": "o02",
-            "q074": "o01", "q076": "o02", "q077": "o08",
+            "q072": "o05", "q070": "o06", "q076": "o02",
+            "q073": "o01", "q075": "o02", "q077": "o08",
             "q079": "o05", "q081": "o05", "q082": "o01",
             "q084": "o02", "q085": "o02",
         })
@@ -134,7 +146,35 @@ class QuestionnaireContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             assemble_model_record({"q001": "o01"}, model)
 
+    def test_revised_ids_write_only_the_intended_checkpoint_feature(self) -> None:
+        """Verify changed public IDs preserve feature identity and checkpoint input order."""
+        expected = {
+            "q007": "SCZ15_PROD_seen_hallucinations9",
+            "q014": "SCZ15_Seen_hallucinations15",
+            "q066": "ACE15_bullied_often15", "q067": "ACE15_tease_bullying15",
+            "q068": "ACE15_emotional_bullying15", "q069": "ACE15_rumours_bullying15",
+            "q070": "ACE15_bullying_by_num15", "q071": "ACE15_bullying_time15",
+            "q072": "ACE15_other_bullying15", "q073": "ACE18_hate_crime18",
+            "q074": "ACE18_emotional_abuse18", "q075": "ACE18_witness_crime18",
+            "q076": "ACE18_other_abuse18",
+        }
+        options = {item.question_id: item.option_ids for item in questionnaire_requirements().questions}
+        for stem in ("dcmfnet_pos", "dcmfnet_neg"):
+            model = predictor(stem)
+            baseline = assemble_model_record(complete_answers(), model)
+            for question_id, feature in expected.items():
+                with self.subTest(stem=stem, question_id=question_id):
+                    answers = complete_answers()
+                    answers[question_id] = options[question_id][-1]
+                    record = assemble_model_record(answers, model)
+                    changed = {name for name in record if record[name] != baseline[name]}
+                    self.assertEqual(changed, {feature})
+                    self.assertEqual(tuple(record), model.schema.flat_feature_names)
+                    start = 1 if question_id in {f"q{i:03d}" for i in range(66, 73)} else 0
+                    self.assertEqual(record[feature], len(options[question_id]) - 1 + start)
+
     def test_complete_assessment_returns_separate_unchanged_target_outputs(self) -> None:
+        """Verify complete assessment returns separate unchanged target outputs."""
         positive = predictor("dcmfnet_pos")
         negative = predictor("dcmfnet_neg")
         answers = complete_answers()

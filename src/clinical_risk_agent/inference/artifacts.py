@@ -81,6 +81,7 @@ def inspect_artifact(
 
 
 def _require_file(path: Path) -> None:
+    """Require an existing artifact file before loading or inspecting it."""
     if not path.is_file():
         raise ArtifactValidationError(
             ArtifactErrorCode.FILE_NOT_FOUND,
@@ -89,6 +90,7 @@ def _require_file(path: Path) -> None:
 
 
 def _read_metadata(path: Path) -> dict[str, Any]:
+    """Read checkpoint metadata and reject malformed JSON or unsupported shapes."""
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
@@ -105,6 +107,7 @@ def _read_metadata(path: Path) -> dict[str, Any]:
 
 
 def _validate_metadata(metadata: Mapping[str, Any]) -> dict[str, int]:
+    """Validate checkpoint metadata against the versioned artifact contract."""
     if set(metadata) != _SIDECAR_KEYS:
         _invalid_metadata("Model metadata has missing or unsupported top-level fields.")
     if metadata["runtime"] != _SUPPORTED_RUNTIME:
@@ -193,6 +196,7 @@ def _validate_metadata(metadata: Mapping[str, Any]) -> dict[str, int]:
 
 
 def _load_weights_only(path: Path) -> dict[str, Any]:
+    """Load checkpoint tensors using the restricted weights-only loader."""
     try:
         value = torch.load(path, map_location="cpu", weights_only=True)
     except Exception as exc:
@@ -212,6 +216,7 @@ def _validate_checkpoint(
     payload: Mapping[str, Any],
     metadata: Mapping[str, Any],
 ) -> Mapping[str, Tensor]:
+    """Validate checkpoint structure against the approved metadata and model layout."""
     if set(payload) != _CHECKPOINT_KEYS:
         raise ArtifactValidationError(
             ArtifactErrorCode.INVALID_CHECKPOINT,
@@ -245,12 +250,14 @@ def _validate_checkpoint(
 
 
 def _require_sequence(value: Any, field: str) -> Sequence[Any]:
+    """Require a non-empty sequence of valid metadata values."""
     if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
         _invalid_metadata(f"{field} must be an array.")
     return value
 
 
 def _require_grouped_sequence(value: Any, field: str) -> Sequence[Sequence[Any]]:
+    """Validate ordered per-modality feature sequences from artifact metadata."""
     groups = _require_sequence(value, field)
     if any(isinstance(group, (str, bytes)) or not isinstance(group, Sequence) for group in groups):
         _invalid_metadata(f"{field} must be an array of arrays.")
@@ -258,6 +265,7 @@ def _require_grouped_sequence(value: Any, field: str) -> Sequence[Sequence[Any]]
 
 
 def _require_finite_numbers(values: Sequence[Any], field: str) -> None:
+    """Reject non-numeric or non-finite normalization metadata values."""
     for value in values:
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             _invalid_metadata(f"{field} must contain only numbers.")
@@ -266,14 +274,17 @@ def _require_finite_numbers(values: Sequence[Any], field: str) -> None:
 
 
 def _invalid_metadata(message: str) -> None:
+    """Construct a stable metadata-validation failure without exposing artifact contents."""
     raise ArtifactValidationError(ArtifactErrorCode.INVALID_METADATA, message)
 
 
 def _invalid_state_dict(message: str) -> None:
+    """Construct a stable checkpoint-validation failure without exposing tensors."""
     raise ArtifactValidationError(ArtifactErrorCode.INVALID_STATE_DICT, message)
 
 
 def _sha256(path: Path) -> str:
+    """Compute a file digest for pinned artifact identity verification."""
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):

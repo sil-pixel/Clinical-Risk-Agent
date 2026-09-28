@@ -6,6 +6,7 @@ import {
   getOptionsForQuestion,
   modelQuestionCount,
   questionnaireSections,
+  questionnaireVersion,
   totalQuestionCount,
 } from "../src/questionnaireData.js";
 
@@ -65,14 +66,27 @@ test("public copy avoids known ambiguous or awkward constructions", () => {
   }
 });
 
-test("the exceptional age-nine experience keeps its original timeframe", () => {
+test("the revised visual-experience question uses the approved age-fifteen timeframe", () => {
   const question = allQuestions.find((item) => item.id === "q007");
-  assert.match(question.prompt, /age 9/i);
+  assert.match(question.prompt, /age 15/i);
+  assert.equal(questionnaireVersion, "prototype_questionnaire_v2");
 });
 
 test("section six places the catch-all experience last", () => {
   const section = questionnaireSections.find((item) => item.id === "s06");
-  assert.equal(section.questions.at(-1).id, "q073");
+  assert.equal(section.questions.at(-1).id, "q076");
+  assert.match(section.questions.at(-1).prompt, /not covered by the other questions/i);
+});
+
+test("revised bullying IDs keep frequency, number and duration option sets aligned", () => {
+  const section = questionnaireSections.find((item) => item.id === "s05");
+  assert.deepEqual(section.questions.map((item) => [item.id, item.optionSet]), [
+    ["q066", "bullyingFrequency"], ["q067", "bullyingFrequency"],
+    ["q068", "bullyingFrequency"], ["q069", "bullyingFrequency"],
+    ["q070", "bullyingPeople"], ["q071", "bullyingDuration"],
+    ["q072", "bullyingFrequency"],
+  ]);
+  assert.match(section.questions.at(-1).prompt, /not covered by the other examples/i);
 });
 
 test("every section and question has descriptive copy and options", () => {

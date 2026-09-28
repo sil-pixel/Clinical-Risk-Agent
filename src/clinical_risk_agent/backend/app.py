@@ -50,35 +50,60 @@ USAGE_LIMIT_MESSAGE = (
 
 
 class ResearchService(Protocol):
-    def ready(self) -> tuple[bool, str | None]: ...
-    def answer(self, question_id: str) -> dict[str, Any]: ...
-    def answer_text(self, question: str) -> dict[str, Any]: ...
-    def search_general(self, question: str) -> dict[str, Any]: ...
-    def close(self) -> None: ...
+    """Define the research retrieval operations required by the public API."""
+    def ready(self) -> tuple[bool, str | None]:
+        """Check research readiness and report the loaded corpus version."""
+        ...
+    def answer(self, question_id: str) -> dict[str, Any]:
+        """Answer a supported research question using approved claim evidence."""
+        ...
+    def answer_text(self, question: str) -> dict[str, Any]:
+        """Answer a free-text research question through the bounded evidence workflow."""
+        ...
+    def search_general(self, question: str) -> dict[str, Any]:
+        """Retrieve broader corpus passages for a general research question."""
+        ...
+    def close(self) -> None:
+        """Release the owned runtime or provider resources."""
+        ...
 
 
 class ConversationService(Protocol):
+    """Define protected chat generation and assessment-explanation operations."""
     def handle(self, text: str, *, deployment_mode: str,
-               session_valid: bool) -> dict[str, Any]: ...
-    def explain_assessment(self, result: dict[str, Any]) -> dict[str, Any]: ...
-    def close(self) -> None: ...
+               session_valid: bool) -> dict[str, Any]:
+        """Run protected routing and return the appropriate public conversational outcome."""
+        ...
+    def explain_assessment(self, result: dict[str, Any]) -> dict[str, Any]:
+        """Generate a plain-language explanation of validated research-model display values."""
+        ...
+    def close(self) -> None:
+        """Release the owned runtime or provider resources."""
+        ...
 
 
 class AssessmentService(Protocol):
-    def requirements(self) -> dict[str, Any]: ...
+    """Define questionnaire discovery and protected model assessment operations."""
+    def requirements(self) -> dict[str, Any]:
+        """Return the public questionnaire version, questions and allowed options."""
+        ...
     def assess(self, version: str, answers: dict[str, str],
-               *, deployment_mode: str, timeout_seconds: float) -> dict[str, Any]: ...
+               *, deployment_mode: str, timeout_seconds: float) -> dict[str, Any]:
+        """Run protected questionnaire validation and return separate research-model estimates."""
+        ...
 
 
 class LocalAssessmentService:
     """Lazily loads both pinned DCMFNet artifacts and the protected graph."""
 
     def __init__(self, root: Path) -> None:
+        """Prepare lazy, thread-safe loading of the protected assessment runtime."""
         self._root = root
         self._graph: ProtectedAssessmentGraph | None = None
         self._lock = threading.Lock()
 
     def _load(self) -> ProtectedAssessmentGraph:
+        """Lazily initialize and cache the local service runtime under a lock."""
         with self._lock:
             if self._graph is None:
                 artifact_dir = self._root / "model_artifacts"
@@ -99,10 +124,12 @@ class LocalAssessmentService:
             return self._graph
 
     def warmup(self) -> None:
+        """Load model resources before the first assessment request."""
         self._load()
 
     @staticmethod
     def requirements() -> dict[str, Any]:
+        """Return the public questionnaire version, questions and allowed options."""
         contract = questionnaire_requirements()
         return {
             "questionnaire_version": contract.version,
@@ -114,6 +141,7 @@ class LocalAssessmentService:
 
     def assess(self, version: str, answers: dict[str, str],
                *, deployment_mode: str, timeout_seconds: float) -> dict[str, Any]:
+        """Run protected questionnaire validation and return separate research-model estimates."""
         submission = AssessmentSubmission(
             PreflightRequest(
                 RequestKind.STRUCTURED_ASSESSMENT, deployment_mode, True,
@@ -160,48 +188,58 @@ class LocalResearchService:
     """Loads the two pinned encoders and read-only Qdrant store once per process."""
 
     def __init__(self, root: Path) -> None:
+        """Prepare lazy, thread-safe loading of the local scientific retrieval runtime."""
         self._root = root
         self._runtime: ResearchRuntime | None = None
         self._lock = threading.Lock()
 
     def _load(self) -> ResearchRuntime:
+        """Lazily initialize and cache the local service runtime under a lock."""
         with self._lock:
             if self._runtime is None:
                 self._runtime = ResearchRuntime(self._root)
             return self._runtime
 
     def ready(self) -> tuple[bool, str | None]:
+        """Check research readiness and report the loaded corpus version."""
         try:
             return True, self._load().corpus_version
         except Exception:
             return False, None
 
     def answer(self, question_id: str) -> dict[str, Any]:
+        """Answer a supported research question using approved claim evidence."""
         return self._load().answerer.answer_public_id(question_id)
 
     def answer_text(self, question: str) -> dict[str, Any]:
+        """Answer a free-text research question through the bounded evidence workflow."""
         return self._load().answerer.answer(question)
 
     def search_general(self, question: str) -> dict[str, Any]:
+        """Retrieve broader corpus passages for a general research question."""
         return self._load().search_general(question)
 
     def close(self) -> None:
+        """Release the owned runtime or provider resources."""
         if self._runtime is not None:
             self._runtime.close()
 
 
 class ResearchAnswerRequest(BaseModel):
+    """Validate a request selecting one curated research question."""
     model_config = ConfigDict(extra="forbid", strict=True)
     question_id: str = Field(pattern=r"^rq_0[1-5]$")
 
 
 class MessageRequest(BaseModel):
+    """Validate a bounded free-text chat request."""
     model_config = ConfigDict(extra="forbid", strict=True)
     kind: Literal["free_text"]
     text: str = Field(min_length=1, max_length=500)
 
 
 class AssessmentAttestations(BaseModel):
+    """Require adult, self-assessment and research-consent confirmations."""
     model_config = ConfigDict(extra="forbid", strict=True)
     age_18_or_over: Literal[True]
     self_assessment: Literal[True]
@@ -209,6 +247,7 @@ class AssessmentAttestations(BaseModel):
 
 
 class AssessmentRequest(BaseModel):
+    """Validate questionnaire answers and required assessment attestations."""
     model_config = ConfigDict(extra="forbid", strict=True)
     questionnaire_version: str = Field(min_length=1, max_length=80)
     answers: dict[str, str] = Field(max_length=85)
@@ -216,12 +255,15 @@ class AssessmentRequest(BaseModel):
 
 
 class CapacityGate:
+    """Limit simultaneous operations with a thread-safe admission counter."""
     def __init__(self, limit: int) -> None:
+        """Configure the concurrency limit and its thread-safe active counter."""
         self._limit = limit
         self._active = 0
         self._lock = threading.Lock()
 
     def acquire(self) -> bool:
+        """Admit an operation if the concurrency limit has available capacity."""
         with self._lock:
             if self._active >= self._limit:
                 return False
@@ -229,12 +271,14 @@ class CapacityGate:
             return True
 
     def release(self) -> None:
+        """Release a previously admitted operation from the concurrency counter."""
         with self._lock:
             self._active -= 1
 
 
 def _error(code: str, message: str, component: str, status: int,
            *, retryable: bool = False) -> JSONResponse:
+    """Build a non-cacheable API error with a stable code and safe message."""
     return JSONResponse(status_code=status, headers={"Cache-Control": "no-store"}, content={
         "api_version": API_VERSION,
         "error": {"code": code, "message": message, "component": component,
@@ -282,6 +326,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     explanation_capacity = asyncio.Semaphore(settings.max_model_concurrency)
 
     def evaluate_live(text: str, result: dict[str, Any]):
+        """Schedule a bounded background quality check for a delivered generated response."""
         if result.get("response_kind") not in {"GROUNDED_ANSWER", "GENERAL_EDUCATION", "CONVERSATION"}:
             return
         evaluator = getattr(conversation, "evaluate_response", None)
@@ -291,6 +336,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
         monitor.quality_started()
 
         async def evaluate():
+            """Judge a live reply and retain only scores and safe operational metadata."""
             started = time.monotonic()
             try:
                 verdict = await asyncio.to_thread(evaluator, text, result)
@@ -307,17 +353,21 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
         task.add_done_callback(quality_tasks.discard)
 
     def assessment_key(token: str) -> str:
+        """Derive an opaque cache key from an authorized session credential."""
         return hashlib.sha256(token.encode()).hexdigest()
 
     def prune_assessments() -> None:
+        """Remove cached assessment results older than the session lifetime."""
         cutoff = time.monotonic() - settings.session_ttl_seconds
         for key, (created, _) in tuple(assessment_results.items()):
             if created < cutoff:
                 del assessment_results[key]
 
     async def explain_result(result: dict[str, Any]):
+        """Generate an assessment explanation asynchronously while preserving validated scores."""
         started = time.monotonic()
         async def generate():
+            """Invoke the assessment explainer within its concurrency limit."""
             async with explanation_capacity:
                 return await asyncio.to_thread(conversation.explain_assessment, dict(result["result"]))
         try:
@@ -341,6 +391,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        """Warm models at startup and release volatile state and resources at shutdown."""
         try:
             warmup = getattr(assessment, "warmup", None)
             if warmup is not None:
@@ -371,6 +422,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.middleware("http")
     async def transport_boundary(request: Request, call_next):
+        """Apply the HTTP concurrency limit before processing a request."""
         if not http_capacity.acquire():
             return _error("HTTP_CAPACITY_EXHAUSTED", "The research demo is at capacity.",
                           "capacity", 503, retryable=True)
@@ -380,6 +432,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
             http_capacity.release()
 
     async def _bounded_transport(request: Request, call_next):
+        """Enforce origin, request-size and deployment transport restrictions."""
         origin = request.headers.get("origin")
         if origin and origin not in settings.allowed_origins:
             return _error("ORIGIN_NOT_ALLOWED", "Request origin is not allowed.",
@@ -405,12 +458,14 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
         return response
 
     def bearer(authorization: str | None = Header(default=None)) -> str:
+        """Extract the bearer credential required for private session operations."""
         if not authorization or not authorization.startswith("Bearer "):
             raise PermissionError("missing_session")
         return authorization[7:]
 
     @app.exception_handler(PermissionError)
     async def permission_error(_request: Request, error: PermissionError):
+        """Convert session authorization failures into stable public API errors."""
         code = str(error)
         if code in {"hourly_quota_exhausted", "daily_quota_exhausted",
                     "assessment_quota_exhausted"}:
@@ -420,14 +475,17 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(_request: Request, _error_value: RequestValidationError):
+        """Return a safe error for malformed public request payloads."""
         return _error("INVALID_REQUEST", "Request validation failed.", "transport", 422)
 
     @app.get("/health/live")
     async def live():
+        """Report that the backend process is running."""
         return {"status": "live", "api_version": API_VERSION}
 
     @app.get("/health/ready")
     async def ready():
+        """Check research and assessment readiness for the public health endpoint."""
         is_ready, corpus_version = await asyncio.to_thread(research.ready)
         if not is_ready:
             return _error("DEPENDENCY_UNAVAILABLE", "Research retrieval is unavailable.",
@@ -441,6 +499,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.post("/v1/session", status_code=201)
     async def create_session(request: Request):
+        """Issue a quota-limited private session credential."""
         host = request.client.host if request.client else "unknown"
         network_key = sessions.network_digest(host)
         try:
@@ -457,6 +516,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.delete("/v1/session")
     async def delete_session(token: str = Depends(bearer)):
+        """Invalidate a private session and remove its cached assessment."""
         sessions.delete(token)
         assessment_results.pop(assessment_key(token), None)
         return {"api_version": API_VERSION, "status": "session_cleared"}
@@ -464,6 +524,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     @app.get("/v1/research/questions")
     async def list_questions(token: str = Depends(bearer)):
         # Static-content reads do not count as explicit user activity.
+        """List the curated research questions available to an authorized session."""
         state = sessions.authorize(token, renew=False, now=now() if now else None)
         return {"api_version": API_VERSION, "deployment_mode": settings.deployment_mode,
                 "state_version": state.state_version,
@@ -475,6 +536,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     @app.post("/v1/research/answers")
     async def answer_research(payload: ResearchAnswerRequest,
                               token: str = Depends(bearer)):
+        """Return a bounded research answer after session, quota and capacity checks."""
         if not model_capacity.acquire():
             return _error("MODEL_CAPACITY_EXHAUSTED", "The research service is busy. Try again.",
                           "capacity", 503, retryable=True)
@@ -508,6 +570,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.post("/v1/messages")
     async def submit_message(payload: MessageRequest, token: str = Depends(bearer)):
+        """Generate one protected conversational response within the request deadline."""
         started = time.monotonic()
         if not model_capacity.acquire():
             return _error("MODEL_CAPACITY_EXHAUSTED", "The research service is busy. Try again.",
@@ -551,6 +614,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.post("/v1/messages:stream")
     async def stream_message(payload: MessageRequest, token: str = Depends(bearer)):
+        """Stream typed validated chat events after protected session authorization."""
         if not model_capacity.acquire():
             return _error("MODEL_CAPACITY_EXHAUSTED", "The research service is busy. Try again.",
                           "capacity", 503, retryable=True)
@@ -562,6 +626,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                 raise
 
             async def events():
+                """Emit status, validated content, citations or a safe error through SSE."""
                 started = time.monotonic()
                 try:
                     yield _sse("status", {"phase": "protected_preflight"}, 1)
@@ -628,6 +693,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.get("/v1/assessments/questionnaire")
     async def assessment_questionnaire(token: str = Depends(bearer)):
+        """Return the questionnaire contract to an authorized private session."""
         state = sessions.authorize(token, renew=False, now=now() if now else None)
         return {
             "api_version": API_VERSION, "deployment_mode": settings.deployment_mode,
@@ -638,6 +704,12 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.post("/v1/assessments")
     async def submit_assessment(payload: AssessmentRequest, token: str = Depends(bearer)):
+        """Return validated model scores and start their background LLM explanation."""
+        sessions.authorize(token, renew=False, now=now() if now else None)
+        if payload.questionnaire_version != assessment.requirements()["questionnaire_version"]:
+            return _error("QUESTIONNAIRE_VERSION_UNSUPPORTED",
+                          "The questionnaire has changed. Refresh and complete the current version.",
+                          "questionnaire", 409)
         started = time.monotonic()
         if not model_capacity.acquire():
             return _error("MODEL_CAPACITY_EXHAUSTED", "The model service is busy. Try again.",
@@ -695,6 +767,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.get("/v1/assessments/latest")
     async def latest_assessment(token: str = Depends(bearer)):
+        """Return the latest assessment cached for the authorized session."""
         sessions.authorize(token, renew=False, now=now() if now else None)
         prune_assessments()
         cached = assessment_results.get(assessment_key(token))
@@ -705,6 +778,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.get("/v1/evaluations/dashboard")
     async def evaluation_dashboard(request: Request):
+        """Expose read-only aggregate evaluation telemetry to local clients."""
         if (not request.client or request.client.host not in {"127.0.0.1", "::1", "testclient"}
                 or request.headers.get("x-forwarded-for")):
             return _error("LOCAL_ACCESS_REQUIRED", "The evaluation dashboard is local-only.",
@@ -713,6 +787,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
 
     @app.post("/v1/assessments/explanation")
     async def retry_explanation(token: str = Depends(bearer)):
+        """Retry only the LLM explanation for an authorized cached assessment result."""
         sessions.authorize(token, renew=False, now=now() if now else None)
         prune_assessments()
         cached = assessment_results.get(assessment_key(token))
@@ -738,6 +813,7 @@ def app_factory() -> FastAPI:
 
 
 def _sse(event: str, data: dict[str, Any], sequence: int) -> str:
+    """Serialize a typed event with its sequence identifier for SSE transport."""
     payload = json.dumps(data, separators=(",", ":"), ensure_ascii=True)
     return f"id: {sequence}\nevent: {event}\ndata: {payload}\n\n"
     RequestKind,

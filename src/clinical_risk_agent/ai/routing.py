@@ -17,11 +17,13 @@ from langgraph.graph import END, START, StateGraph
 
 
 class RequestKind(str, Enum):
+    """Distinguish free-text requests from structured assessment submissions."""
     FREE_TEXT = "free_text"
     STRUCTURED_ASSESSMENT = "structured_assessment"
 
 
 class SafetyCategory(str, Enum):
+    """Enumerate safety decisions that allow processing or require redirection."""
     EMERGENCY_REDIRECTION = "EMERGENCY_REDIRECTION"
     CRITICAL_SAFETY_REDIRECTION = "CRITICAL_SAFETY_REDIRECTION"
     ACUTE_DISTRESS_REDIRECTION = "ACUTE_DISTRESS_REDIRECTION"
@@ -33,12 +35,14 @@ class SafetyCategory(str, Enum):
 
 
 class LanguageStatus(str, Enum):
+    """Enumerate English support and uncertain or unsupported language outcomes."""
     SUPPORTED_ENGLISH = "SUPPORTED_ENGLISH"
     UNSUPPORTED_LANGUAGE = "UNSUPPORTED_LANGUAGE"
     UNCERTAIN_LANGUAGE = "UNCERTAIN_LANGUAGE"
 
 
 class Intent(str, Enum):
+    """Enumerate the user intents understood by the protected router."""
     RISK_ASSESSMENT = "risk_assessment"
     EXPLAIN_MY_RISK = "explain_my_risk"
     SCIENTIFIC_QUESTION = "scientific_question"
@@ -48,6 +52,7 @@ class Intent(str, Enum):
 
 
 class Route(str, Enum):
+    """Enumerate permitted next stages of the protected request workflow."""
     REJECT_SESSION = "reject_session"
     REJECT_MODE = "reject_mode"
     SAFETY_TERMINAL = "safety_terminal"
@@ -72,6 +77,7 @@ class PreflightRequest:
     assessment_view_authorized: bool = False
 
     def __post_init__(self) -> None:
+        """Validate preflight request shape and backend-supplied authorization flags."""
         if (type(self.session_valid) is not bool
                 or type(self.assessment_view_authorized) is not bool
                 or not isinstance(self.deployment_mode, str)):
@@ -89,6 +95,7 @@ class PreflightRequest:
 
 @dataclass(frozen=True, slots=True)
 class SafetyDecision:
+    """Carry a safety category with policy provenance and a stable rationale code."""
     category: SafetyCategory
     policy_version: str
     rationale_code: str
@@ -96,6 +103,7 @@ class SafetyDecision:
 
 @dataclass(frozen=True, slots=True)
 class LanguageDecision:
+    """Carry a language classification with detector provenance and rationale."""
     status: LanguageStatus
     detector_version: str
     rationale_code: str
@@ -103,6 +111,7 @@ class LanguageDecision:
 
 @dataclass(frozen=True, slots=True)
 class IntentDecision:
+    """Carry an intent prediction with confidence and model-calibration provenance."""
     intent: Intent
     calibrated_confidence: float
     requires_clarification: bool
@@ -127,18 +136,28 @@ class RouteDecision:
 
 
 class SafetyPort(Protocol):
-    def evaluate(self, request: PreflightRequest) -> SafetyDecision: ...
+    """Define safety classification for protected preflight requests."""
+    def evaluate(self, request: PreflightRequest) -> SafetyDecision:
+        """Evaluate the safety category of a protected preflight request."""
+        ...
 
 
 class LanguagePort(Protocol):
-    def classify(self, text: str) -> LanguageDecision: ...
+    """Define language classification for transient input text."""
+    def classify(self, text: str) -> LanguageDecision:
+        """Determine whether the transient input uses supported English."""
+        ...
 
 
 class IntentPort(Protocol):
-    def classify(self, text: str) -> IntentDecision: ...
+    """Define intent classification for transient input text."""
+    def classify(self, text: str) -> IntentDecision:
+        """Determine intent and calibrated routing confidence for transient input."""
+        ...
 
 
 class _State(TypedDict, total=False):
+    """Carry volatile preflight decisions between routing stages."""
     request: PreflightRequest
     safety: SafetyDecision
     language: LanguageDecision
@@ -156,6 +175,7 @@ class RoutingGraph:
     """One-turn, no-checkpointer preflight; state never leaves volatile memory."""
 
     def __init__(self, safety: SafetyPort, language: LanguagePort, intent: IntentPort) -> None:
+        """Compile the protected safety, language and intent preflight graph."""
         if safety is None or language is None or intent is None:
             raise ValueError("Safety, language and intent ports are required")
         self._safety = safety
@@ -186,6 +206,7 @@ class RoutingGraph:
 
     @staticmethod
     def _validate(state: _State) -> _State:
+        """Reject unauthorized sessions or unsupported deployment modes before classification."""
         request = state["request"]
         if request.deployment_mode != "prototype_demo":
             return {"route": Route.REJECT_MODE}
@@ -195,9 +216,11 @@ class RoutingGraph:
 
     @staticmethod
     def _after_validation(state: _State) -> str:
+        """Choose whether a validated preflight proceeds to safety interception."""
         return "end" if "route" in state else "safety"
 
     def _intercept_safety(self, state: _State) -> _State:
+        """Run the required safety classifier before language or intent processing."""
         decision = self._safety.evaluate(state["request"])
         if (not isinstance(decision, SafetyDecision)
                 or not isinstance(decision.category, SafetyCategory)
@@ -209,6 +232,7 @@ class RoutingGraph:
 
     @staticmethod
     def _after_safety(state: _State) -> str:
+        """Choose the next stage according to the safety decision and request kind."""
         if "route" in state:
             return "end"
         if state["request"].kind is RequestKind.STRUCTURED_ASSESSMENT:
@@ -216,6 +240,7 @@ class RoutingGraph:
         return "language"
 
     def _detect_language(self, state: _State) -> _State:
+        """Run language classification on the transient free-text request."""
         decision = self._language.classify(state["request"].text or "")
         if (not isinstance(decision, LanguageDecision)
                 or not isinstance(decision.status, LanguageStatus)
@@ -227,9 +252,11 @@ class RoutingGraph:
 
     @staticmethod
     def _after_language(state: _State) -> str:
+        """Continue only for supported English and otherwise select a terminal route."""
         return "end" if "route" in state else "intent"
 
     def _classify_intent(self, state: _State) -> _State:
+        """Classify user intent and validate the returned confidence and provenance."""
         decision = self._intent.classify(state["request"].text or "")
         if not isinstance(decision, IntentDecision):
             raise TypeError("Intent port returned an invalid decision")
@@ -246,6 +273,7 @@ class RoutingGraph:
 
     @staticmethod
     def _select_route(state: _State) -> _State:
+        """Map the validated intent to its allowed downstream workflow stage."""
         request = state["request"]
         if request.kind is RequestKind.STRUCTURED_ASSESSMENT:
             return {"route": (Route.VALIDATE_ASSESSMENT if request.assessment_view_authorized
@@ -264,6 +292,7 @@ class RoutingGraph:
 
     def advance(self, request: PreflightRequest) -> RouteDecision:
         # No runtime user content may be sent to an external trace service.
+        """Execute protected preflight and return the next-stage routing decision."""
         if external_tracing_enabled():
             raise RuntimeError("External tracing is forbidden for runtime requests")
         state = self._graph.invoke({"request": request})

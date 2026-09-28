@@ -40,11 +40,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def answers() -> dict[str, str]:
+    """Provide answers behavior for synthetic test fixtures."""
     return {item.question_id: item.option_ids[0] for item in questionnaire_requirements().questions}
 
 
 def synthetic_result(positive: float = 0.25, negative: float = 0.75) -> QuestionnaireAssessmentResult:
+    """Provide synthetic result behavior for synthetic test fixtures."""
     def one(target: ModelTarget, value: float) -> InferenceResult:
+        """Provide one behavior for synthetic test fixtures."""
         return InferenceResult(target, (SymptomSeverityPrediction(value),), 1,
                                "synthetic-artifact-sha", OUTPUT_NAME, ("synthetic fixture",))
 
@@ -56,37 +59,48 @@ def synthetic_result(positive: float = 0.25, negative: float = 0.75) -> Question
 
 
 class FixedSafety:
+    """Provide fixed safety fixtures and assertions."""
     def __init__(self):
+        """Initialize the synthetic test fixture and its observable state."""
         self.category = SafetyCategory.ALLOW_NORMAL_PROCESSING
         self.calls = 0
 
     def evaluate(self, request):
+        """Provide evaluate behavior for synthetic test fixtures."""
         self.calls += 1
         return SafetyDecision(self.category, "synthetic-policy", "fixture")
 
 
 class NeverLanguage:
+    """Provide never language fixtures and assertions."""
     def classify(self, text):
+        """Provide classify behavior for synthetic test fixtures."""
         raise AssertionError("Structured assessment must bypass language detection")
 
 
 class NeverIntent:
+    """Provide never intent fixtures and assertions."""
     def classify(self, text):
+        """Provide classify behavior for synthetic test fixtures."""
         raise AssertionError("Structured assessment must bypass intent classification")
 
 
 class FakeML:
+    """Provide fake ml fixtures and assertions."""
     def __init__(self, result=None):
+        """Initialize the synthetic test fixture and its observable state."""
         self.result = result or synthetic_result()
         self.validations = 0
         self.predictions = 0
         self.error = None
 
     def validate(self, answer_map, *, version):
+        """Provide validate behavior for synthetic test fixtures."""
         self.validations += 1
         return validate_questionnaire(answer_map, version=version)
 
     def predict(self, answer_map, *, version):
+        """Provide predict behavior for synthetic test fixtures."""
         self.predictions += 1
         if self.error:
             raise self.error
@@ -94,7 +108,9 @@ class FakeML:
 
 
 class AssessmentGraphTests(unittest.TestCase):
+    """Provide assessment graph tests fixtures and assertions."""
     def setUp(self):
+        """Prepare isolated fixtures before each test."""
         self.safety = FixedSafety()
         self.ml = FakeML()
         self.routing = RoutingGraph(self.safety, NeverLanguage(), NeverIntent())
@@ -102,6 +118,7 @@ class AssessmentGraphTests(unittest.TestCase):
 
     def submission(self, answer_map=None, *, authorized=True, session=True,
                    mode="prototype_demo", version=None, deadline=None):
+        """Provide submission behavior for synthetic test fixtures."""
         preflight = PreflightRequest(
             RequestKind.STRUCTURED_ASSESSMENT, mode, session,
             assessment_view_authorized=authorized,
@@ -113,6 +130,7 @@ class AssessmentGraphTests(unittest.TestCase):
         )
 
     def test_complete_synthetic_assessment_preserves_separate_raw_values(self):
+        """Verify complete synthetic assessment preserves separate raw values."""
         outcome = self.graph.run(self.submission())
         self.assertEqual(outcome.status, AssessmentStatus.READY)
         self.assertIs(outcome.result, self.ml.result)
@@ -125,6 +143,7 @@ class AssessmentGraphTests(unittest.TestCase):
         self.assertNotIn("25.0%", repr(outcome))
 
     def test_missing_answers_do_not_call_inference(self):
+        """Verify missing answers do not call inference."""
         answer_map = answers()
         answer_map.pop("q001")
         outcome = self.graph.run(self.submission(answer_map))
@@ -133,6 +152,7 @@ class AssessmentGraphTests(unittest.TestCase):
         self.assertEqual(self.ml.predictions, 0)
 
     def test_unscored_and_unknown_answers_do_not_call_inference(self):
+        """Verify unscored and unknown answers do not call inference."""
         for invalid_map in ({**answers(), "q001": "memory_unknown"},
                             {**answers(), "q999": "o01"}):
             with self.subTest(invalid_map=invalid_map.get("q999", "memory_unknown")):
@@ -141,11 +161,13 @@ class AssessmentGraphTests(unittest.TestCase):
         self.assertEqual(self.ml.predictions, 0)
 
     def test_wrong_version_fails_before_inference(self):
+        """Verify wrong version fails before inference."""
         outcome = self.graph.run(self.submission(version="unsupported-v0"))
         self.assertEqual(outcome.status, AssessmentStatus.QUESTIONNAIRE_CONTRACT_UNAVAILABLE)
         self.assertEqual(self.ml.predictions, 0)
 
     def test_session_and_view_authorization_precede_ml(self):
+        """Verify session and view authorization precede ml."""
         for kwargs in ({"session": False}, {"authorized": False},
                        {"mode": "hospital_silent_research"}):
             with self.subTest(kwargs=kwargs):
@@ -154,18 +176,21 @@ class AssessmentGraphTests(unittest.TestCase):
         self.assertEqual((self.ml.validations, self.ml.predictions), (0, 0))
 
     def test_safety_terminal_precedes_ml(self):
+        """Verify safety terminal precedes ml."""
         self.safety.category = SafetyCategory.CRITICAL_SAFETY_REDIRECTION
         outcome = self.graph.run(self.submission())
         self.assertEqual(outcome.status, AssessmentStatus.SAFETY_TERMINAL)
         self.assertEqual((self.ml.validations, self.ml.predictions), (0, 0))
 
     def test_expired_deadline_precedes_even_safety(self):
+        """Verify expired deadline precedes even safety."""
         outcome = self.graph.run(self.submission(deadline=time.monotonic() - 1))
         self.assertEqual(outcome.status, AssessmentStatus.DEADLINE_EXPIRED)
         self.assertEqual(self.safety.calls, 0)
         self.assertEqual(self.ml.validations, 0)
 
     def test_external_tracing_fails_before_graph_receives_answers(self):
+        """Verify external tracing fails before graph receives answers."""
         with patch.dict("os.environ", {"LANGSMITH_TRACING": "true"}):
             outcome = self.graph.run(self.submission())
         self.assertEqual(outcome.status, AssessmentStatus.PRECONDITION_UNAVAILABLE)
@@ -173,6 +198,7 @@ class AssessmentGraphTests(unittest.TestCase):
                          (0, 0, 0))
 
     def test_out_of_range_and_nonfinite_outputs_fail_closed(self):
+        """Verify out of range and nonfinite outputs fail closed."""
         for value in (-0.01, 1.01, float("nan"), float("inf")):
             with self.subTest(value=value):
                 self.ml.result = synthetic_result(positive=value)
@@ -183,6 +209,7 @@ class AssessmentGraphTests(unittest.TestCase):
                 self.assertEqual(outcome.safe_message, INTERNAL_VARIANCE_MESSAGE)
 
     def test_wrong_target_fails_closed_without_display(self):
+        """Verify wrong target fails closed without display."""
         result = synthetic_result()
         self.ml.result = QuestionnaireAssessmentResult(
             result.questionnaire_version, result.generic_profile_version,
@@ -193,6 +220,7 @@ class AssessmentGraphTests(unittest.TestCase):
         self.assertIsNone(outcome.result)
 
     def test_malformed_ml_payload_fails_closed_without_display(self):
+        """Verify malformed ml payload fails closed without display."""
         result = synthetic_result()
         self.ml.result = QuestionnaireAssessmentResult(
             result.questionnaire_version, result.generic_profile_version,
@@ -203,12 +231,14 @@ class AssessmentGraphTests(unittest.TestCase):
         self.assertIsNone(outcome.display)
 
     def test_ml_adapter_invalid_probability_maps_to_variance(self):
+        """Verify ml adapter invalid probability maps to variance."""
         self.ml.error = ValueError("Assessment produced an invalid probability")
         outcome = self.graph.run(self.submission())
         self.assertEqual(outcome.status, AssessmentStatus.INTERNAL_SYSTEM_VARIANCE)
         self.assertEqual(outcome.safe_message, INTERNAL_VARIANCE_MESSAGE)
 
     def test_runtime_failure_returns_no_estimate(self):
+        """Verify runtime failure returns no estimate."""
         self.ml.error = RuntimeError("synthetic worker failure with secret")
         outcome = self.graph.run(self.submission())
         self.assertEqual(outcome.status, AssessmentStatus.INFERENCE_UNAVAILABLE)
@@ -216,6 +246,7 @@ class AssessmentGraphTests(unittest.TestCase):
         self.assertIsNone(outcome.safe_message)
 
     def test_submission_copies_answers_and_suppresses_repr(self):
+        """Verify submission copies answers and suppresses repr."""
         answer_map = answers()
         submission = self.submission(answer_map)
         answer_map["q001"] = "memory_unknown"
@@ -223,6 +254,7 @@ class AssessmentGraphTests(unittest.TestCase):
         self.assertNotIn("q001", repr(submission))
 
     def test_free_text_cannot_be_submitted(self):
+        """Verify free text cannot be submitted."""
         with self.assertRaises(ValueError):
             AssessmentSubmission(
                 PreflightRequest(RequestKind.FREE_TEXT, "prototype_demo", True, "risk?"),
@@ -232,6 +264,7 @@ class AssessmentGraphTests(unittest.TestCase):
             self.submission(deadline=time.monotonic() + 61)
 
     def test_real_ml_adapter_uses_both_pinned_artifacts(self):
+        """Verify real ml adapter uses both pinned artifacts."""
         artifact_dir = ROOT / "model_artifacts"
         positive = DCMFNetPredictor(artifact_dir / "dcmfnet_pos.pt",
                                     artifact_dir / "dcmfnet_pos.metadata.json")

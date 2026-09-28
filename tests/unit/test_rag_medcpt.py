@@ -17,38 +17,50 @@ from clinical_risk_agent.rag.medcpt import MedCPTEncoder, MedCPTReranker  # noqa
 
 
 class FakeTokenizer:
+    """Provide fake tokenizer fixtures and assertions."""
     def __init__(self) -> None:
+        """Initialize the synthetic test fixture and its observable state."""
         self.last_input = None
         self.last_max_length = None
 
     def __call__(self, texts: object, **kwargs: object) -> dict[str, torch.Tensor]:
+        """Provide call behavior for synthetic test fixtures."""
         self.last_input = texts
         self.last_max_length = kwargs["max_length"]
         return {"input_ids": torch.ones((len(texts), 2), dtype=torch.long)}
 
     def encode(self, text: str, *, add_special_tokens: bool) -> list[int]:
+        """Provide encode behavior for synthetic test fixtures."""
         return list(range(len(text.split())))
 
 
 class FakeOutput:
+    """Provide fake output fixtures and assertions."""
     def __init__(self, count: int) -> None:
+        """Initialize the synthetic test fixture and its observable state."""
         self.last_hidden_state = torch.ones((count, 2, 3))
         self.logits = torch.ones((count, 1))
 
 
 class FakeModel:
+    """Provide fake model fixtures and assertions."""
     def __init__(self) -> None:
+        """Initialize the synthetic test fixture and its observable state."""
         self.weight = torch.nn.Parameter(torch.ones(1))
 
     def parameters(self):
+        """Provide parameters behavior for synthetic test fixtures."""
         return iter((self.weight,))
 
     def __call__(self, **kwargs: torch.Tensor) -> FakeOutput:
+        """Provide call behavior for synthetic test fixtures."""
         return FakeOutput(kwargs["input_ids"].shape[0])
 
 
 class MedCPTAdapterTests(unittest.TestCase):
+    """Provide med cptadapter tests fixtures and assertions."""
     def test_query_article_and_cross_encoder_inputs(self) -> None:
+        """Verify query article and cross encoder inputs."""
         query_tokenizer = FakeTokenizer()
         article_tokenizer = FakeTokenizer()
         encoder = MedCPTEncoder(

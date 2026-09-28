@@ -16,6 +16,7 @@ from clinical_risk_agent.rag.answering import CURATED_QUESTIONS  # noqa: E402
 
 
 def main() -> None:
+    """Run the command-line workflow: Exercise one non-user curated question through the configured LLM provider."""
     settings = BackendSettings.from_env(root=ROOT)
     if not (settings.llm_provider and settings.llm_model and settings.llm_api_key):
         raise RuntimeError("LLM_PROVIDER, LLM_MODEL, and LLM_API_KEY are required")

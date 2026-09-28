@@ -2,6 +2,7 @@ export const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8
 
 let pendingSession = null;
 
+/** Create a private session while coalescing overlapping connection requests. */
 export async function createSession() {
   if (!pendingSession) {
     pendingSession = (async () => {
@@ -18,6 +19,7 @@ export async function createSession() {
   return pendingSession;
 }
 
+/** Invalidate the private backend session associated with a bearer token. */
 export async function deleteSession(token) {
   if (!token) return;
   await fetch(`${API_BASE}/v1/session`, {
@@ -26,6 +28,7 @@ export async function deleteSession(token) {
   });
 }
 
+/** Submit protected questionnaire answers and return scores or a safe API error. */
 export async function submitAssessment(token, payload) {
   const response = await fetch(`${API_BASE}/v1/assessments`, {
     method: "POST",
@@ -44,6 +47,7 @@ export async function submitAssessment(token, payload) {
   return body;
 }
 
+/** Fetch the session's latest assessment and background explanation status. */
 export async function getLatestAssessment(token) {
   const response = await fetch(`${API_BASE}/v1/assessments/latest`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -52,6 +56,7 @@ export async function getLatestAssessment(token) {
   return response.json();
 }
 
+/** Retry the LLM explanation without recalculating the cached assessment scores. */
 export async function retryAssessmentExplanation(token) {
   const response = await fetch(`${API_BASE}/v1/assessments/explanation`, {
     method: "POST", headers: { Authorization: `Bearer ${token}` },

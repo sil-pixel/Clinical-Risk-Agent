@@ -22,6 +22,7 @@ from rag_general_benchmark import _scores, _validate
 
 
 def _latency(rows: list[dict]) -> dict[str, float]:
+    """Summarize retrieval latency measurements for one reranking strategy."""
     times = sorted(row["retrieve_latency_ms"] for row in rows)
     return {
         "median_retrieve_latency_ms": statistics.median(times),
@@ -30,6 +31,7 @@ def _latency(rows: list[dict]) -> dict[str, float]:
 
 
 def main() -> None:
+    """Run the command-line workflow: Compare two pinned rerankers on the existing frozen hierarchical corpus."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--experiment", type=Path, default=ROOT / "agent_docs/RAG_HIERARCHICAL_RERANKER_EXPERIMENT.json")
     parser.add_argument("--corpus", type=Path, default=ROOT / "data/indexes/rag_corpus_manifest.json")

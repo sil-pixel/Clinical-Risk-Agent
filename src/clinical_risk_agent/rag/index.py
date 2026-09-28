@@ -15,6 +15,7 @@ from .corpus import ScientificSource, eligible_source
 
 @dataclass(frozen=True, slots=True)
 class CorpusSnapshot:
+    """Freeze eligible sources and passages under a reproducible corpus version."""
     version: str
     strategy: str
     sources: tuple[ScientificSource, ...]
@@ -29,6 +30,7 @@ class CorpusSnapshot:
         today: date,
         count_tokens: Callable[[str], int] = approximate_tokens,
     ) -> "CorpusSnapshot":
+        """Build a deduplicated eligible corpus snapshot with a content-derived version."""
         admitted = tuple(sorted(
             (source for source in sources if eligible_source(source, today=today)),
             key=lambda source: source.source_id,
@@ -56,12 +58,14 @@ class CorpusSnapshot:
         )
 
     def active_passages(self, *, today: date) -> tuple[Passage, ...]:
+        """Return passages whose sources remain eligible on the supplied date."""
         active_ids = {source.source_id for source in self.sources
                       if eligible_source(source, today=today)}
         return tuple(item for item in self.passages if item.source_id in active_ids)
 
 
 def tokenize(text: str) -> tuple[str, ...]:
+    """Extract normalized word tokens for lexical indexing and querying."""
     from .chunking import WORD_TOKEN
 
     return tuple(match.group().lower() for match in WORD_TOKEN.finditer(text))
@@ -69,6 +73,7 @@ def tokenize(text: str) -> tuple[str, ...]:
 
 @dataclass(frozen=True, slots=True)
 class LexicalHit:
+    """Pair a matching chunk identifier with its lexical relevance score."""
     chunk_id: str
     score: float
 
@@ -77,6 +82,7 @@ class BM25Index:
     """Separate from the vector engine; may be rebuilt from a public snapshot."""
 
     def __init__(self, snapshot: CorpusSnapshot, *, k1: float = 1.2, b: float = 0.75) -> None:
+        """Build term statistics and sparse vocabulary from the frozen passage snapshot."""
         self.version = f"bm25-{snapshot.version}"
         self._passages = snapshot.passages
         self._k1 = k1
@@ -93,6 +99,7 @@ class BM25Index:
         }
 
     def sparse_document(self, chunk_id: str) -> tuple[list[int], list[float]]:
+        """Return a chunk vector weighted by BM25 term relevance."""
         position = next((index for index, item in enumerate(self._passages)
                          if item.chunk_id == chunk_id), None)
         if position is None:
@@ -113,6 +120,7 @@ class BM25Index:
         return [index for index, _ in vector], [value for _, value in vector]
 
     def sparse_query(self, query: str) -> tuple[list[int], list[float]]:
+        """Return unit-weight sparse indices for known query terms."""
         indices = sorted(self._term_ids[term] for term in set(tokenize(query))
                          if term in self._term_ids)
         return indices, [1.0] * len(indices)
@@ -120,6 +128,7 @@ class BM25Index:
     def search(
         self, query: str, *, limit: int = 40, allowed_chunk_ids: set[str] | None = None
     ) -> tuple[LexicalHit, ...]:
+        """Rank allowed passages by BM25 lexical relevance to the query."""
         if limit < 1:
             raise ValueError("Search limit must be positive")
         query_terms = set(tokenize(query))

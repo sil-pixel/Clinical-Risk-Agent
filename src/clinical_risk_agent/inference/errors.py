@@ -20,11 +20,13 @@ class ArtifactValidationError(RuntimeError):
     """An expected failure while safely validating a model artifact pair."""
 
     def __init__(self, code: ArtifactErrorCode, message: str) -> None:
+        """Initialize a typed failure with its stable code and safe message."""
         super().__init__(message)
         self.code = code
 
 
 class InferenceErrorCode(str, Enum):
+    """Enumerate stable, non-sensitive model inference failure codes."""
     EMPTY_REQUEST = "inference_empty_request"
     INVALID_FEATURES = "inference_invalid_features"
     MODEL_LOAD_FAILED = "inference_model_load_failed"
@@ -35,5 +37,6 @@ class InferenceError(RuntimeError):
     """Stable failure from model construction, input transformation, or inference."""
 
     def __init__(self, code: InferenceErrorCode, message: str) -> None:
+        """Initialize a typed failure with its stable code and safe message."""
         super().__init__(message)
         self.code = code

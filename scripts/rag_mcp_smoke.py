@@ -15,6 +15,7 @@ from rag_mcp_server import mcp
 
 
 async def main(*, stdio: bool = False) -> None:
+    """Run the command-line workflow: Exercise the local MCP tools through the official in-process client."""
     server = (StdioServerParameters(
         command=sys.executable,
         args=[str(Path(__file__).with_name("rag_mcp_server.py"))],
@@ -32,6 +33,7 @@ async def main(*, stdio: bool = False) -> None:
             raise AssertionError("A tool lacks a read-only annotation")
 
         async def call(name: str, arguments: dict) -> dict:
+            """Invoke an MCP tool and validate its structured response for the diagnostic run."""
             result = await client.call_tool(name, arguments)
             if result.is_error or not isinstance(result.structured_content, dict):
                 raise AssertionError(f"MCP tool failed: {name}: {result}")

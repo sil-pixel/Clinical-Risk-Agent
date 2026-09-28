@@ -33,6 +33,7 @@ ARTIFACTS = {
 
 
 def load_predictor(target: ModelTarget) -> DCMFNetPredictor:
+    """Provide load predictor behavior for synthetic test fixtures."""
     stem = ARTIFACTS[target][0]
     artifact_root = REPOSITORY_ROOT / "model_artifacts"
     return DCMFNetPredictor(
@@ -44,6 +45,7 @@ def load_predictor(target: ModelTarget) -> DCMFNetPredictor:
 def record_from_schema(
     predictor: DCMFNetPredictor, source: str
 ) -> dict[str, float]:
+    """Provide record from schema behavior for synthetic test fixtures."""
     values = getattr(predictor.schema, source)
     return {
         name: value
@@ -55,7 +57,9 @@ def record_from_schema(
 
 
 class DCMFNetRuntimeTests(unittest.TestCase):
+    """Provide dcmfnet runtime tests fixtures and assertions."""
     def test_golden_predictions_match_authoritative_thesis_runtime(self) -> None:
+        """Verify golden predictions match authoritative thesis runtime."""
         for target, (_, median_output, mean_output) in ARTIFACTS.items():
             with self.subTest(target=target):
                 predictor = load_predictor(target)
@@ -77,6 +81,7 @@ class DCMFNetRuntimeTests(unittest.TestCase):
                 )
 
     def test_nan_values_are_imputed_with_exported_training_medians(self) -> None:
+        """Verify nan values are imputed with exported training medians."""
         for target, (_, median_output, _) in ARTIFACTS.items():
             with self.subTest(target=target):
                 predictor = load_predictor(target)
@@ -91,6 +96,7 @@ class DCMFNetRuntimeTests(unittest.TestCase):
                 )
 
     def test_schema_preserves_exported_group_order_and_feature_count(self) -> None:
+        """Verify schema preserves exported group order and feature count."""
         predictor = load_predictor(ModelTarget.POSITIVE_SYMPTOM_SEVERITY)
         schema = predictor.input_schema()
 
@@ -116,6 +122,7 @@ class DCMFNetRuntimeTests(unittest.TestCase):
         self.assertTrue(schema.nan_values_use_training_median)
 
     def test_prediction_result_preserves_target_artifact_and_limitations(self) -> None:
+        """Verify prediction result preserves target artifact and limitations."""
         predictor = load_predictor(ModelTarget.NEGATIVE_SYMPTOM_SEVERITY)
         result = predictor.predict([record_from_schema(predictor, "means")])
 
@@ -126,6 +133,7 @@ class DCMFNetRuntimeTests(unittest.TestCase):
         self.assertTrue(any("without clamping" in item.lower() for item in result.limitations))
 
     def test_predictions_are_deterministic_and_batch_order_is_preserved(self) -> None:
+        """Verify predictions are deterministic and batch order is preserved."""
         predictor = load_predictor(ModelTarget.POSITIVE_SYMPTOM_SEVERITY)
         median_record = record_from_schema(predictor, "medians")
         mean_record = record_from_schema(predictor, "means")
@@ -146,6 +154,7 @@ class DCMFNetRuntimeTests(unittest.TestCase):
         )
 
     def test_invalid_records_fail_with_typed_errors(self) -> None:
+        """Verify invalid records fail with typed errors."""
         predictor = load_predictor(ModelTarget.NEGATIVE_SYMPTOM_SEVERITY)
         valid = record_from_schema(predictor, "means")
 
@@ -176,6 +185,7 @@ class DCMFNetRuntimeTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, InferenceErrorCode.EMPTY_REQUEST)
 
     def test_non_cpu_runtime_is_rejected_until_verified(self) -> None:
+        """Verify non cpu runtime is rejected until verified."""
         stem = ARTIFACTS[ModelTarget.POSITIVE_SYMPTOM_SEVERITY][0]
         artifact_root = REPOSITORY_ROOT / "model_artifacts"
         with self.assertRaises(InferenceError) as raised:

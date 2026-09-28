@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class LLMProvider(str, Enum):
+    """Enumerate supported structured-generation providers."""
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GEMINI = "gemini"
@@ -31,11 +32,13 @@ class AssistantDraft(BaseModel):
 
 @dataclass(frozen=True, slots=True)
 class GenerationRequest:
+    """Carry generation instructions and transient user and evidence context."""
     system_instruction: str
     user_text: str = field(repr=False)
     evidence_context: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
+        """Validate instruction presence and bound transient user and evidence context sizes."""
         if not self.system_instruction.strip():
             raise ValueError("System instruction is required")
         if not 1 <= len(self.user_text.strip()) <= 4000:
@@ -45,30 +48,49 @@ class GenerationRequest:
 
 
 class StructuredGenerator(Protocol):
+    """Define the provider-neutral structured generation and lifecycle contract."""
     @property
-    def provider(self) -> LLMProvider: ...
+    def provider(self) -> LLMProvider:
+        """Return the configured LLM provider identifier."""
+        ...
 
     @property
-    def model(self) -> str: ...
+    def model(self) -> str:
+        """Return the configured LLM model identifier."""
+        ...
 
-    def generate(self, request: GenerationRequest) -> AssistantDraft: ...
+    def generate(self, request: GenerationRequest) -> AssistantDraft:
+        """Generate and validate an assistant draft using the configured provider."""
+        ...
 
-    def close(self) -> None: ...
+    def close(self) -> None:
+        """Release the owned runtime or provider resources."""
+        ...
 
 
 class ModelsPort(Protocol):
-    def generate_content(self, **kwargs: Any) -> Any: ...
+    """Define the Gemini content-generation interface used by the adapter."""
+    def generate_content(self, **kwargs: Any) -> Any:
+        """Generate provider content from the supplied model and request configuration."""
+        ...
 
 
 class ResponsesPort(Protocol):
-    def parse(self, **kwargs: Any) -> Any: ...
+    """Define the OpenAI structured-response interface used by the adapter."""
+    def parse(self, **kwargs: Any) -> Any:
+        """Parse a provider response into the requested structured output schema."""
+        ...
 
 
 class MessagesPort(Protocol):
-    def parse(self, **kwargs: Any) -> Any: ...
+    """Define the Anthropic structured-message interface used by the adapter."""
+    def parse(self, **kwargs: Any) -> Any:
+        """Parse a provider response into the requested structured output schema."""
+        ...
 
 
 def _validate_configuration(api_key: str, model: str) -> None:
+    """Reject missing API credentials or an unspecified model identifier."""
     if not api_key.strip():
         raise ValueError("LLM_API_KEY is not configured")
     if not model.strip():
@@ -76,6 +98,7 @@ def _validate_configuration(api_key: str, model: str) -> None:
 
 
 def _user_content(request: GenerationRequest) -> str:
+    """Combine the transient user message with supplied evidence for the provider."""
     if request.evidence_context:
         return (
             f"User message:\n{request.user_text}\n\n"
@@ -85,7 +108,9 @@ def _user_content(request: GenerationRequest) -> str:
 
 
 class GeminiGenerator:
+    """Generate strictly validated assistant drafts through the Gemini API."""
     def __init__(self, api_key: str, model: str, *, models: ModelsPort | None = None) -> None:
+        """Validate credentials and bind the Gemini client or an injected model interface."""
         _validate_configuration(api_key, model)
         self._model = model.strip()
         self._client = None
@@ -102,17 +127,21 @@ class GeminiGenerator:
 
     @property
     def provider(self) -> LLMProvider:
+        """Return the configured LLM provider identifier."""
         return LLMProvider.GEMINI
 
     @property
     def model(self) -> str:
+        """Return the configured LLM model identifier."""
         return self._model
 
     def close(self) -> None:
+        """Release the owned runtime or provider resources."""
         if self._client is not None:
             self._client.close()
 
     def generate(self, request: GenerationRequest) -> AssistantDraft:
+        """Generate and validate an assistant draft using the configured provider."""
         from google.genai import types
 
         # Gemini's response_schema dialect does not accept Pydantic's
@@ -149,9 +178,11 @@ class GeminiGenerator:
 
 
 class OpenAIGenerator:
+    """Generate strictly validated assistant drafts through the OpenAI API."""
     def __init__(
         self, api_key: str, model: str, *, responses: ResponsesPort | None = None,
     ) -> None:
+        """Validate credentials and bind the OpenAI client or an injected response interface."""
         _validate_configuration(api_key, model)
         self._model = model.strip()
         self._client = None
@@ -164,17 +195,21 @@ class OpenAIGenerator:
 
     @property
     def provider(self) -> LLMProvider:
+        """Return the configured LLM provider identifier."""
         return LLMProvider.OPENAI
 
     @property
     def model(self) -> str:
+        """Return the configured LLM model identifier."""
         return self._model
 
     def close(self) -> None:
+        """Release the owned runtime or provider resources."""
         if self._client is not None:
             self._client.close()
 
     def generate(self, request: GenerationRequest) -> AssistantDraft:
+        """Generate and validate an assistant draft using the configured provider."""
         response = self._responses.parse(
             model=self._model,
             input=[
@@ -189,9 +224,11 @@ class OpenAIGenerator:
 
 
 class AnthropicGenerator:
+    """Generate strictly validated assistant drafts through the Anthropic API."""
     def __init__(
         self, api_key: str, model: str, *, messages: MessagesPort | None = None,
     ) -> None:
+        """Validate credentials and bind the Anthropic client or an injected message interface."""
         _validate_configuration(api_key, model)
         self._model = model.strip()
         self._client = None
@@ -204,17 +241,21 @@ class AnthropicGenerator:
 
     @property
     def provider(self) -> LLMProvider:
+        """Return the configured LLM provider identifier."""
         return LLMProvider.ANTHROPIC
 
     @property
     def model(self) -> str:
+        """Return the configured LLM model identifier."""
         return self._model
 
     def close(self) -> None:
+        """Release the owned runtime or provider resources."""
         if self._client is not None:
             self._client.close()
 
     def generate(self, request: GenerationRequest) -> AssistantDraft:
+        """Generate and validate an assistant draft using the configured provider."""
         response = self._messages.parse(
             model=self._model,
             max_tokens=1200,

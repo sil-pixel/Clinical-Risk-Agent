@@ -14,7 +14,9 @@ from rag_relevance_gate_calibration import _gate_rows, _path_summary  # noqa: E4
 
 
 class GateSweepTests(unittest.TestCase):
+    """Provide gate sweep tests fixtures and assertions."""
     def test_fallback_summary_counts_direct_and_unsupported_separately(self) -> None:
+        """Verify fallback summary counts direct and unsupported separately."""
         rows = [
             {"answerable": True, "direct_pmids": ["1"],
              "outage_top_5_pmids": ["1", "2"], "outage_retrieval_mode": "keyword_fallback",
@@ -29,6 +31,7 @@ class GateSweepTests(unittest.TestCase):
         self.assertEqual(result["keyword_fallback_cases"], 2)
 
     def test_cutoff_tradeoff(self) -> None:
+        """Verify cutoff tradeoff."""
         rows = [
             {"answerable": True, "direct_pmids": ["1"],
              "diagnostic_top_5": [{"pmid": "1", "dense_cosine": 0.60}]},
@@ -43,6 +46,7 @@ class GateSweepTests(unittest.TestCase):
         self.assertEqual(high["no_direct_evidence_abstention_rate"], 1.0)
 
     def test_missing_dense_score_is_not_accepted(self) -> None:
+        """Verify missing dense score is not accepted."""
         rows = [
             {"answerable": True, "direct_pmids": ["1"],
              "diagnostic_top_5": [{"pmid": "1", "dense_cosine": None}]},

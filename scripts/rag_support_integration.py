@@ -20,17 +20,23 @@ from rag_benchmark import ROOT, _sha256, _snapshot
 
 
 class UnavailableDense:
+    """Simulate a retrieval dependency outage for non-user recovery checks."""
     def search(self, query: str, *, limit: int):
+        """Raise a deliberate dense or fallback outage for retrieval recovery diagnostics."""
         raise RuntimeError("Injected dense outage")
 
 
 class UnavailableSparse:
+    """Simulate a retrieval dependency outage for non-user recovery checks."""
     def sparse_search(self, query: str, *, limit: int):
+        """Raise a deliberate sparse-search outage for retrieval recovery diagnostics."""
         raise RuntimeError("Injected primary sparse outage")
 
 
 class UnavailableBM25(BM25Index):
+    """Simulate a retrieval dependency outage for non-user recovery checks."""
     def search(self, *args, **kwargs):
+        """Raise a deliberate dense or fallback outage for retrieval recovery diagnostics."""
         raise RuntimeError("Injected independent fallback outage")
 
 
@@ -57,6 +63,7 @@ CASES = (
 
 
 def _check(result, expected_pmid, passages):
+    """Check support-gate outputs against expected sources and evidence status."""
     ids = [item.pmid for item in result.items]
     if expected_pmid is None:
         if result.status != EvidenceStatus.NO_ELIGIBLE_EVIDENCE or result.items or result.displays:
@@ -75,6 +82,7 @@ def _check(result, expected_pmid, passages):
 
 
 def main():
+    """Run the command-line workflow: Exercise curated claim support and recovery against the pinned local Qdrant corpus."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus", type=Path, default=ROOT / "data/indexes/rag_corpus_manifest.json")
     parser.add_argument("--catalog", type=Path, default=ROOT / "agent_docs/RAG_21_SOURCE_CLAIM_SUPPORT_CATALOG.json")

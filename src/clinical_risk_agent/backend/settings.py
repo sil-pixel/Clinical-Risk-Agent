@@ -9,6 +9,7 @@ from pathlib import Path
 
 @dataclass(frozen=True, slots=True)
 class BackendSettings:
+    """Hold validated backend, session and provider configuration."""
     root: Path
     session_signing_key: bytes
     allowed_origins: tuple[str, ...]
@@ -29,6 +30,7 @@ class BackendSettings:
     session_creations_per_network_hour: int = 5
 
     def __post_init__(self) -> None:
+        """Reject invalid deployment, authorization and provider configuration."""
         if self.deployment_mode != "prototype_demo":
             raise ValueError("Only prototype_demo is supported")
         if len(self.session_signing_key) < 32:
@@ -52,6 +54,7 @@ class BackendSettings:
 
     @classmethod
     def from_env(cls, *, root: Path | None = None) -> "BackendSettings":
+        """Load backend settings from environment variables and the local dotenv file."""
         resolved_root = (root or Path(__file__).resolve().parents[3]).resolve()
         from dotenv import load_dotenv
 

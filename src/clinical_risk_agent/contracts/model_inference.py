@@ -7,18 +7,21 @@ from enum import Enum
 
 
 class ModelTarget(str, Enum):
+    """Identify the positive or negative symptom target predicted by the model."""
     POSITIVE_SYMPTOM_SEVERITY = "SCZ18_Pos_Norm"
     NEGATIVE_SYMPTOM_SEVERITY = "SCZ18_Neg_Norm"
 
 
 @dataclass(frozen=True, slots=True)
 class FeatureGroup:
+    """Describe an ordered group of model input features."""
     name: str
     feature_names: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class InferenceInputSchema:
+    """Define the feature layout and missing-value rules required for inference."""
     target: ModelTarget
     groups: tuple[FeatureGroup, ...]
     feature_count: int
@@ -35,6 +38,7 @@ class SymptomSeverityPrediction:
 
 @dataclass(frozen=True, slots=True)
 class InferenceResult:
+    """Bundle predictions with checkpoint identity and research limitations."""
     target: ModelTarget
     predictions: tuple[SymptomSeverityPrediction, ...]
     artifact_version: int

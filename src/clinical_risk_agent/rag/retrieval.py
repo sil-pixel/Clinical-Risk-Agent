@@ -25,31 +25,47 @@ from .index import BM25Index, CorpusSnapshot, LexicalHit
 
 @dataclass(frozen=True, slots=True)
 class DenseHit:
+    """Pair a matching chunk identifier with its dense cosine similarity."""
     chunk_id: str
     cosine: float
 
 
 class DenseSearcher(Protocol):
-    def search(self, query: str, *, limit: int) -> Sequence[DenseHit]: ...
+    """Define semantic retrieval of ranked dense-vector matches."""
+    def search(self, query: str, *, limit: int) -> Sequence[DenseHit]:
+        """Return ranked semantic matches for the query and requested candidate limit."""
+        ...
 
 
 class SparseSearcher(Protocol):
-    def sparse_search(self, query: str, *, limit: int) -> Sequence[LexicalHit]: ...
+    """Define lexical retrieval of ranked sparse-vector matches."""
+    def sparse_search(self, query: str, *, limit: int) -> Sequence[LexicalHit]:
+        """Return ranked lexical matches from the sparse scientific index."""
+        ...
 
 
 class CrossEncoder(Protocol):
-    def score(self, query: str, passage: Passage) -> float: ...
+    """Define relevance scoring for query-passage pairs."""
+    def score(self, query: str, passage: Passage) -> float:
+        """Return the relevance score for one query-passage pair."""
+        ...
 
-    def score_many(self, query: str, passages: Sequence[Passage]) -> Sequence[float]: ...
+    def score_many(self, query: str, passages: Sequence[Passage]) -> Sequence[float]:
+        """Return relevance scores for a batch of query-passage pairs."""
+        ...
 
 
 class SupportChecker(Protocol):
+    """Define claim-specific support checks for retrieved source passages."""
     def supports(self, query: RetrievalQuery, source: ScientificSource,
-                 passage: Passage) -> bool: ...
+                 passage: Passage) -> bool:
+        """Check whether a passage supports the requested bounded claim."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
 class _RankedCandidate:
+    """Carry a passage and its source with fused and component relevance scores."""
     passage: Passage
     source: ScientificSource
     fused_score: float
@@ -74,6 +90,7 @@ class HybridRetriever:
         relevance_first: bool = True,
         support_checker: SupportChecker | None = None,
     ) -> None:
+        """Bind compatible indexes and configure relevance, reranking and support gates."""
         if lexical_index.version != f"bm25-{snapshot.version}":
             raise ValueError("Lexical index and corpus versions differ")
         if not -1 <= dense_min_cosine <= 1:
@@ -89,6 +106,7 @@ class HybridRetriever:
         self.support_checker = support_checker
 
     def retrieve(self, query: RetrievalQuery, *, today: date) -> EvidenceResult:
+        """Retrieve eligible evidence with relevance and claim-support gates."""
         active = self.snapshot.active_passages(today=today)
         passages = {item.chunk_id: item for item in active}
         sources = {item.source_id: item for item in self.snapshot.sources
@@ -149,6 +167,7 @@ class HybridRetriever:
         sources: Mapping[str, ScientificSource],
         primary_status: AttemptStatus,
     ) -> EvidenceResult:
+        """Run independent BM25 retrieval when primary search or support is inadequate."""
         try:
             lexical = self.lexical_index.search(
                 query.text, limit=40, allowed_chunk_ids=set(passages)
@@ -176,6 +195,7 @@ class HybridRetriever:
 
     def _supported(self, candidates: Sequence[_RankedCandidate],
                    query: RetrievalQuery) -> tuple[_RankedCandidate, ...]:
+        """Keep only candidates that satisfy the configured claim-specific support check."""
         if self.support_checker is None:
             return tuple(candidates)
         return tuple(item for item in candidates if self.support_checker.supports(
@@ -188,6 +208,7 @@ class HybridRetriever:
         passages: Mapping[str, Passage],
         sources: Mapping[str, ScientificSource],
     ) -> tuple[_RankedCandidate, ...]:
+        """Combine dense and lexical candidate ranks using reciprocal rank fusion."""
         scores: dict[str, float] = {}
         for ranking in (dense, lexical):
             for rank, hit in enumerate(ranking, start=1):
@@ -206,6 +227,7 @@ class HybridRetriever:
         self, candidates: Sequence[_RankedCandidate], query: RetrievalQuery, today: date,
         *, limit: int | None = None,
     ) -> tuple[_RankedCandidate, ...]:
+        """Apply reranking, relevance gates and source-aware evidence selection."""
         eligible = [item for item in candidates[:20]
                     if eligible_source(item.source, today=today)]
         if self.reranker is not None and hasattr(self.reranker, "score_many"):
@@ -268,6 +290,7 @@ class HybridRetriever:
     def _evidence_status(
         selected: Sequence[_RankedCandidate], query: RetrievalQuery
     ) -> EvidenceStatus:
+        """Determine the evidence outcome from selected sources and their claim stances."""
         stances = {item.source.stance for item in selected
                    if query.claim_id and item.source.stance_claim_id == query.claim_id}
         return (EvidenceStatus.CONFLICTING_EVIDENCE
@@ -317,6 +340,7 @@ class HybridRetriever:
         fallback: AttemptStatus,
         selected: Sequence[_RankedCandidate],
     ) -> EvidenceResult:
+        """Build a provenance-preserving evidence result with safe display records."""
         items: list[EvidenceItem] = []
         displays: list[EvidenceDisplayRecord] = []
         for index, candidate in enumerate(selected, start=1):

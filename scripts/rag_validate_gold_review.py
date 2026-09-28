@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 def validate(path: Path, packet_path: Path) -> list[str]:
+    """Validate an independent gold-review worksheet against its blinded source packet."""
     review = json.loads(path.read_text(encoding="utf-8"))
     packet = json.loads(packet_path.read_text(encoding="utf-8"))
     problems: list[str] = []
@@ -55,6 +56,7 @@ def validate(path: Path, packet_path: Path) -> list[str]:
 
 
 def main() -> None:
+    """Run the command-line workflow: Validate a completed independent first-pass gold-review worksheet."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("worksheet", type=Path)
     parser.add_argument(

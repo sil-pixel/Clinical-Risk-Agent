@@ -15,6 +15,7 @@ from clinical_risk_agent.inference import questionnaire_requirements  # noqa: E4
 
 
 def main() -> None:
+    """Run the command-line workflow: Exercise the real FastAPI -> bounded RAG -> Qdrant path locally."""
     settings = BackendSettings(
         root=ROOT, session_signing_key=b"local-smoke-only-signing-key-32-bytes",
         allowed_origins=("http://localhost:5173",),

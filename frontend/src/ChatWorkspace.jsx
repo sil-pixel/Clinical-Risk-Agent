@@ -11,6 +11,7 @@ const suggestedQuestions = [
   "Is bullying perpetration associated with smoking or drinking at age 13?",
 ];
 
+/** Decode one SSE block into its typed event and JSON payload. */
 function parseEvent(block) {
   let type = "message";
   let data = null;
@@ -21,6 +22,7 @@ function parseEvent(block) {
   return data ? { type, data } : null;
 }
 
+/** Render protected chat, research suggestions and optional questionnaire navigation. */
 export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire, onReset }) {
   const [messages, setMessages] = useState([
     {
@@ -39,6 +41,7 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
     if (thread) thread.scrollTop = thread.scrollHeight;
   }, [messages, phase]);
 
+  /** Submit a chat turn and consume validated content, citations or streaming errors. */
   const submit = async (event, suppliedText) => {
     event?.preventDefault();
     const text = (suppliedText ?? input).trim();

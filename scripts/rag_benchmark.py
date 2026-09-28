@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _sha256(path: Path) -> str:
+    """Compute a file SHA-256 digest for artifact or corpus provenance."""
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
@@ -32,6 +33,7 @@ def _sha256(path: Path) -> str:
 
 
 def _source(raw: dict) -> ScientificSource:
+    """Reconstruct a scientific source from the serialized corpus manifest."""
     item = dict(raw)
     item["authors"] = tuple(item["authors"])
     item["published_on"] = date.fromisoformat(item["published_on"])
@@ -43,6 +45,7 @@ def _source(raw: dict) -> ScientificSource:
 
 
 def _snapshot(raw: dict, strategy: str) -> CorpusSnapshot:
+    """Reconstruct a retrieval-strategy snapshot from the frozen corpus manifest."""
     return CorpusSnapshot(
         version=raw["corpus_version"], strategy=strategy,
         sources=tuple(_source(item) for item in raw["sources"]),
@@ -51,6 +54,7 @@ def _snapshot(raw: dict, strategy: str) -> CorpusSnapshot:
 
 
 def _metrics(rows: list[dict]) -> dict:
+    """Aggregate retrieval correctness, abstention and source-coverage measurements."""
     positive = [row for row in rows if row["positive_pmids"]]
     negative = [row for row in rows if not row["positive_pmids"]]
     ranks = [row["positive_rank"] for row in positive]
@@ -82,6 +86,7 @@ def _metrics(rows: list[dict]) -> dict:
 
 
 def _run(retriever: HybridRetriever, cases: list[dict], today: date) -> dict:
+    """Run one retrieval strategy against the frozen non-user benchmark cases."""
     rows = []
     for case in cases:
         query = RetrievalQuery(case["query"])
@@ -106,6 +111,7 @@ def _run(retriever: HybridRetriever, cases: list[dict], today: date) -> dict:
 
 
 def main() -> None:
+    """Run the command-line workflow: Run a locked, source-level retrieval diagnostic on the local Qdrant corpus."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus", type=Path, default=ROOT / "data/indexes/rag_corpus_manifest.json")
     parser.add_argument("--qrels", type=Path, default=ROOT / "agent_docs/RAG_BENCHMARK_16_SOURCE_QRELS.json")

@@ -19,11 +19,14 @@ from rag_general_benchmark import _validate
 
 
 class _UnavailableDense:
+    """Simulate a retrieval dependency outage for non-user recovery checks."""
     def search(self, query: str, *, limit: int):
+        """Raise a deliberate dense or fallback outage for retrieval recovery diagnostics."""
         raise RuntimeError("Diagnostic forced dense outage")
 
 
 def _gate_rows(rows: list[dict], cutoff: float) -> dict:
+    """Summarize relevance-gate performance on answerable and unanswerable cases."""
     positives = [row for row in rows if row["answerable"]]
     negatives = [row for row in rows if not row["answerable"]]
     direct_hits = 0
@@ -54,6 +57,7 @@ def _gate_rows(rows: list[dict], cutoff: float) -> dict:
 
 
 def _path_summary(rows: list[dict], prefix: str) -> dict:
+    """Summarize evidence outcomes for one retrieval and fallback path."""
     positives = [row for row in rows if row["answerable"]]
     negatives = [row for row in rows if not row["answerable"]]
     direct = sum(bool(set(row[f"{prefix}_top_5_pmids"]) & set(row["direct_pmids"]))
@@ -75,6 +79,7 @@ def _path_summary(rows: list[dict], prefix: str) -> dict:
 
 
 def main() -> None:
+    """Run the command-line workflow: Explore dense relevance and no-evidence gates without changing runtime policy."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--spec", type=Path, default=ROOT / "agent_docs/RAG_RELEVANCE_GATE_CALIBRATION_SPEC.json")
     parser.add_argument("--corpus", type=Path, default=ROOT / "data/indexes/rag_corpus_manifest.json")

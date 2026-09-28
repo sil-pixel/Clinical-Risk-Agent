@@ -14,6 +14,7 @@ OUTPUT = ROOT / "agent_docs/RAG_GOLD_21_SOURCE_BLINDED_PACKET.json"
 
 
 def main() -> None:
+    """Run the command-line workflow: Export a source-and-question-only packet for independent gold review."""
     corpus_bytes = CORPUS.read_bytes()
     corpus = json.loads(corpus_bytes)
     worksheet = json.loads(WORKSHEET.read_text(encoding="utf-8"))

@@ -8,6 +8,7 @@ from enum import Enum
 
 
 class EvidenceStatus(str, Enum):
+    """Enumerate supported, absent and unavailable evidence outcomes."""
     SUFFICIENT = "sufficient_evidence"
     NO_ELIGIBLE_EVIDENCE = "no_eligible_evidence"
     CONFLICTING_EVIDENCE = "conflicting_evidence"
@@ -15,11 +16,13 @@ class EvidenceStatus(str, Enum):
 
 
 class RetrievalMode(str, Enum):
+    """Identify primary hybrid retrieval or independent keyword fallback."""
     PRIMARY_HYBRID = "primary_hybrid"
     KEYWORD_FALLBACK = "keyword_fallback"
 
 
 class AttemptStatus(str, Enum):
+    """Describe the outcome of an individual retrieval attempt."""
     SUCCESS = "success"
     ZERO_MATCH = "zero_match"
     UNAVAILABLE = "unavailable"
@@ -39,6 +42,7 @@ class RetrievalQuery:
     claim_id: str | None = None
 
     def __post_init__(self) -> None:
+        """Require non-empty query text, a valid source cap and an optional non-empty claim ID."""
         if (not self.text.strip() or not 3 <= self.source_cap <= 5
                 or (self.claim_id is not None and not self.claim_id.strip())):
             raise ValueError("Retrieval query or source cap is invalid")
@@ -46,6 +50,7 @@ class RetrievalQuery:
 
 @dataclass(frozen=True, slots=True)
 class EvidenceItem:
+    """Carry a retrieved passage with relevance, provenance and source metadata."""
     citation_id: str
     source_id: str
     chunk_id: str
@@ -77,6 +82,7 @@ class EvidenceItem:
 
 @dataclass(frozen=True, slots=True)
 class EvidenceDisplayRecord:
+    """Expose the source fields and exact passage permitted for display."""
     citation_id: str
     source_id: str
     exact_matched_text: str
@@ -95,6 +101,7 @@ class EvidenceDisplayRecord:
 
 @dataclass(frozen=True, slots=True)
 class EvidenceResult:
+    """Bundle evidence items with retrieval status and corpus provenance."""
     status: EvidenceStatus
     retrieval_mode: RetrievalMode | None
     primary_status: AttemptStatus
@@ -107,6 +114,7 @@ class EvidenceResult:
     limitation: str | None = None
 
     def __post_init__(self) -> None:
+        """Require matching unique citations and enforce the distinct-source display cap."""
         ids = {item.citation_id for item in self.items}
         if len(ids) != len(self.items) or ids != {item.citation_id for item in self.displays}:
             raise ValueError("Evidence and display citation IDs must match uniquely")

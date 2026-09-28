@@ -17,6 +17,7 @@ from clinical_risk_agent.contracts import EvidenceResult, EvidenceStatus
 
 @dataclass(frozen=True, slots=True)
 class CuratedQuestion:
+    """Map a supported research question to its approved claim and public identifier."""
     public_id: str
     claim_id: str
     question: str
@@ -84,6 +85,7 @@ RESEARCH_LIMITATION = "Research-only; not a diagnosis, individual risk estimate,
 
 
 def _normalized(question: str) -> str:
+    """Normalize case and punctuation for curated-question matching."""
     return re.sub(r"\s+", " ", question.strip().rstrip("?!. ").casefold())
 
 
@@ -98,6 +100,7 @@ class BoundedResearchAnswerer:
         exploratory_search: Callable[[str, int], dict[str, Any]],
         bounded_use: Callable[[str], str],
     ) -> None:
+        """Bind curated claim definitions to the support-gated research retriever."""
         expected = {item.claim_id for item in CURATED_QUESTIONS}
         if not expected <= claim_ids:
             raise ValueError("Answer templates differ from the curated assertion catalog")
@@ -111,10 +114,12 @@ class BoundedResearchAnswerer:
 
     @property
     def example_questions(self) -> tuple[str, ...]:
+        """Return example queries for the curated research claims."""
         return tuple(item.question for item in CURATED_QUESTIONS)
 
     @property
     def public_questions(self) -> tuple[dict[str, str], ...]:
+        """Return public identifiers and text for supported research questions."""
         return tuple({"id": item.public_id, "question": item.question}
                      for item in CURATED_QUESTIONS)
 
@@ -126,6 +131,7 @@ class BoundedResearchAnswerer:
         return self.answer(spec.question)
 
     def answer(self, question: str) -> dict[str, Any]:
+        """Answer a supported research question using approved claim evidence."""
         if not isinstance(question, str) or not 3 <= len(question.strip()) <= 500:
             raise ValueError("Question must be 3 to 500 characters")
         spec = self._questions.get(_normalized(question))
@@ -186,6 +192,7 @@ class BoundedResearchAnswerer:
 
     @staticmethod
     def _no_adequate(claim_id: str) -> dict[str, Any]:
+        """Build an explicit abstention when no adequate claim evidence is available."""
         return {
             "status": "no_adequate_evidence",
             "research_only": True,
@@ -198,6 +205,7 @@ class BoundedResearchAnswerer:
 
     @staticmethod
     def _unavailable() -> dict[str, Any]:
+        """Build a safe response when research retrieval cannot complete."""
         return {
             "status": "retrieval_unavailable",
             "research_only": True,

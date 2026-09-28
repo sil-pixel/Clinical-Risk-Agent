@@ -16,10 +16,12 @@ from clinical_risk_agent.evaluation import regression_metrics
 
 
 def digest(path):
+    """Compute a file SHA-256 digest for evaluation provenance."""
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
 def save(report):
+    """Write a versioned non-user evaluation report for offline inspection."""
     report.update(schema_version=1, created_at=datetime.now(timezone.utc).isoformat(),
                   run_id=uuid.uuid4().hex)
     directory = ROOT / "data/evaluations"
@@ -30,6 +32,7 @@ def save(report):
 
 
 def historical(args):
+    """Import archived per-seed model metrics without linking them to deployed checkpoints."""
     targets, sources = {}, {}
     for name, prefix in (("positive", "Pos"), ("negative", "Neg")):
         path = args.directory / f"{prefix}_test_results_per_seed.csv"
@@ -52,6 +55,7 @@ def historical(args):
 
 
 def ml(args):
+    """Evaluate deployed symptom predictors against a labeled non-user CSV."""
     from clinical_risk_agent.inference import DCMFNetPredictor
 
     rows = list(csv.DictReader(args.csv.open()))
@@ -77,6 +81,7 @@ def ml(args):
 
 
 def llm(args):
+    """Evaluate generated answers against the frozen non-user relevance and reference set."""
     import httpx
     from clinical_risk_agent.backend.settings import BackendSettings
     from clinical_risk_agent.ai.generation import GenerationRequest, create_generator
@@ -146,6 +151,7 @@ def llm(args):
             results.append(row)
             print(f"{case['id']}: {row['response_kind']} · correctness={row['correctness']}", flush=True)
         def mean(key):
+            """Average available metric values while excluding unscored evaluation cases."""
             values = [row[key] for row in results if row[key] is not None]
             return sum(values) / len(values) if values else None
         save({"kind": "llm", "dataset": gold_path.name, "dataset_sha256": digest(gold_path),
@@ -172,6 +178,7 @@ def llm(args):
 
 
 def main():
+    """Run the command-line workflow: Offline evaluations on non-user fixtures; saves versioned dashboard reports."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     history = commands.add_parser("import-thesis")

@@ -21,12 +21,14 @@ from rag_benchmark import ROOT, _sha256, _snapshot
 
 
 def _scores(ranked: list[str], grades: dict[str, int], k: int) -> dict[str, float]:
+    """Compute ranked-source retrieval metrics from graded gold judgments."""
     positives = {pmid for pmid, grade in grades.items() if grade == 2}
     top = [item.removeprefix("pmid:") for item in ranked[:k]]
     hits = [item for item in top if item in positives]
     ideal = sorted(grades.values(), reverse=True)[:k]
 
     def dcg(values: list[int]) -> float:
+        """Compute discounted cumulative gain for an ordered relevance-grade sequence."""
         return sum((2**grade - 1) / math.log2(rank + 1)
                    for rank, grade in enumerate(values, start=1))
 
@@ -41,10 +43,12 @@ def _scores(ranked: list[str], grades: dict[str, int], k: int) -> dict[str, floa
 
 
 def _answerable(case: dict) -> bool:
+    """Check whether a gold case includes any fully relevant source."""
     return 2 in case["grades"].values()
 
 
 def _relevance_first(gold: dict) -> bool:
+    """Validate and resolve the predeclared relevance-first ranking choice."""
     ranking = gold["predeclared_run"].get("ranking", "evidence_first")
     if ranking not in ("evidence_first", "relevance_first"):
         raise ValueError("Unknown ranking configuration")
@@ -52,6 +56,7 @@ def _relevance_first(gold: dict) -> bool:
 
 
 def _validate(gold: dict, corpus: dict, gold_path: Path, corpus_path: Path) -> None:
+    """Validate the frozen gold-set status, corpus identity and benchmark assumptions."""
     if gold["status"] not in ("pre_run_locked_assistant_judgments_not_dual_adjudicated",
                               "pre_run_locked_provisional_ai_reviewed_research_only"):
         raise ValueError("Gold set is not in expected locked state")
@@ -85,6 +90,7 @@ def _validate(gold: dict, corpus: dict, gold_path: Path, corpus_path: Path) -> N
 
 
 def main() -> None:
+    """Run the command-line workflow: Compare document and hierarchical retrieval on frozen general-association questions."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus", type=Path, default=ROOT / "data/indexes/rag_corpus_manifest.json")
     parser.add_argument("--gold", type=Path, default=ROOT / "agent_docs/RAG_GENERAL_ASSOCIATION_GOLD_16_SOURCE.json")

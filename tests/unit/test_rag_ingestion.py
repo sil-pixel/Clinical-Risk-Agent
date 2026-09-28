@@ -19,7 +19,9 @@ from clinical_risk_agent.rag.pubmed import PubMedClient  # noqa: E402
 
 
 class IngestionManifestTests(unittest.TestCase):
+    """Provide ingestion manifest tests fixtures and assertions."""
     def test_reviewed_source_required(self) -> None:
+        """Verify reviewed source required."""
         record = {
             "pmid": "12345", "topic": "depression",
             "study_design": "observational_study", "reviewer": "reviewer-1",
@@ -37,6 +39,7 @@ class IngestionManifestTests(unittest.TestCase):
                 load_approved_sources(path, today=date(2026, 9, 24))
 
     def test_pubmed_design_conflict_requires_documented_override(self) -> None:
+        """Verify pubmed design conflict requires documented override."""
         record = {
             "pmid": "12345", "topic": "schizophrenia",
             "study_design": "observational_study", "reviewer": "reviewer-1",

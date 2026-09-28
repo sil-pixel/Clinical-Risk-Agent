@@ -21,6 +21,7 @@ from .support import CuratedClaimSupport, SupportAssertion
 
 
 def sha256_file(path: Path) -> str:
+    """Compute the SHA-256 digest of a file without loading it all into memory."""
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
@@ -29,6 +30,7 @@ def sha256_file(path: Path) -> str:
 
 
 def _source(raw: dict[str, Any]) -> ScientificSource:
+    """Reconstruct a scientific source from serialized corpus metadata."""
     item = dict(raw)
     item["authors"] = tuple(item["authors"])
     item["published_on"] = date.fromisoformat(item["published_on"])
@@ -40,6 +42,7 @@ def _source(raw: dict[str, Any]) -> ScientificSource:
 
 
 def _snapshot(raw: dict[str, Any], strategy: str) -> CorpusSnapshot:
+    """Reconstruct one strategy snapshot from the frozen corpus manifest."""
     return CorpusSnapshot(
         version=raw["corpus_version"], strategy=strategy,
         sources=tuple(_source(item) for item in raw["sources"]),
@@ -51,6 +54,7 @@ class ResearchRuntime:
     """One immutable corpus/model view shared by MCP and the HTTP backend."""
 
     def __init__(self, root: Path) -> None:
+        """Load pinned encoders, corpus snapshots, support rules and local retrieval indexes."""
         self.root = root.resolve()
         corpus_path = self.root / "data/indexes/rag_corpus_manifest.json"
         catalog_path = self.root / "agent_docs/RAG_21_SOURCE_CLAIM_SUPPORT_CATALOG.json"
@@ -174,7 +178,9 @@ class ResearchRuntime:
 
     @property
     def corpus_version(self) -> str:
+        """Return the frozen corpus version used by the runtime."""
         return self.corpus["snapshots"]["hierarchical"]["corpus_version"]
 
     def close(self) -> None:
+        """Release the owned runtime or provider resources."""
         self._client.close()

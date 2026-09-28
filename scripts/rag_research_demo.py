@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 async def ask(question: str) -> dict:
+    """Run a bounded research question through the local MCP server."""
     server = StdioServerParameters(
         command=sys.executable,
         args=[str(ROOT / "scripts/rag_mcp_server.py")],
@@ -30,6 +31,7 @@ async def ask(question: str) -> dict:
 
 
 def main() -> None:
+    """Run the command-line workflow: Ask the local research-only RAG MCP tool one public/synthetic question."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--question", help="A public or synthetic research question")
     parser.add_argument("--list-questions", action="store_true")

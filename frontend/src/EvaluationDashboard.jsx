@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
 import { API_BASE } from "./api.js";
 
+/** Format a finite metric or display a dash when it is unavailable. */
 const format = (value, digits = 4) => Number.isFinite(value) ? value.toFixed(digits) : "—";
 
+/** Render one evaluation metric with its value and interpretation. */
 function Metric({ label, value, detail }) {
   return <div className="eval-metric"><span>{label}</span><strong>{value}</strong><small>{detail}</small></div>;
 }
 
+/** Display live answer-quality estimates and aggregate service monitoring. */
 export default function EvaluationDashboard() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
+    /** Fetch local monitoring data without updating state after unmount. */
     const refresh = async () => {
       try {
         const response = await fetch(`${API_BASE}/v1/evaluations/dashboard`);

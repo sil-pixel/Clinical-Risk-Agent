@@ -32,6 +32,7 @@ class ResearchCorpus:
     """One process-local, immutable view; no tool opens files supplied by callers."""
 
     def __init__(self) -> None:
+        """Load frozen corpus collections and approved support rules for MCP tools."""
         corpus_path = ROOT / "data/indexes/rag_corpus_manifest.json"
         catalog_path = ROOT / "agent_docs/RAG_21_SOURCE_CLAIM_SUPPORT_CATALOG.json"
         pin_path = ROOT / "agent_docs/RAG_MEDCPT_ENCODER_PIN.json"
@@ -103,10 +104,12 @@ class ResearchCorpus:
             raise
 
     def close(self) -> None:
+        """Release the owned runtime or provider resources."""
         self.client.close()
 
     @staticmethod
     def _question(question: str) -> str:
+        """Validate and normalize a bounded public or synthetic research question."""
         question = question.strip()
         if not 3 <= len(question) <= 500:
             raise ValueError("Question must be 3 to 500 characters")
@@ -114,23 +117,27 @@ class ResearchCorpus:
 
     @staticmethod
     def _limit(limit: int) -> int:
+        """Validate the permitted number of MCP search results."""
         if not 1 <= limit <= 5:
             raise ValueError("Limit must be 1 to 5")
         return limit
 
     @staticmethod
     def _pmid(pmid: str) -> str:
+        """Validate the syntax of a PubMed identifier supplied to an MCP tool."""
         if not re.fullmatch(r"[1-9]\d{0,9}", pmid):
             raise ValueError("PMID must be a positive integer string")
         return pmid
 
     @staticmethod
     def _claim_id(claim_id: str) -> str:
+        """Validate the syntax of a curated claim identifier supplied to an MCP tool."""
         if not re.fullmatch(r"[a-z][a-z0-9_]{2,100}", claim_id):
             raise ValueError("Invalid claim ID")
         return claim_id
 
     def _matches(self, strategy: str, question: str, limit: int) -> dict:
+        """Retrieve ranked corpus passages for the selected chunking strategy."""
         question = self._question(question)
         limit = self._limit(limit)
         result = self.retrievers[strategy].retrieve(
@@ -158,17 +165,21 @@ class ResearchCorpus:
         }
 
     def search_evidence(self, question: str, limit: int = 5) -> dict:
+        """Search the hierarchical corpus for passages relevant to a research question."""
         return self._matches("hierarchical", question, limit)
 
     def retrieve_supported(self, question: str, claim_id: str):
+        """Retrieve passages that satisfy the requested curated claim-support check."""
         return self.supported_retriever.retrieve(
             RetrievalQuery(self._question(question), claim_id=claim_id), today=date.today(),
         )
 
     def answer_research_question(self, question: str) -> dict:
+        """Return the bounded research answer for an MCP question."""
         return self.answerer.answer(question)
 
     def compare_retrieval(self, question: str, limit: int = 5) -> dict:
+        """Compare document and hierarchical passage retrieval for the same question."""
         question = self._question(question)
         limit = self._limit(limit)
         return {
@@ -179,6 +190,7 @@ class ResearchCorpus:
         }
 
     def get_paper(self, pmid: str) -> dict:
+        """Return the approved corpus metadata and sections for a PubMed identifier."""
         pmid = self._pmid(pmid)
         source = self.sources.get(pmid)
         if source is None:
@@ -198,6 +210,7 @@ class ResearchCorpus:
         }
 
     def list_curated_claims(self) -> dict:
+        """List the bounded claims supported by the approved source catalog."""
         return {
             "research_only": True,
             "catalog_status": self.catalog["status"],
@@ -206,6 +219,7 @@ class ResearchCorpus:
         }
 
     def get_curated_claim(self, claim_id: str) -> dict:
+        """Return the approved source assertions for one curated claim."""
         claim_id = self._claim_id(claim_id)
         matches = []
         for assertion in self.assertions:
@@ -231,6 +245,7 @@ _corpus: ResearchCorpus | None = None
 
 
 def corpus() -> ResearchCorpus:
+    """Lazily load and reuse the approved MCP research-corpus runtime."""
     global _corpus
     if _corpus is None:
         _corpus = ResearchCorpus()
@@ -250,6 +265,7 @@ READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 
 
 def valid_question_and_limit(question: str, limit: int) -> None:
+    """Validate the MCP question and result-count arguments before retrieval."""
     try:
         ResearchCorpus._question(question)
         ResearchCorpus._limit(limit)

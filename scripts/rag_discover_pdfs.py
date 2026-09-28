@@ -18,6 +18,7 @@ DOI = re.compile(r"10\.\d{4,9}/[^\s<>;,]+", re.IGNORECASE)
 
 
 def _doi_on_first_page(path: Path) -> str | None:
+    """Extract a candidate DOI from the first page of a local research PDF."""
     logging.getLogger("pypdf").setLevel(logging.ERROR)
     text = PdfReader(path).pages[0].extract_text() or ""
     matches = DOI.findall(text)
@@ -29,6 +30,7 @@ def _doi_on_first_page(path: Path) -> str | None:
 
 
 def _pubmed_match(doi: str) -> tuple[str, ...]:
+    """Resolve a candidate DOI to matching PubMed identifiers."""
     parameters = urllib.parse.urlencode({
         "db": "pubmed", "term": f"{doi}[DOI]", "retmode": "json", "retmax": 5,
     })
@@ -44,6 +46,7 @@ def _pubmed_match(doi: str) -> tuple[str, ...]:
 
 
 def discover(directory: Path, *, online: bool) -> list[dict[str, object]]:
+    """Screen local research PDFs and resolve their PubMed bibliographic identities."""
     papers = sorted(directory.glob("*.pdf"))
     if not papers:
         raise ValueError("No research PDFs found")
@@ -66,6 +69,7 @@ def discover(directory: Path, *, online: bool) -> list[dict[str, object]]:
 
 
 def main() -> None:
+    """Run the command-line workflow: Resolve user-supplied research PDFs to PubMed IDs without indexing PDF text."""
     repository = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory", type=Path,
