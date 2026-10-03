@@ -12,11 +12,11 @@ The dashboard displays live service responses, not archived benchmark scores. Af
 generated response is delivered through either message endpoint, a background LLM judge
 estimates correctness (factual accuracy, relevance and completeness, **without a gold
 reference**) and groundedness against that response's exact cited passages. Correctness
-is a same-model automated estimate, not independent verification. Groundedness is null
+is an automated estimate from the separately configured judge, not human verification. Groundedness is null
 for replies without source passages. Nulls and failed evaluations do not enter means.
 Scores, individual score counts, pending jobs, skipped jobs and errors are displayed.
 
-The judge uses the configured provider/model and makes an additional paid provider call.
+The live judge uses `LLM_JUDGE_MODEL` with the configured provider/key and makes an additional paid provider call; if unset it falls back to the chat model. Locally it is set to `gemini-3.5-flash`, while chat is unchanged. Human calibration remains pending; see [the review workflow](LLM_JUDGE_CALIBRATION.md). The dashboard includes a 100-response synthetic review panel with explicit human confirmation and unweighted/weighted Cohen's κ.
 Only one live evaluation runs at a time; replies arriving while it is busy are explicitly
 counted as skipped. No evaluation queue accumulates private chat content. Prompts, answers
 and passages are sent to the configured provider transiently for judging but are never
@@ -35,7 +35,7 @@ but are no longer displayed in the live dashboard.
 
 - **Groundedness**: automated judge estimates support for generated factual claims in the supplied corpus passages. Only corpus-cited answers enter this mean.
 - **Correctness**: automated judge compares the generated answer with the frozen reference answer. Abstention on an answerable case scores zero; generation and judge failures are excluded and reported separately.
-- Judge model, generator model, corpus hash, dataset hash, sample size, and date accompany each report. The default judge is the configured generator model, so the judgment is not independent or human-validated.
+- Judge model, generator model, corpus hash, dataset hash, sample size, and date accompany each report. The default judge uses `LLM_JUDGE_MODEL` when configured, otherwise the generator model. A separate model is still not human validation.
 - **RMSE, MSE, R², Spearman rho**: computed separately for both deployed checkpoints against labeled non-user data, on the normalized target scale. Spearman uses average ranks for ties; constant input produces an undefined value, displayed as a dash. R² is undefined for a constant reference target.
 - The initial current-checkpoint ML report evaluates the existing 20,000-row fully synthetic Thesis dataset. Training overlap is unknown: these are descriptive benchmark scores, not established held-out accuracy. Historical multi-seed reports are separate and are not linked to deployed checkpoint identities.
 

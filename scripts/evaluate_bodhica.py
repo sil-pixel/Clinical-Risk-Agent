@@ -87,7 +87,7 @@ def llm(args):
     from clinical_risk_agent.ai.generation import GenerationRequest, create_generator
 
     settings = BackendSettings.from_env(root=ROOT)
-    model = args.judge_model or settings.llm_model
+    model = args.judge_model or settings.llm_judge_model or settings.llm_model
     judge = create_generator(settings.llm_provider, settings.llm_api_key, model)
     gold_path = ROOT / "agent_docs/RAG_GENERAL_ASSOCIATION_GOLD_21_SOURCE.json"
     corpus_path = ROOT / "data/indexes/rag_corpus_manifest.json"

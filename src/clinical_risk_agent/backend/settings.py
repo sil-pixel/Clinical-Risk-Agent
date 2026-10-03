@@ -16,6 +16,7 @@ class BackendSettings:
     llm_provider: str | None = None
     llm_model: str | None = None
     llm_api_key: str | None = field(default=None, repr=False)
+    llm_judge_model: str | None = None
     deployment_mode: str = "prototype_demo"
     session_ttl_seconds: int = 1800
     request_timeout_seconds: float = 115.0
@@ -51,6 +52,10 @@ class BackendSettings:
                 raise ValueError("LLM_PROVIDER must be openai, anthropic, or gemini")
             object.__setattr__(self, "llm_provider", normalized_provider)
             object.__setattr__(self, "llm_model", self.llm_model.strip())
+        if self.llm_judge_model is not None:
+            if not self.llm_judge_model.strip():
+                raise ValueError("LLM_JUDGE_MODEL must not be blank")
+            object.__setattr__(self, "llm_judge_model", self.llm_judge_model.strip())
 
     @classmethod
     def from_env(cls, *, root: Path | None = None) -> "BackendSettings":
@@ -78,5 +83,6 @@ class BackendSettings:
             llm_provider=os.getenv("LLM_PROVIDER") or None,
             llm_model=os.getenv("LLM_MODEL") or None,
             llm_api_key=os.getenv("LLM_API_KEY") or None,
+            llm_judge_model=os.getenv("LLM_JUDGE_MODEL") or None,
             session_creations_per_network_hour=session_creation_limit,
         )

@@ -98,15 +98,15 @@ test("the other-events caption describes the five grouped experiences in plain l
   assert.doesNotMatch(question.note, /_abuse18|_assault18|_neglect18|_violence18/);
 });
 
-test("sections start with family and sex, then progress through ages nine, fifteen and eighteen", () => {
+test("sections start with sex and family, then progress through ages nine, fifteen and eighteen", () => {
   assert.deepEqual(questionnaireSections.map((section) => section.id), [
-    "s08", "s09", "s03", "s04", "s01", "s02", "s05", "s06", "s07",
+    "s09", "s08", "s03", "s04", "s01", "s02", "s05", "s06", "s07",
   ]);
   questionnaireSections.forEach((section, index) => {
     assert.equal(section.eyebrow, `Section ${index + 1} of 9`);
   });
   assert.deepEqual(allQuestions.slice(0, 5).map((item) => item.id), [
-    "q081", "q082", "q083", "q084", "q085",
+    "q085", "q081", "q082", "q083", "q084",
   ]);
 });
 

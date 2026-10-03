@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import MagicMock
 
 from clinical_risk_agent.ai import (
     AssistantDraft,
@@ -84,11 +85,27 @@ def orchestrator(research=None, generator=None):
 
 class ConversationTests(unittest.TestCase):
     """Provide conversation tests fixtures and assertions."""
+    def test_separate_judge_does_not_use_chat_generator(self):
+        """Route quality requests to the distinct judge and close each owned adapter once."""
+        chat = MagicMock()
+        judge = MagicMock(model="independent-judge", provider=LLMProvider.GEMINI)
+        judge.generate.return_value = AssistantDraft(response_kind="conversation", citation_ids=[],
+            text='{"correctness": 0.8, "groundedness": null, "quality_label": "acceptable"}')
+        service = ProtectedConversationOrchestrator(None, FakeResearch(), chat, judge=judge)
+        result = service.evaluate_response("Question", {"message": "Answer", "citations": []})
+        self.assertEqual(result["judge_model"], "independent-judge")
+        self.assertEqual(result["quality_label"], "acceptable")
+        chat.generate.assert_not_called()
+        judge.generate.assert_called_once()
+        service.close()
+        chat.close.assert_called_once()
+        judge.close.assert_called_once()
+
     def test_live_judge_context_and_no_passage_groundedness(self):
         """Verify live judge context and no passage groundedness."""
         generator = FakeGenerator([AssistantDraft(
             response_kind="conversation", citation_ids=[],
-            text='{"correctness": 0.8, "groundedness": 1}',
+            text='{"correctness": 0.8, "groundedness": 1, "quality_label": "good"}',
         )])
         service = orchestrator(generator=generator)
         scores = service.evaluate_response("Fixture question", {

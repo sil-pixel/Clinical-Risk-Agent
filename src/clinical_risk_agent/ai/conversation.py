@@ -125,20 +125,24 @@ class EvidenceAbstention(ValueError):
 class ProtectedConversationOrchestrator:
     """Route protected requests into research, education or conversational generation."""
     def __init__(self, router: RoutingGraph, research: ConversationalResearchPort,
-                 generator: StructuredGenerator | None) -> None:
+                 generator: StructuredGenerator | None, *,
+                 judge: StructuredGenerator | None = None) -> None:
         """Bind the protected router, research service and optional LLM generator."""
         self._router = router
         self._research = research
         self._generator = generator
+        self._judge = judge if judge is not None else generator
 
     def close(self) -> None:
         """Release the owned runtime or provider resources."""
         if self._generator is not None:
             self._generator.close()
+        if self._judge is not None and self._judge is not self._generator:
+            self._judge.close()
 
     def evaluate_response(self, question: str, result: dict[str, Any]) -> dict[str, Any]:
         """Judge a delivered live answer; callers retain scores only, never this context."""
-        if self._generator is None:
+        if self._judge is None:
             raise RuntimeError("Quality judge unavailable")
         passages = [{"citation_id": item.get("citation_id"),
                      "passage": item.get("exact_matched_text", "")}
@@ -156,10 +160,14 @@ class ProtectedConversationOrchestrator:
             "citation presence. Use null when there are no passages or no factual claims. "
             "Do not equate agreement with a passage to factual truth. Return response_kind="
             "conversation, citation_ids=[], and text containing ONLY a JSON object with "
-            "keys correctness and groundedness. No rationale or copied user text.",
+            "keys correctness, groundedness and quality_label. quality_label must be "
+            "good (accurate, relevant, sufficiently complete, supported when evidence is supplied), "
+            "acceptable (useful and safe with minor omissions or imprecision), or bad (material "
+            "error, unsupported central claim, irrelevant answer or unsafe advice). Missing "
+            "passages alone do not make general education bad. No rationale or copied user text.",
             "Evaluate this delivered answer.", context,
         )
-        verdict = json.loads(self._generator.generate(request).text)
+        verdict = json.loads(self._judge.generate(request).text)
         if not isinstance(verdict, dict) or not {"correctness", "groundedness"} <= verdict.keys():
             raise ValueError("Incomplete judge result")
         scores = {}
@@ -172,8 +180,13 @@ class ProtectedConversationOrchestrator:
             scores[key] = value
         if not passages:
             scores["groundedness"] = None
-        return {**scores, "judge_model": self._generator.model,
-                "judge_provider": self._generator.provider.value}
+        label = verdict.get("quality_label")
+        if not isinstance(label, str) or label not in {"good", "acceptable", "bad"}:
+            raise ValueError("Invalid judge label")
+        return {**scores, "quality_label": label, "rubric_version": "bodhica-quality-v1",
+                "calibration_status": "pending_human_review",
+                "judge_model": self._judge.model,
+                "judge_provider": self._judge.provider.value}
 
     def handle(self, text: str, *, deployment_mode: str, session_valid: bool) -> dict[str, Any]:
         """Run protected routing and return the appropriate public conversational outcome."""

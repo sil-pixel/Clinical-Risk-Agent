@@ -38,7 +38,8 @@ class Monitor:
                "created_at": datetime.now(timezone.utc).isoformat()}
         if verdict:
             row.update({key: verdict.get(key) for key in
-                        ("correctness", "groundedness", "judge_model", "judge_provider")})
+                        ("correctness", "groundedness", "judge_model", "judge_provider",
+                         "quality_label", "rubric_version", "calibration_status")})
         with self._lock:
             if status != "skipped":
                 self._pending = max(0, self._pending - 1)

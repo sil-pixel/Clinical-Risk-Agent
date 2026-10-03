@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { API_BASE } from "./api.js";
+import JudgeReview from "./JudgeReview.jsx";
 
 /** Format a finite metric or display a dash when it is unavailable. */
 const format = (value, digits = 4) => Number.isFinite(value) ? value.toFixed(digits) : "—";
@@ -43,12 +44,13 @@ export default function EvaluationDashboard() {
         <Metric label="Evaluated replies" value={quality?.evaluated ?? 0} detail={`${quality?.pending ?? 0} evaluation(s) pending`} />
         <Metric label="Evaluation errors" value={quality?.errors ?? 0} detail={`${quality?.skipped ?? 0} replies skipped (judge busy / unavailable)`} />
       </div>
-      <p className="eval-provenance">Scores update after replies are delivered; evaluation does not delay chat. Groundedness is unscored without source passages. Correctness is an estimate from the configured LLM, not independently verified truth or a gold-answer comparison. Missing scores and failures are excluded from averages.</p>
+      <p className="eval-provenance">Scores update after replies are delivered; evaluation does not delay chat. Groundedness is unscored without source passages. Correctness is an estimate from the separately configured judge model, not independently verified truth. Human calibration is pending; missing scores and failures are excluded from averages.</p>
       <p className="eval-provenance">Most recent 2,000 evaluated or skipped replies since server start. Only scores and metadata are retained; no chat text is saved. Evaluations make an additional provider request.</p>
       <div className="eval-table-scroll"><table className="eval-table"><thead><tr><th>Time</th><th>Response type</th><th>Groundedness</th><th>Correctness estimate</th><th>Status / judge</th></tr></thead>
         <tbody>{quality?.recent.map((r, i) => <tr key={`${r.created_at}-${i}`}><td>{new Date(r.created_at).toLocaleTimeString()}</td><td>{r.response_kind}</td><td>{format(r.groundedness, 3)}</td><td>{format(r.correctness, 3)}</td><td>{r.status}{r.judge_model ? ` · ${r.judge_model}` : ''}</td></tr>)}</tbody></table></div>
       {!quality?.recent.length && <p className="eval-provenance">Send a chat message to start live evaluation.</p>}
     </section>
+    <JudgeReview />
     <section className="evaluation-section">
       <h2>Live ML accuracy</h2>
       <div className="eval-grid">

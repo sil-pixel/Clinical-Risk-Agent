@@ -294,9 +294,14 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     research = service or LocalResearchService(settings.root)
     if conversation is None:
         generator = None
+        judge = None
         if settings.llm_provider and settings.llm_model and settings.llm_api_key:
             generator = create_generator(
                 settings.llm_provider, settings.llm_api_key, settings.llm_model,
+            )
+            judge = create_generator(
+                settings.llm_provider, settings.llm_api_key,
+                settings.llm_judge_model or settings.llm_model,
             )
         conversation = ProtectedConversationOrchestrator(
             RoutingGraph(
@@ -304,6 +309,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
             ),
             research,
             generator,
+            judge=judge,
         )
     assessment = assessment or LocalAssessmentService(settings.root)
     sessions = SessionStore(
@@ -784,6 +790,19 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
             return _error("LOCAL_ACCESS_REQUIRED", "The evaluation dashboard is local-only.",
                           "authorization", 403)
         return await asyncio.to_thread(monitor.snapshot)
+
+    @app.get("/v1/evaluations/judge-review")
+    async def judge_review_packet(request: Request):
+        """Serve synthetic judge review fixtures only to loopback clients."""
+        if (not request.client or request.client.host not in {"127.0.0.1", "::1", "testclient"}
+                or request.headers.get("x-forwarded-for")):
+            return _error("LOCAL_ACCESS_REQUIRED", "Judge review is local-only.",
+                          "authorization", 403)
+        path = settings.root / "agent_docs/LLM_JUDGE_REVIEW_100.json"
+        if not path.is_file():
+            return _error("REVIEW_UNAVAILABLE", "Review fixtures have not been prepared.",
+                          "evaluation", 404)
+        return json.loads(await asyncio.to_thread(path.read_text))
 
     @app.post("/v1/assessments/explanation")
     async def retry_explanation(token: str = Depends(bearer)):
