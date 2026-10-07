@@ -20,6 +20,14 @@ image = (
         str(LOCAL_ROOT / "pyproject.toml"), optional_dependencies=["rag", "backend"],
     )
     .add_local_dir(str(LOCAL_ROOT / "src"), f"{REMOTE_ROOT}/src", copy=True)
+    # Both DCMFNet checkpoints load during startup; without them the lifespan fails.
+    .add_local_dir(
+        str(LOCAL_ROOT / "model_artifacts"), f"{REMOTE_ROOT}/model_artifacts", copy=True,
+    )
+    .add_local_file(
+        str(LOCAL_ROOT / "data/monitoring/drift_reference.json"),
+        f"{REMOTE_ROOT}/data/monitoring/drift_reference.json", copy=True,
+    )
     .add_local_dir(
         str(LOCAL_ROOT / "data/indexes/models"), f"{REMOTE_ROOT}/data/indexes/models",
         copy=True,
