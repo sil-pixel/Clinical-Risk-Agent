@@ -29,6 +29,8 @@ class BackendSettings:
     assessment_submissions_per_day: int = 3
     global_model_operations_per_day: int = 1000
     session_creations_per_network_hour: int = 5
+    # "semantic": certain rules, then the pinned embedding router; "rules": rules only.
+    intent_router: str = "semantic"
 
     def __post_init__(self) -> None:
         """Reject invalid deployment, authorization and provider configuration."""
@@ -41,6 +43,8 @@ class BackendSettings:
             raise ValueError("At least one explicit HTTP(S) origin is required")
         if "*" in self.allowed_origins:
             raise ValueError("Wildcard CORS is forbidden")
+        if self.intent_router not in {"semantic", "rules"}:
+            raise ValueError("INTENT_ROUTER must be semantic or rules")
         if self.session_ttl_seconds != 1800:
             raise ValueError("The approved session TTL is exactly 30 minutes")
         llm_values = (self.llm_provider, self.llm_model, self.llm_api_key)
@@ -85,4 +89,5 @@ class BackendSettings:
             llm_api_key=os.getenv("LLM_API_KEY") or None,
             llm_judge_model=os.getenv("LLM_JUDGE_MODEL") or None,
             session_creations_per_network_hour=session_creation_limit,
+            intent_router=os.getenv("INTENT_ROUTER", "semantic").strip().lower(),
         )

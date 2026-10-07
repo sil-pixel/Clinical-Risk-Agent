@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from clinical_risk_agent.ai import (
     AssessmentStatus,
     AssessmentSubmission,
+    HybridIntentPort,
     MLAssessmentAdapter,
     PreflightRequest,
     ProtectedConversationOrchestrator,
@@ -33,7 +34,11 @@ from clinical_risk_agent.ai import (
     RoutingGraph,
     create_generator,
 )
-from clinical_risk_agent.inference import DCMFNetPredictor, questionnaire_requirements
+from clinical_risk_agent.inference import (
+    DCMFNetPredictor,
+    questionnaire_feature_codes,
+    questionnaire_requirements,
+)
 from clinical_risk_agent.rag.answering import CURATED_QUESTIONS
 from clinical_risk_agent.rag.runtime import ResearchRuntime
 
@@ -70,8 +75,8 @@ class ResearchService(Protocol):
 
 class ConversationService(Protocol):
     """Define protected chat generation and assessment-explanation operations."""
-    def handle(self, text: str, *, deployment_mode: str,
-               session_valid: bool) -> dict[str, Any]:
+    def handle(self, text: str, *, deployment_mode: str, session_valid: bool,
+               confirmed_intent: str | None = None) -> dict[str, Any]:
         """Run protected routing and return the appropriate public conversational outcome."""
         ...
     def explain_assessment(self, result: dict[str, Any]) -> dict[str, Any]:
@@ -126,6 +131,11 @@ class LocalAssessmentService:
     def warmup(self) -> None:
         """Load model resources before the first assessment request."""
         self._load()
+
+    @staticmethod
+    def drift_features(version: str, answers: dict[str, str]) -> dict[str, int]:
+        """Return answered feature codes for aggregate input-drift monitoring."""
+        return questionnaire_feature_codes(answers, version=version)
 
     @staticmethod
     def requirements() -> dict[str, Any]:
@@ -236,6 +246,11 @@ class MessageRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     kind: Literal["free_text"]
     text: str = Field(min_length=1, max_length=500)
+    # Set when the user taps "Yes" on a clarification; the router re-verifies it.
+    confirmed_intent: Literal[
+        "risk_assessment", "explain_my_risk", "scientific_question",
+        "mental_health_education", "general_conversation",
+    ] | None = None
 
 
 class AssessmentAttestations(BaseModel):
@@ -286,12 +301,19 @@ def _error(code: str, message: str, component: str, status: int,
     })
 
 
+def confirmation(payload: MessageRequest) -> dict[str, str]:
+    """Forward a clarification confirmation only when the client supplied one."""
+    return {"confirmed_intent": payload.confirmed_intent} if payload.confirmed_intent else {}
+
+
 def create_app(settings: BackendSettings, *, service: ResearchService | None = None,
                conversation: ConversationService | None = None,
                assessment: AssessmentService | None = None,
                clock: Callable[[], float] | None = None) -> FastAPI:
     """Compose the API. Authorization is derived only from transport state."""
     research = service or LocalResearchService(settings.root)
+    monitor = Monitor(settings.root)
+    intent_port = None
     if conversation is None:
         generator = None
         judge = None
@@ -303,10 +325,11 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                 settings.llm_provider, settings.llm_api_key,
                 settings.llm_judge_model or settings.llm_model,
             )
+        intent_port = (HybridIntentPort.from_root(settings.root)
+                       if settings.intent_router == "semantic" else PrototypeIntentPort())
         conversation = ProtectedConversationOrchestrator(
-            RoutingGraph(
-                PrototypeSafetyPort(), PrototypeLanguagePort(), PrototypeIntentPort(),
-            ),
+            RoutingGraph(PrototypeSafetyPort(), PrototypeLanguagePort(), intent_port,
+                         observer=monitor.record_intent),
             research,
             generator,
             judge=judge,
@@ -324,7 +347,6 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     model_capacity = CapacityGate(settings.max_model_concurrency)
     http_capacity = CapacityGate(settings.max_http_concurrency)
     now = clock
-    monitor = Monitor(settings.root)
     assessment_results: dict[str, tuple[float, dict[str, Any]]] = {}
     explanation_tasks: set[asyncio.Task] = set()
     quality_tasks: set[asyncio.Task] = set()
@@ -404,6 +426,11 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                 started = time.monotonic()
                 await asyncio.to_thread(warmup)
                 monitor.record("model_startup", "ready", time.monotonic() - started)
+            router_warmup = getattr(intent_port, "warmup", None)
+            if router_warmup is not None:
+                started = time.monotonic()
+                await asyncio.to_thread(router_warmup)
+                monitor.record("intent_router_startup", "ready", time.monotonic() - started)
             yield
         finally:
             for task in explanation_tasks | quality_tasks:
@@ -591,6 +618,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                     asyncio.to_thread(
                         conversation.handle, payload.text,
                         deployment_mode=settings.deployment_mode, session_valid=True,
+                        **confirmation(payload),
                     ),
                     timeout=settings.request_timeout_seconds,
                 )
@@ -642,6 +670,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                             asyncio.to_thread(
                                 conversation.handle, payload.text,
                                 deployment_mode=settings.deployment_mode, session_valid=True,
+                                **confirmation(payload),
                             ),
                             timeout=settings.request_timeout_seconds,
                         )
@@ -738,6 +767,14 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                 )
                 if result.get("status") == "assessment_ready":
                     monitor.record("assessment_inference", "ready", time.monotonic() - started)
+                    drift_features = getattr(assessment, "drift_features", None)
+                    if drift_features is not None:
+                        # Input monitoring must never fail an assessment that already succeeded.
+                        try:
+                            monitor.record_inputs(
+                                drift_features(payload.questionnaire_version, payload.answers))
+                        except Exception:
+                            monitor.record("input_monitoring", "error", 0)
                     prune_assessments()
                     assessment_results[assessment_key(token)] = (time.monotonic(), result)
                     explainer = getattr(conversation, "explain_assessment", None)

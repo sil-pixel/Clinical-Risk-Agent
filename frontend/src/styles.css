@@ -218,6 +218,7 @@ a { color: inherit; }
 .button--primary { color: white; background: var(--brand); border-color: var(--brand); }
 .button--primary:hover:not(:disabled) { background: var(--brand-dark); }
 .button--secondary { color: var(--brand-dark); background: white; border-color: #bdd2ce; }
+.chat-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .button--quiet { color: var(--muted); background: transparent; border-color: var(--line); }
 .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .icon--left { transform: rotate(180deg); }

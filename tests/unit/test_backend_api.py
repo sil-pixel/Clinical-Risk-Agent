@@ -12,6 +12,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from clinical_risk_agent.backend import BackendSettings, create_app
+from clinical_risk_agent.inference import questionnaire_feature_codes, questionnaire_requirements
 
 
 class Clock:
@@ -141,7 +142,7 @@ class BackendAPITests(unittest.TestCase):
             root=Path("."), session_signing_key=b"x" * 32,
             allowed_origins=("https://portfolio.example",),
             model_turns_per_hour=2, model_turns_per_day=3,
-            global_model_operations_per_day=20,
+            global_model_operations_per_day=20, intent_router="rules",
         )
         self.client_context = TestClient(create_app(
             self.settings, service=self.service, clock=self.clock,
@@ -374,6 +375,78 @@ class BackendAPITests(unittest.TestCase):
             self.assertEqual(response.status_code, 409)
             self.assertEqual(response.json()["error"]["code"], "QUESTIONNAIRE_VERSION_UNSUPPORTED")
             self.assertEqual(assessment.calls, [])
+
+    def test_message_forwards_only_confirmable_intents(self) -> None:
+        """Verify confirmed intents reach the conversation and unsafe ones are rejected."""
+        conversation = FakeConversation()
+        conversation.handle = lambda text, **kwargs: (
+            conversation.calls.append((text, kwargs)) or FakeConversation().handle(
+                text, deployment_mode=kwargs["deployment_mode"],
+                session_valid=kwargs["session_valid"]))
+        with TestClient(create_app(self.settings, service=self.service,
+                                   conversation=conversation)) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            ok = client.post("/v1/messages", headers=self.auth(token), json={
+                "kind": "free_text", "text": "does poverty matter",
+                "confirmed_intent": "scientific_question"})
+            self.assertEqual(ok.status_code, 200)
+            self.assertEqual(conversation.calls[-1][1]["confirmed_intent"], "scientific_question")
+            client.post("/v1/messages", headers=self.auth(token),
+                        json={"kind": "free_text", "text": "hello"})
+            self.assertNotIn("confirmed_intent", conversation.calls[-1][1])
+            unsafe = client.post("/v1/messages", headers=self.auth(token), json={
+                "kind": "free_text", "text": "my dose",
+                "confirmed_intent": "unsupported_or_unsafe"})
+            self.assertEqual(unsafe.status_code, 422)
+
+    def test_ready_assessment_records_aggregate_drift_inputs(self) -> None:
+        """Verify ready assessments feed drift counters through the optional service hook."""
+        class DriftAssessment(FakeAssessment):
+            """Expose fixture feature codes for drift monitoring."""
+            def drift_features(self, version, answers):
+                """Return complete first-option feature codes for the fixture submission."""
+                return questionnaire_feature_codes(
+                    {item.question_id: "o01" for item in questionnaire_requirements().questions})
+
+        with TestClient(create_app(self.settings, service=self.service,
+                                   conversation=FakeConversation(),
+                                   assessment=DriftAssessment())) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            response = client.post("/v1/assessments", headers=self.auth(token), json={
+                "questionnaire_version": "prototype_questionnaire_v1",
+                "answers": {"q001": "o01"},
+                "attestations": {"age_18_or_over": True, "self_assessment": True,
+                                 "research_only_consent": True},
+            })
+            self.assertEqual(response.status_code, 200)
+            drift = client.get("/v1/evaluations/dashboard").json()["input_drift"]
+            self.assertEqual(drift["n"], 1)
+            self.assertNotIn("features", drift)
+            dashboard = client.get("/v1/evaluations/dashboard").json()
+            self.assertEqual(dashboard["input_ood"]["n"], 1)
+            self.assertNotIn("input_monitoring", str(dashboard["operations"]))
+
+    def test_input_monitoring_failure_keeps_assessment_result(self) -> None:
+        """Verify a drift or OOD scoring error is logged without failing the assessment."""
+        class BrokenDriftAssessment(FakeAssessment):
+            """Return incomplete feature codes that OOD scoring cannot use."""
+            def drift_features(self, version, answers):
+                """Return a partial code map that OOD scoring cannot use."""
+                return {"SEX": 1}
+
+        with TestClient(create_app(self.settings, service=self.service,
+                                   conversation=FakeConversation(),
+                                   assessment=BrokenDriftAssessment())) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            response = client.post("/v1/assessments", headers=self.auth(token), json={
+                "questionnaire_version": "prototype_questionnaire_v1",
+                "answers": {"q001": "o01"},
+                "attestations": {"age_18_or_over": True, "self_assessment": True,
+                                 "research_only_consent": True},
+            })
+            self.assertEqual(response.status_code, 200)
+            operations = client.get("/v1/evaluations/dashboard").json()["operations"]
+            self.assertIn("input_monitoring", [row["operation"] for row in operations])
 
     def test_public_questionnaire_contract_and_submission(self) -> None:
         """Verify public questionnaire contract and submission."""

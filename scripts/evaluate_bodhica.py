@@ -12,7 +12,9 @@ import uuid
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from clinical_risk_agent.evaluation import regression_metrics
+from clinical_risk_agent.drift import count_codes, drift_report
+from clinical_risk_agent.evaluation import CLARIFY, classification_metrics, regression_metrics
+from clinical_risk_agent.ood import build_ood_reference
 
 
 def digest(path):
@@ -78,6 +80,97 @@ def ml(args):
           "artifact_hashes": artifact_hashes,
           "note": "Normalized target scale [0,1]. Dataset must contain non-user reference labels. "
                   "Training overlap and clinical representativeness are not established by this run."})
+
+
+def drift_features():
+    """Return the 85 questionnaire-answered features; PRS and batch inputs are never live."""
+    from clinical_risk_agent.inference.questionnaire import MANUAL_FEATURE_NAMES
+    return MANUAL_FEATURE_NAMES
+
+
+def drift_reference(args):
+    """Write the aggregate reference profile used by live drift and OOD monitoring."""
+    from clinical_risk_agent.backend.monitoring import DRIFT_REFERENCE_PATH
+
+    rows = list(csv.DictReader(args.csv.open()))
+    counts, missing = count_codes(rows, drift_features())
+    ood = build_ood_reference(rows, drift_features(), counts)
+    profile = {"dataset": args.csv.name, "dataset_sha256": digest(args.csv), "n": len(rows),
+               "created_at": datetime.now(timezone.utc).isoformat(), "counts": counts,
+               "missing": missing, "ood": ood,
+               "note": "Aggregate per-feature answer-code counts; missing reference values are "
+                       "excluded from drift comparisons because live submissions are complete. "
+                       "OOD statistics fill missing reference values with each modal code; "
+                       "thresholds are in-sample reference quantiles."}
+    path = ROOT / DRIFT_REFERENCE_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(profile, indent=2) + "\n")
+    print(f"Saved {path.relative_to(ROOT)}", flush=True)
+
+
+def drift(args):
+    """Compare a current non-user CSV batch with a reference CSV and save a drift report."""
+    features = drift_features()
+    reference, _ = count_codes(csv.DictReader(args.reference.open()), features)
+    rows = list(csv.DictReader(args.current.open()))
+    current, missing = count_codes(rows, features)
+    report = drift_report(reference, current, len(rows))
+    save({"kind": "drift", "dataset": args.current.name, "dataset_sha256": digest(args.current),
+          "reference_dataset": args.reference.name,
+          "reference_sha256": digest(args.reference),
+          "evaluation_type": "offline_input_drift", "drift": report,
+          "current_missing": missing,
+          "note": "Univariate categorical drift on the 85 questionnaire features; reference and "
+                  "current missing values are excluded. Drift does not measure accuracy."})
+
+
+def routing(args):
+    """Score the deployed hybrid intent router and the rules-only baseline on labeled cases."""
+    from clinical_risk_agent.ai import HybridIntentPort, Intent, PrototypeIntentPort
+    from clinical_risk_agent.ai.routing import ROUTING_CONFIDENCE_THRESHOLD as threshold
+    from clinical_risk_agent.ai.semantic_router import CALIBRATION_PATH, UTTERANCES_PATH
+
+    path = ROOT / "agent_docs/INTENT_ROUTER_EVAL.json"
+    cases = [case for case in json.loads(path.read_text())["cases"]
+             if args.split == "all" or case["split"] == args.split]
+    labels = [intent.value for intent in Intent]
+    retrieval = {"scientific_question", "mental_health_education"}
+
+    def to_route(label):
+        """Collapse intents that share the retrieval route."""
+        return "retrieval" if label in retrieval else label
+
+    route_labels = list(dict.fromkeys(to_route(label) for label in labels))
+    expected = [case["intent"] or CLARIFY for case in cases]
+    results = {}
+    for name, port in (("hybrid", HybridIntentPort.from_root(ROOT)),
+                       ("rules_only", PrototypeIntentPort())):
+        decisions = [port.classify(case["text"]) for case in cases]
+        predicted = [CLARIFY if d.requires_clarification or d.calibrated_confidence < threshold
+                     else d.intent.value for d in decisions]
+        results[name] = {
+            "intent": classification_metrics(expected, predicted, labels),
+            "route": classification_metrics([to_route(label) for label in expected],
+                                            [to_route(label) for label in predicted],
+                                            route_labels),
+            "rule_decided": sum(d.model_id == "deterministic-prototype-rules"
+                                for d in decisions) / len(decisions),
+        }
+        print(f"{name}: accuracy={results[name]['intent']['accuracy']:.3f} "
+              f"macro_f1={results[name]['intent']['macro_f1']:.3f} "
+              f"route_accuracy={results[name]['route']['accuracy']:.3f}", flush=True)
+    calibration = ROOT / CALIBRATION_PATH
+    save({"kind": "routing", "dataset": path.name, "dataset_sha256": digest(path),
+          "split": args.split, "evaluation_type": "offline_intent_routing",
+          "utterances_sha256": digest(ROOT / UTTERANCES_PATH),
+          "calibration_sha256": digest(calibration),
+          "model": json.loads(calibration.read_text())["model"]["repo"],
+          "routing_threshold": threshold, "results": results,
+          "eval_status": json.loads(path.read_text())["status"],
+          "note": "Cases are assistant-authored; see eval_status for human approval. The router's "
+                  "utterances share that author, so scores are optimistic. Clarification counts as a "
+                  "prediction: it lowers recall but never precision. Route metrics merge "
+                  "scientific_question and mental_health_education, which share retrieval."})
 
 
 def llm(args):
@@ -187,6 +280,16 @@ def main():
     regression = commands.add_parser("ml")
     regression.add_argument("csv", type=Path)
     regression.set_defaults(run=ml)
+    reference = commands.add_parser("drift-reference")
+    reference.add_argument("csv", type=Path)
+    reference.set_defaults(run=drift_reference)
+    shift = commands.add_parser("drift")
+    shift.add_argument("reference", type=Path)
+    shift.add_argument("current", type=Path)
+    shift.set_defaults(run=drift)
+    intent = commands.add_parser("routing")
+    intent.add_argument("--split", choices=("test", "calibration", "all"), default="test")
+    intent.set_defaults(run=routing)
     language = commands.add_parser("llm")
     language.add_argument("--url", default="http://127.0.0.1:8000")
     language.add_argument("--limit", type=int, default=0)

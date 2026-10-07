@@ -11,9 +11,14 @@ import os
 from dataclasses import dataclass, field
 from enum import Enum
 from math import isfinite
+from collections.abc import Callable
 from typing import Protocol, TypedDict
 
 from langgraph.graph import END, START, StateGraph
+
+
+# Free-text intents below this calibrated confidence are routed to clarification.
+ROUTING_CONFIDENCE_THRESHOLD = 0.85
 
 
 class RequestKind(str, Enum):
@@ -51,6 +56,16 @@ class Intent(str, Enum):
     UNSUPPORTED_OR_UNSAFE = "unsupported_or_unsafe"
 
 
+# A clarification may name the router's best guess when it is at least this confident and
+# the text resembles the reference utterances. A user can confirm only such a suggestion,
+# and never an unsupported or unsafe intent.
+SUGGESTION_MIN_CONFIDENCE = 0.5
+CONFIRMABLE_INTENTS = frozenset({
+    Intent.RISK_ASSESSMENT, Intent.EXPLAIN_MY_RISK, Intent.SCIENTIFIC_QUESTION,
+    Intent.MENTAL_HEALTH_EDUCATION, Intent.GENERAL_CONVERSATION,
+})
+
+
 class Route(str, Enum):
     """Enumerate permitted next stages of the protected request workflow."""
     REJECT_SESSION = "reject_session"
@@ -75,6 +90,8 @@ class PreflightRequest:
     session_valid: bool
     text: str | None = field(default=None, repr=False)
     assessment_view_authorized: bool = False
+    # Client claim that the user accepted a clarification suggestion; verified by the graph.
+    confirmed_intent: Intent | None = None
 
     def __post_init__(self) -> None:
         """Validate preflight request shape and backend-supplied authorization flags."""
@@ -86,8 +103,11 @@ class PreflightRequest:
             if (not isinstance(self.text, str) or not self.text.strip()
                     or self.assessment_view_authorized):
                 raise ValueError("Invalid free-text request shape")
+            if (self.confirmed_intent is not None
+                    and self.confirmed_intent not in CONFIRMABLE_INTENTS):
+                raise ValueError("Intent cannot be confirmed")
         elif self.kind is RequestKind.STRUCTURED_ASSESSMENT:
-            if self.text is not None:
+            if self.text is not None or self.confirmed_intent is not None:
                 raise ValueError("Structured assessment cannot contain free text")
         else:
             raise ValueError("Unknown request kind")
@@ -131,6 +151,8 @@ class RouteDecision:
     language_status: LanguageStatus | None
     intent: Intent | None
     allow_inference: bool = False
+    # Router's best guess, offered to the user when the route is CLARIFY_INTENT.
+    suggested_intent: Intent | None = None
     allow_rag: bool = False
     allow_llm: bool = False
 
@@ -174,10 +196,12 @@ def external_tracing_enabled() -> bool:
 class RoutingGraph:
     """One-turn, no-checkpointer preflight; state never leaves volatile memory."""
 
-    def __init__(self, safety: SafetyPort, language: LanguagePort, intent: IntentPort) -> None:
+    def __init__(self, safety: SafetyPort, language: LanguagePort, intent: IntentPort,
+                 observer: Callable[[IntentDecision], None] | None = None) -> None:
         """Compile the protected safety, language and intent preflight graph."""
         if safety is None or language is None or intent is None:
             raise ValueError("Safety, language and intent ports are required")
+        self._observer = observer
         self._safety = safety
         self._language = language
         self._intent = intent
@@ -269,6 +293,19 @@ class RoutingGraph:
                 or not isfinite(decision.calibrated_confidence)
                 or not 0.0 <= decision.calibrated_confidence <= 1.0):
             raise ValueError("Intent decision lacks calibrated provenance")
+        confirmed = state["request"].confirmed_intent
+        # Stateless check: honor a confirmation only if the router itself would suggest it.
+        if confirmed is not None and suggestion(decision) is confirmed:
+            decision = IntentDecision(
+                confirmed, 1.0, False, decision.model_id, decision.model_sha256,
+                decision.calibration_version, decision.router_version,
+                "user_confirmed_suggestion",
+            )
+        if self._observer is not None:
+            try:
+                self._observer(decision)
+            except Exception:
+                pass  # Monitoring must never change routing.
         return {"intent": decision}
 
     @staticmethod
@@ -279,7 +316,7 @@ class RoutingGraph:
             return {"route": (Route.VALIDATE_ASSESSMENT if request.assessment_view_authorized
                               else Route.UNSUPPORTED)}
         decision = state["intent"]
-        if decision.requires_clarification or decision.calibrated_confidence < 0.85:
+        if decision.requires_clarification or decision.calibrated_confidence < ROUTING_CONFIDENCE_THRESHOLD:
             return {"route": Route.CLARIFY_INTENT}
         return {"route": {
             Intent.RISK_ASSESSMENT: Route.ASSESSMENT_REDIRECTION,
@@ -296,9 +333,21 @@ class RoutingGraph:
         if external_tracing_enabled():
             raise RuntimeError("External tracing is forbidden for runtime requests")
         state = self._graph.invoke({"request": request})
+        suggested = (suggestion(state["intent"])
+                     if state["route"] is Route.CLARIFY_INTENT and "intent" in state else None)
         return RouteDecision(
             route=state["route"],
             safety_category=state["safety"].category if "safety" in state else None,
             language_status=state["language"].status if "language" in state else None,
             intent=state["intent"].intent if "intent" in state else None,
+            suggested_intent=suggested,
         )
+
+
+def suggestion(decision: IntentDecision) -> Intent | None:
+    """Return the intent worth offering for confirmation, or None for a generic menu."""
+    unfamiliar = decision.rationale_code == "semantic_unfamiliar"
+    if (decision.intent in CONFIRMABLE_INTENTS and not unfamiliar
+            and decision.calibrated_confidence >= SUGGESTION_MIN_CONFIDENCE):
+        return decision.intent
+    return None

@@ -12,6 +12,7 @@ from .errors import (
 from .questionnaire import (
     assemble_model_record,
     predict_questionnaire,
+    questionnaire_feature_codes,
     questionnaire_requirements,
     validate_questionnaire,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "assemble_model_record",
     "inspect_artifact",
     "predict_questionnaire",
+    "questionnaire_feature_codes",
     "questionnaire_requirements",
     "validate_questionnaire",
 ]

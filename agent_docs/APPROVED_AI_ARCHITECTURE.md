@@ -139,6 +139,8 @@ Use a pre-intercepted, English-only intent router:
 3. Deterministic rules recognize structured questionnaire submissions, explicit assessment commands, and clearly unsupported transport/content cases.
 4. A locally hosted Hugging Face sequence-classification encoder classifies remaining English free text into the approved intent enum.
 
+> **Superseded for intent routing by ADR-027 (2026-10-06).** Intent now uses hybrid routing: certain exact-match rules first, then a pinned, non-fine-tuned `bge-small-en-v1.5` embedding-similarity router with calibrated confidence and the same `0.85` threshold. The DistilBERT text below still describes the planned safety classifier; its intent-classifier parts are historical.
+
 The approved architecture baseline is [`distilbert/distilbert-base-uncased`](https://huggingface.co/distilbert/distilbert-base-uncased), fine-tuned separately for the fixed project intent labels and safety labels. A base checkpoint, zero-shot classifier, or uncalibrated artifact is not approved for release.
 
 The encoder returns logits only. A deterministic adapter maps logits to the fixed enum, applies calibration and the initial `0.85` maximum-confidence threshold, and returns intent, calibrated confidence, clarification requirement, policy-compatible rationale code, model ID, pinned revision/checksum, fine-tuning dataset/version, calibration version, and router version. It does not determine questionnaire completeness, emit user prose, or select tools. Confidence below `0.85`, out-of-distribution input, or unresolved incompatible intent returns the deterministic two-action `INTENT_CLARIFICATION_REQUIRED` component without RAG, LLM, or inference. Safety uncertainty remains governed by the earlier fail-closed safety interceptor.

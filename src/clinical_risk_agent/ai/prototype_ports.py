@@ -21,8 +21,62 @@ from .routing import (
     SafetyDecision,
 )
 
-POLICY_VERSION = "prototype-safety-rules-v1"
+POLICY_VERSION = "prototype-safety-rules-v2"
 ROUTER_VERSION = "prototype-conversational-router-v2"
+
+_FIRST_PERSON = re.compile(r"\b(i|i'm|im|i've|ive|i'd|i'll|me|my|myself|mine)\b")
+_REQUEST_PHRASE = re.compile(r"\b(tell|show|give|help) me\b")
+_RESEARCH_FRAMING = re.compile(
+    r"\b(research|study|studies|evidence|papers?|literature|cohort|trials?|risks?|rates?|"
+    r"prevalence|associat\w*|linked|link|correlat\w*|factors?|predict\w*|population|"
+    r"patients|people|individuals|adolescents|youth|among|mechanisms?|statistics|"
+    r"what is|what are|tell me about|explain|define)\b"
+)
+_PILLS = r"(pills|tablets|meds|medication|medicine|sleeping pills|painkillers)"
+
+# Expressions that describe the writer's (or another person's) own danger. These always
+# intercept, whatever else the message contains.
+_PERSONAL_RISK_RULES = (
+    (SafetyCategory.EMERGENCY_REDIRECTION, tuple(re.compile(pattern) for pattern in (
+        r"\bimmediate danger\b", r"\bmedical emergency\b", r"\bcall an ambulance\b",
+        rf"\b(took|taken|swallowed|ate)\b.{{0,30}}\b(too many|a lot of|all (of )?(my|the)|"
+        rf"a bottle of|a bunch of|a handful of)\b.{{0,20}}\b{_PILLS}",
+    ))),
+    (SafetyCategory.CRITICAL_SAFETY_REDIRECTION, tuple(re.compile(pattern) for pattern in (
+        r"\b(kill|hurt|harm|cut|injur|poison|hang|shoot|drown|burn|starv)\w* myself\b",
+        r"\b(wants?|going|trying|tried|plans?|planning|threaten\w*) to (kill|hurt|harm) "
+        r"(himself|herself|themselves|themself)\b",
+        r"\bend(ing)? (it all|my (own )?life)\b",
+        r"\btak(e|ing) my (own )?life\b",
+        r"\b(don'?t|do not|no longer) want to (live|be alive|exist|be here any ?more|wake up)\b",
+        r"\bwant(ed|s)? to (die|be dead)\b",
+        r"\bwish i (was|were|had) (dead|never been born)\b",
+        r"\bwish i could (die|disappear forever)\b",
+        r"\bbetter off (dead|without me)\b",
+        r"\b(no|nothing) (reason )?to live for\b",
+        r"\bno reason to (live|go on)\b",
+        r"\bcan'?t (go on|keep going|take (it|this) any ?more)\b",
+        r"\b(kms|unalive)\b",
+    ))),
+    (SafetyCategory.ACUTE_DISTRESS_REDIRECTION, tuple(re.compile(pattern) for pattern in (
+        r"\bi('m| am|m) hallucinating\b", r"\bi (hear|keep hearing) voices\b",
+        r"\bvoices\b.{0,20}\b(telling|told|tell) me\b",
+        r"\bi('m| am|m) (hearing|seeing) things\b",
+        r"\b(someone|people|they) (is|are) (watching|following|after) me\b",
+        r"\bhaving a panic attack\b", r"\bsevere panic\b",
+    ))),
+)
+
+# Topic words that are also legitimate research subjects. They intercept unless the
+# message is framed as a research or educational question without any first-person
+# reference, so "suicide risk in schizophrenia" is answerable but "my suicide plan" is not.
+_TOPIC_RULES = (
+    (SafetyCategory.EMERGENCY_REDIRECTION, (re.compile(r"\boverdos\w*"),)),
+    (SafetyCategory.CRITICAL_SAFETY_REDIRECTION, (
+        re.compile(r"\bsuicid\w*"), re.compile(r"\bself[- ]?harm\w*"),
+        re.compile(r"\bself[- ]?injur\w*"),
+    )),
+)
 
 
 def _normalized(text: str) -> str:
@@ -30,24 +84,29 @@ def _normalized(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip().rstrip("?!. ").casefold())
 
 
+def _safety_text(text: str) -> str:
+    """Casefold text and unify apostrophes and whitespace for safety matching."""
+    return re.sub(r"\s+", " ", text.replace("’", "'").replace("‘", "'").casefold())
+
+
 class PrototypeSafetyPort:
-    """High-precision deterministic intercepts with architecture-defined priority."""
+    """High-recall deterministic intercepts with architecture-defined priority."""
 
     def evaluate(self, request: PreflightRequest) -> SafetyDecision:
         """Classify text against the prototype safety interception rules."""
-        text = (request.text or "").casefold()
+        text = _safety_text(request.text or "")
+        research_question = (bool(_RESEARCH_FRAMING.search(text))
+                             and not _FIRST_PERSON.search(_REQUEST_PHRASE.sub("", text)))
+        for category, patterns in _PERSONAL_RISK_RULES:
+            if any(pattern.search(text) for pattern in patterns):
+                return SafetyDecision(category, POLICY_VERSION, f"rule_{category.value.lower()}")
+        if not research_question:
+            for category, patterns in _TOPIC_RULES:
+                if any(pattern.search(text) for pattern in patterns):
+                    return SafetyDecision(
+                        category, POLICY_VERSION, f"rule_{category.value.lower()}_topic",
+                    )
         rules = (
-            (SafetyCategory.EMERGENCY_REDIRECTION, (
-                "overdose", "immediate danger", "medical emergency", "call an ambulance",
-            )),
-            (SafetyCategory.CRITICAL_SAFETY_REDIRECTION, (
-                "kill myself", "end my life", "want to die", "suicide", "self-harm",
-                "self harm",
-            )),
-            (SafetyCategory.ACUTE_DISTRESS_REDIRECTION, (
-                "i am hallucinating", "i'm hallucinating", "i hear voices",
-                "voices are telling me", "someone is watching me", "severe panic",
-            )),
             (SafetyCategory.STATE_INELIGIBLE_MINOR, (
                 "i am under 18", "i'm under 18", "i am a minor", "i'm a minor",
             )),

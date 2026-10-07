@@ -299,6 +299,34 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(result["message"], text)
         self.assertTrue(result["generated_by_llm"])
 
+    def test_general_conversation_refusal_returns_crisis_response(self) -> None:
+        """Verify a crisis refusal from the chat model becomes the fixed crisis response."""
+        generator = FakeGenerator([AssistantDraft(
+            response_kind="refusal", text="Crisis indicated.", citation_ids=[],
+        )])
+        result = orchestrator(generator=generator).handle(
+            "Lately there is just no point to anything at all",
+            deployment_mode="prototype_demo", session_valid=True,
+        )
+        self.assertEqual(result["response_kind"], "CRITICAL_SAFETY_REDIRECTION")
+        self.assertIn("Tele-MANAS", result["message"])
+        self.assertIsNone(result["model"])
+        self.assertIn("Safety override", generator.calls[0].system_instruction)
+
+    def test_education_refusal_returns_crisis_response(self) -> None:
+        """Verify a crisis refusal on the general-education path becomes the crisis response."""
+        empty = {"status": "no_adequate_evidence", "answer": "No evidence.",
+                 "limitation": None, "corpus_version": "fixture-corpus", "citations": []}
+        generator = FakeGenerator([AssistantDraft(
+            response_kind="refusal", text="Crisis indicated.", citation_ids=[],
+        )])
+        result = orchestrator(FakeResearch(empty, empty), generator).handle(
+            "What is depression and why does everything feel pointless?",
+            deployment_mode="prototype_demo", session_valid=True,
+        )
+        self.assertEqual(result["response_kind"], "CRITICAL_SAFETY_REDIRECTION")
+        self.assertIn("Safety override", generator.calls[0].system_instruction)
+
     def test_safety_language_and_assessment_routes_deny_tools(self) -> None:
         """Verify safety language and assessment routes deny tools."""
         fixtures = (

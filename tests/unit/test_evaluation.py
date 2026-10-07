@@ -53,3 +53,31 @@ class EvaluationTests(unittest.TestCase):
         for y, p in [([1], [2]), ([1, 2], [1]), ([1, float('nan')], [1, 2])]:
             with self.assertRaises(ValueError):
                 regression_metrics(y, p)
+
+
+class ClassificationMetricTests(unittest.TestCase):
+    """Check routing classification metrics, including clarification handling."""
+
+    def test_precision_recall_with_clarification(self):
+        """Verify clarifying lowers recall only, and expected clarifications score as correct."""
+        from clinical_risk_agent.evaluation import CLARIFY, classification_metrics
+
+        result = classification_metrics(
+            ["a", "a", "b", CLARIFY], ["a", CLARIFY, "a", CLARIFY], ["a", "b"])
+        a, b = result["per_label"]["a"], result["per_label"]["b"]
+        self.assertEqual((a["precision"], a["recall"]), (0.5, 0.5))
+        self.assertIsNone(b["precision"])
+        self.assertEqual(b["recall"], 0.0)
+        self.assertEqual(result["accuracy"], 0.5)
+        self.assertEqual(result["macro_precision"], 0.25)
+        self.assertEqual(result["coverage"], 0.5)
+        self.assertEqual(result["clarified_labeled_cases"], 1)
+        self.assertEqual(result["confusion"]["b"]["a"], 1)
+
+    def test_invalid_labels_rejected(self):
+        """Verify unpaired, empty or unknown labels are rejected."""
+        from clinical_risk_agent.evaluation import classification_metrics
+
+        for expected, predicted in ([[], []], [["a"], []], [["z"], ["a"]]):
+            with self.assertRaises(ValueError):
+                classification_metrics(expected, predicted, ["a"])

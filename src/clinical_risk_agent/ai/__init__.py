@@ -33,6 +33,7 @@ from .generation import (
 )
 from .conversation import ConversationOutcome, ProtectedConversationOrchestrator
 from .prototype_ports import PrototypeIntentPort, PrototypeLanguagePort, PrototypeSafetyPort
+from .semantic_router import HybridIntentPort, SemanticIntentRouter
 
 __all__ = [
     "Intent",
@@ -65,4 +66,6 @@ __all__ = [
     "PrototypeIntentPort",
     "PrototypeLanguagePort",
     "PrototypeSafetyPort",
+    "HybridIntentPort",
+    "SemanticIntentRouter",
 ]

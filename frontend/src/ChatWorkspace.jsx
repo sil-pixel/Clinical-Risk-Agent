@@ -35,6 +35,7 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
   const [phase, setPhase] = useState("");
   const [busy, setBusy] = useState(false);
   const threadRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     const thread = threadRef.current;
@@ -42,14 +43,14 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
   }, [messages, phase]);
 
   /** Submit a chat turn and consume validated content, citations or streaming errors. */
-  const submit = async (event, suppliedText) => {
+  const submit = async (event, suppliedText, { confirmedIntent, displayText } = {}) => {
     event?.preventDefault();
     const text = (suppliedText ?? input).trim();
     if (!text || !token || busy) return;
-    setInput("");
+    if (!confirmedIntent) setInput("");
     setBusy(true);
     setPhase("Starting protected checks…");
-    setMessages((current) => [...current, { role: "user", text, citations: [] }]);
+    setMessages((current) => [...current, { role: "user", text: displayText ?? text, citations: [] }]);
     let assistant = null;
     let completed = false;
     try {
@@ -59,7 +60,9 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ kind: "free_text", text }),
+        body: JSON.stringify(confirmedIntent
+          ? { kind: "free_text", text, confirmed_intent: confirmedIntent }
+          : { kind: "free_text", text }),
       });
       if (!response.ok || !response.body) {
         const payload = await response.json().catch(() => ({}));
@@ -87,6 +90,7 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
               responseKind: eventData.data.response_kind,
               limitation: eventData.data.limitation,
               actions: eventData.data.actions || [],
+              sourceText: text,
               citations: [],
             };
             setMessages((current) => [...current, assistant]);
@@ -113,6 +117,19 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
     } finally {
       setBusy(false);
       setPhase("");
+    }
+  };
+
+  /** Perform a response action: open the questionnaire, confirm a guess, or start a question. */
+  const runAction = (action, message) => {
+    if (action.id.includes("questionnaire")) {
+      onOpenQuestionnaire();
+    } else if (action.id === "confirm_intent") {
+      // The backend re-checks that this intent was its own suggestion before honoring it.
+      submit(null, message.sourceText, { confirmedIntent: action.intent, displayText: "Yes" });
+    } else if (action.id === "ask_about_schizophrenia_and_clinical_associations") {
+      setInput("What does research say about ");
+      inputRef.current?.focus();
     }
   };
 
@@ -153,10 +170,16 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
                 <small>General knowledge · no corpus citations</small>
               )}
               <p>{message.text}</p>
-              {message.actions?.some((action) => action.id.includes("questionnaire")) && (
-                <button className="button button--secondary" type="button" onClick={onOpenQuestionnaire}>
-                  Open questionnaire
-                </button>
+              {message.actions?.length > 0 && (
+                <div className="chat-actions">
+                  {message.actions.map((action) => (
+                    <button key={action.id} className="button button--secondary" type="button"
+                      disabled={action.id === "confirm_intent" && (busy || !token)}
+                      onClick={() => runAction(action, message)}>
+                      {action.id === "launch_research_questionnaire_router" ? "Open questionnaire" : action.label}
+                    </button>
+                  ))}
+                </div>
               )}
               {message.citations?.map((citation) => (
                 <details className="evidence-card" key={citation.citation_id}>
@@ -185,7 +208,7 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
 
         <form className="chat-composer" onSubmit={submit}>
           <label className="sr-only" htmlFor="chat-input">Message the assistant</label>
-          <textarea id="chat-input" value={input} maxLength="500" rows="2"
+          <textarea id="chat-input" ref={inputRef} value={input} maxLength="500" rows="2"
             placeholder="Ask a question or start a conversation…"
             onChange={(event) => setInput(event.target.value)} disabled={busy || !token} />
           <button className="button button--primary" type="submit"

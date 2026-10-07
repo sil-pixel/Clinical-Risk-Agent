@@ -186,6 +186,18 @@ def assemble_model_record(
     return {name: record[name] for name in all_names}
 
 
+def questionnaire_feature_codes(
+    answers: Mapping[str, str], *, version: str = QUESTIONNAIRE_VERSION,
+) -> dict[str, int]:
+    """Return the 85 answered feature codes for aggregate drift monitoring only."""
+    if not validate_questionnaire(answers, version=version).authorizes_inference:
+        raise ValueError("Questionnaire is incomplete or invalid")
+    return {
+        item.feature_name: item.codes[int(answers[question_id][1:]) - 1]
+        for question_id, item in _PRIVATE_MAPPING.items()
+    }
+
+
 def predict_questionnaire(
     answers: Mapping[str, str],
     positive_predictor: DCMFNetPredictor,
@@ -219,5 +231,6 @@ def predict_questionnaire(
 
 __all__ = [
     "GENERIC_PROFILE_VERSION", "MANUAL_FEATURE_NAMES", "assemble_model_record",
-    "predict_questionnaire", "questionnaire_requirements", "validate_questionnaire",
+    "predict_questionnaire", "questionnaire_feature_codes", "questionnaire_requirements",
+    "validate_questionnaire",
 ]

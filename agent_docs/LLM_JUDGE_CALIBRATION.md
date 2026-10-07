@@ -1,6 +1,6 @@
 # Bodhica judge calibration preparation
 
-Status: **prepared, not yet human-calibrated**. The live judge is configured separately using `LLM_JUDGE_MODEL=gemini-3.5-flash`, sharing the Gemini provider/key with chat. Chat's model is unchanged. A different model reduces self-evaluation coupling but is not independent human verification.
+Status: **prepared, not yet human-calibrated**. Human review progress on 2026-10-07: 10 of 100 responses confirmed (JUDGE-001 to JUDGE-010; 5 calibration, 5 validation, 0 holdout). The judge model has not scored any reviewed case yet, so no human–judge κ exists. The live judge is configured separately using `LLM_JUDGE_MODEL=gemini-3.5-flash`, sharing the Gemini provider/key with chat. Chat's model is unchanged. A different model reduces self-evaluation coupling but is not independent human verification.
 
 Integration check on 2026-09-29: one synthetic fixture was successfully scored by `gemini-3.5-flash`, producing correctness, groundedness and `good`. This verifies adapter/model availability for that request, not agreement or reliability across all 100 cases. The remaining fixtures have not been model-scored yet; no κ can be claimed before paired reviews and judgments exist.
 

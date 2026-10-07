@@ -40,6 +40,14 @@ image = (
         str(LOCAL_ROOT / "agent_docs/RAG_MEDCPT_ENCODER_PIN.json"),
         f"{REMOTE_ROOT}/agent_docs/RAG_MEDCPT_ENCODER_PIN.json", copy=True,
     )
+    .add_local_file(
+        str(LOCAL_ROOT / "agent_docs/INTENT_ROUTER_UTTERANCES.json"),
+        f"{REMOTE_ROOT}/agent_docs/INTENT_ROUTER_UTTERANCES.json", copy=True,
+    )
+    .add_local_file(
+        str(LOCAL_ROOT / "agent_docs/INTENT_ROUTER_CALIBRATION.json"),
+        f"{REMOTE_ROOT}/agent_docs/INTENT_ROUTER_CALIBRATION.json", copy=True,
+    )
     .env({"PYTHONPATH": f"{REMOTE_ROOT}/src", "HF_HUB_OFFLINE": "1"})
 )
 

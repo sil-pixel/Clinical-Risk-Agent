@@ -9,6 +9,7 @@ from typing import Any, Protocol
 
 from .generation import GenerationRequest, StructuredGenerator
 from .routing import (
+    Intent,
     LanguageStatus,
     PreflightRequest,
     RequestKind,
@@ -59,6 +60,19 @@ ASSESSMENT_RESPONSE = (
     "assessment questionnaire."
 )
 CLARIFICATION_RESPONSE = "I didn't quite catch that. Please select what you would like to do:"
+# Asked when the router has a plausible guess below the routing threshold.
+SUGGESTION_QUESTIONS = {
+    Intent.RISK_ASSESSMENT: "Did you want to estimate your own risk with the research questionnaire?",
+    Intent.EXPLAIN_MY_RISK: "Did you want an explanation of your assessment result?",
+    Intent.SCIENTIFIC_QUESTION: "Did you want to know what the research says about this?",
+    Intent.MENTAL_HEALTH_EDUCATION: "Did you want a general explanation of this topic?",
+    Intent.GENERAL_CONVERSATION: "Did you mean this as a general question, not a research or assessment request?",
+}
+SUGGESTION_FOOTER = "If not, choose another option or rephrase your message."
+QUESTIONNAIRE_ACTION = {"id": "submit_risk_assessment_questionnaire",
+                        "label": "Submit Risk Assessment Questionnaire"}
+RESEARCH_ACTION = {"id": "ask_about_schizophrenia_and_clinical_associations",
+                   "label": "Ask About Schizophrenia & Clinical Associations"}
 NO_PRIOR_RESULT_RESPONSE = (
     "There is no validated assessment result in this session to explain. You can launch the "
     "research questionnaire if you would like to create one."
@@ -73,6 +87,11 @@ UNSUPPORTED_RESPONSE = (
 )
 GENERATION_UNAVAILABLE = (
     "I couldn't generate a validated evidence-based response at this time. Please try again later."
+)
+CRISIS_BACKSTOP_INSTRUCTION = (
+    "Safety override: if the user's message suggests that they or someone else may be in "
+    "crisis, at risk of suicide or self-harm, in danger, or facing a medical emergency, do not "
+    "answer it; return response_kind=refusal with a one-sentence text. Use refusal for nothing else."
 )
 
 
@@ -188,11 +207,13 @@ class ProtectedConversationOrchestrator:
                 "judge_model": self._judge.model,
                 "judge_provider": self._judge.provider.value}
 
-    def handle(self, text: str, *, deployment_mode: str, session_valid: bool) -> dict[str, Any]:
+    def handle(self, text: str, *, deployment_mode: str, session_valid: bool,
+               confirmed_intent: str | None = None) -> dict[str, Any]:
         """Run protected routing and return the appropriate public conversational outcome."""
         decision = self._router.advance(PreflightRequest(
             kind=RequestKind.FREE_TEXT, deployment_mode=deployment_mode,
             session_valid=session_valid, text=text,
+            confirmed_intent=Intent(confirmed_intent) if confirmed_intent else None,
         ))
         if decision.route is Route.SAFETY_TERMINAL:
             return self._safety(decision.safety_category).public_dict()
@@ -201,15 +222,7 @@ class ProtectedConversationOrchestrator:
                 "LANGUAGE_UNSUPPORTED", LANGUAGE_RESPONSE, route=decision.route.value,
             ).public_dict()
         if decision.route is Route.CLARIFY_INTENT:
-            return ConversationOutcome(
-                "INTENT_CLARIFICATION_REQUIRED", CLARIFICATION_RESPONSE,
-                actions=(
-                    {"id": "submit_risk_assessment_questionnaire",
-                     "label": "Submit Risk Assessment Questionnaire"},
-                    {"id": "ask_about_schizophrenia_and_clinical_associations",
-                     "label": "Ask About Schizophrenia & Clinical Associations"},
-                ), route=decision.route.value,
-            ).public_dict()
+            return self._clarify(decision.suggested_intent, decision.route).public_dict()
         if decision.route is Route.ASSESSMENT_REDIRECTION:
             return ConversationOutcome(
                 "ASSESSMENT_REDIRECTION", ASSESSMENT_RESPONSE,
@@ -229,6 +242,27 @@ class ProtectedConversationOrchestrator:
         return ConversationOutcome(
             "UNSUPPORTED", UNSUPPORTED_RESPONSE, route=decision.route.value,
         ).public_dict()
+
+    @staticmethod
+    def _clarify(suggested: Intent | None, route: Route) -> ConversationOutcome:
+        """Ask about the router's best guess when there is one, else offer the generic menu."""
+        if suggested is None:
+            return ConversationOutcome(
+                "INTENT_CLARIFICATION_REQUIRED", CLARIFICATION_RESPONSE,
+                actions=(QUESTIONNAIRE_ACTION, RESEARCH_ACTION), route=route.value,
+            )
+        if suggested is Intent.RISK_ASSESSMENT:
+            # Opening the questionnaire already is the confirmation; no resend is needed.
+            actions = ({**QUESTIONNAIRE_ACTION, "label": "Yes, open the questionnaire"},
+                       RESEARCH_ACTION)
+        else:
+            actions = ({"id": "confirm_intent", "label": "Yes", "intent": suggested.value},
+                       QUESTIONNAIRE_ACTION, RESEARCH_ACTION)
+        return ConversationOutcome(
+            "INTENT_CLARIFICATION_REQUIRED",
+            f"{SUGGESTION_QUESTIONS[suggested]} {SUGGESTION_FOOTER}",
+            actions=actions, route=route.value,
+        )
 
     @staticmethod
     def _safety(category: SafetyCategory | None) -> ConversationOutcome:
@@ -322,11 +356,14 @@ class ProtectedConversationOrchestrator:
             "your general knowledge. Explain the topic directly in plain language. Do not claim "
             "that the local corpus supports the answer, invent citations, diagnose the user, or "
             "recommend personalized treatment. Avoid blanket disclaimers; the interface displays "
-            "the research-demo notice. Return response_kind=conversation with no citation IDs.",
+            "the research-demo notice. Return response_kind=conversation with no citation IDs. "
+            + CRISIS_BACKSTOP_INSTRUCTION,
             text,
         )
         try:
             draft = self._generator.generate(request)
+            if draft.response_kind == "refusal":
+                return self._safety(SafetyCategory.CRITICAL_SAFETY_REDIRECTION)
             if draft.citation_ids or self._inline_citation_ids(draft.text):
                 raise ResponseIntegrityError("education_citation_mismatch")
             return ConversationOutcome(
@@ -350,12 +387,15 @@ class ProtectedConversationOrchestrator:
                 "Answer ordinary, non-clinical conversation naturally and concisely. Do not "
                 "diagnose, estimate personal health risk, prescribe treatment, or claim to have "
                 "searched evidence. If the user asks for medical advice, direct them to an "
-                "appropriate professional. Return response_kind=conversation and no citations."
+                "appropriate professional. Return response_kind=conversation and no citations. "
+                + CRISIS_BACKSTOP_INSTRUCTION
             ),
             text,
         )
         try:
             draft = self._generator.generate(request)
+            if draft.response_kind == "refusal":
+                return self._safety(SafetyCategory.CRITICAL_SAFETY_REDIRECTION)
             if (draft.response_kind != "conversation" or draft.citation_ids
                     or re.search(r"\[[A-Za-z0-9_-]+\]", draft.text)):
                 raise ResponseIntegrityError("general_conversation_contract_mismatch")

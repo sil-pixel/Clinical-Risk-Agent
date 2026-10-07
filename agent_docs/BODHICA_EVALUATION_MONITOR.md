@@ -28,8 +28,77 @@ generation failures are not scored as generated answers; request failures appear
 
 Live ML accuracy cannot be inferred from questionnaire predictions without observed
 reference outcomes. Its cards remain unscored rather than substituting benchmark scores.
-Existing offline reports remain on disk and available through the read-only local API,
-but are no longer displayed in the live dashboard.
+Existing offline reports remain on disk and available through the read-only local API.
+They are not displayed in the live dashboard, except the latest held-out routing benchmark,
+which is labeled as such.
+
+### Intent routing
+
+Free-text messages that pass the safety and language checks are routed by certain exact-match
+rules first, then by the pinned embedding-similarity router (ADR-027).
+
+- **Live**: for each routed message the dashboard keeps only the intent, whether it was routed or
+  sent to clarification (confidence below 0.85 or unfamiliar text), its confidence, and whether a
+  rule, the semantic router or a confirmed suggestion decided. It shows the clarification rate,
+  the share of clarifications that named a best guess, confirmed suggestions, rule share, mean
+  confidence and routed-intent counts over the most recent 2,000 messages since server start. A
+  confirmed resend counts as a separate routed message. Message text is
+  never kept. Live messages have no correct labels, so live precision and recall cannot be computed.
+- **Held-out benchmark**: `.venv/bin/python scripts/evaluate_bodhica.py routing` scores the deployed
+  router and the rules-only baseline on `INTENT_ROUTER_EVAL.json` (`--split test` by default;
+  `calibration` or `all` are also available). The dashboard shows the latest report: accuracy,
+  macro precision, recall and F1, and per-intent precision, recall and F1.
+- **Clarification is treated as a prediction.** Asking to clarify on a labeled message lowers that
+  intent's recall but not any intent's precision. Vague messages labeled for clarification are
+  correct when clarified, and the `clarify` row scores them. Macro averages cover the six intents
+  only. An intent that is never predicted counts as precision 0. Route metrics also merge
+  `scientific_question` and `mental_health_education`, which share retrieval.
+- Current test split (43 cases): hybrid accuracy 83.7%, macro precision 0.972, macro recall
+  0.850, macro F1 0.906. Rules only: 23.3%, 0.111, 0.185, 0.102. The product owner approved the
+  cases on 2026-10-07. The router's reference utterances are still pending review and share an
+  author with the cases, so these scores are optimistic.
+
+### Live ML input drift
+
+Each completed assessment adds its 85 answered feature codes to cumulative per-answer counts
+(reset at server restart). Individual submissions are not retained, and the dashboard exposes
+only drift scores, never the counts. Below 30 assessments it shows only the sample size, so a few
+submissions cannot be reverse-read. The 20 polygenic and batch inputs are always training
+medians in live use, so they are excluded.
+
+- **Reference**: `data/monitoring/drift_reference.json`, aggregate counts from the fully
+  synthetic `synthetic_dcmfnet.csv` (missing reference values excluded because live
+  submissions are complete). Rebuild with
+  `.venv/bin/python scripts/evaluate_bodhica.py drift-reference data/synthetic_data/synthetic_dcmfnet.csv`.
+- **Per feature**: Jensen–Shannon distance (base 2, 0–1; drifted at ≥ 0.1, Evidently's
+  categorical default) and PSI (stable < 0.1 ≤ moderate < 0.25 ≤ major).
+- **Dataset**: drift when ≥ 50% of features drift.
+- Drift shows that the input population changed. It does not measure accuracy. Because the
+  reference is synthetic, drift against real users is expected and is not by itself a
+  model fault.
+
+**Out-of-distribution rate.** Each completed assessment is scored twice against reference
+statistics saved in the same profile, then discarded. Only the flag counts are kept:
+
+- **Answer surprise**: average negative log-likelihood of the answers under Laplace-smoothed
+  reference answer frequencies. Flags rare or unseen answer codes.
+- **Mahalanobis distance** from the reference mean, using the reference covariance. Flags
+  unusual combinations of individually common answers.
+- Thresholds are the 99th percentile of the reference rows (in-sample; missing reference
+  values filled with each question's modal code), so about 1% of in-distribution submissions
+  are flagged per score. The dashboard shows each rate and the share flagged by either score,
+  hidden below 30 assessments. On the synthetic data, uniformly random answer sets were
+  always flagged.
+
+Monte Carlo dropout was evaluated and not adopted. Its spread on these checkpoints (std
+≈ 0.0005 positive and 0.0001 negative, against RMSE 0.033 and 0.066) does not track error,
+because dropout only acts inside attention gates.
+
+Offline batch comparison of two non-user CSVs (saved as a `drift` report):
+
+```sh
+.venv/bin/python scripts/evaluate_bodhica.py drift reference.csv current.csv
+```
 
 ### Archived offline evaluations
 
