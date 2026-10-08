@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from clinical_risk_agent.drift import count_codes, drift_report
 from clinical_risk_agent.evaluation import CLARIFY, classification_metrics, regression_metrics
-from clinical_risk_agent.ood import build_ood_reference
+from clinical_risk_agent.ood import build_ood_reference, score_rows
 
 
 def digest(path):
@@ -111,17 +111,23 @@ def drift_reference(args):
 def drift(args):
     """Compare a current non-user CSV batch with a reference CSV and save a drift report."""
     features = drift_features()
-    reference, _ = count_codes(csv.DictReader(args.reference.open()), features)
+    reference_rows = list(csv.DictReader(args.reference.open()))
+    reference, _ = count_codes(reference_rows, features)
     rows = list(csv.DictReader(args.current.open()))
     current, missing = count_codes(rows, features)
-    report = drift_report(reference, current, len(rows))
+    ood = build_ood_reference(reference_rows, features, reference)
+    report = drift_report(reference, current, len(rows),
+                          surprise_sum=float(score_rows(rows, ood, reference).sum()),
+                          surprise_mean=ood["surprise_mean"], surprise_std=ood["surprise_std"])
     save({"kind": "drift", "dataset": args.current.name, "dataset_sha256": digest(args.current),
           "reference_dataset": args.reference.name,
           "reference_sha256": digest(args.reference),
           "evaluation_type": "offline_input_drift", "drift": report,
           "current_missing": missing,
-          "note": "Univariate categorical drift on the 85 questionnaire features; reference and "
-                  "current missing values are excluded. Drift does not measure accuracy."})
+          "note": "Running answer-surprise z-score plus per-question Monte Carlo tests with "
+                  "Benjamini-Hochberg control on the 85 questionnaire features. Current missing "
+                  "values are drawn from reference marginals for the score and excluded from "
+                  "per-question counts. Drift does not measure accuracy."})
 
 
 def routing(args):

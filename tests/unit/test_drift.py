@@ -30,21 +30,39 @@ class DriftMetricTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             count_codes([{"a": "0.5"}], ["a"])
 
-    def test_report_suppressed_below_minimum_sample(self):
-        """Verify per-feature drift is withheld until enough submissions exist."""
-        report = drift_report({"a": {"0": 10}}, {"a": {"1": 5}}, 5)
-        self.assertEqual(report, {"status": "insufficient_data", "n": 5, "min_n": 30})
+    def test_running_score_from_first_submission(self):
+        """Verify the z-score exists at n = 1 and needs accumulating evidence to flag drift."""
+        reference = {"a": {"0": 50, "1": 50}}
+        one = drift_report(reference, {"a": {"1": 1}}, 1, surprise_sum=1.2,
+                           surprise_mean=1.0, surprise_std=0.1)
+        self.assertAlmostEqual(one["running"]["z"], 2.0)
+        self.assertEqual(one["status"], "stable")
+        self.assertNotIn("features", one)
+        many = drift_report(reference, {"a": {"1": 9}}, 9, surprise_sum=9 * 1.2,
+                            surprise_mean=1.0, surprise_std=0.1)
+        self.assertAlmostEqual(many["running"]["z"], 6.0)
+        self.assertEqual(many["status"], "drift")
+        self.assertEqual(drift_report(reference, {}, 0)["status"], "no_data")
 
-    def test_dataset_drift_share(self):
-        """Verify dataset drift requires the configured share of drifted features."""
+    def test_per_question_tests_are_sample_size_aware(self):
+        """Verify chance-level differences pass and a large shift is flagged under FDR."""
         reference = {"a": {"0": 50, "1": 50}, "b": {"0": 50, "1": 50}}
-        report = drift_report(reference, {"a": {"0": 30}, "b": {"0": 15, "1": 15}}, 30)
-        self.assertEqual(report["drifted_features"], 1)
-        self.assertEqual(report["status"], "drift")
-        self.assertEqual(report["features"][0]["feature"], "a")
-        report = drift_report(reference, {"a": {"0": 30}, "b": {"0": 15, "1": 15}}, 30,
-                              dataset_share=0.75)
-        self.assertEqual(report["status"], "stable")
+        typical = drift_report(reference, {"a": {"0": 6, "1": 4}, "b": {"0": 5, "1": 5}}, 10)
+        self.assertEqual(typical["drifted_features"], 0)
+        self.assertEqual(typical["status"], "stable")
+        shifted = drift_report(reference, {"a": {"0": 60}, "b": {"0": 31, "1": 29}}, 60)
+        self.assertEqual(shifted["drifted_features"], 1)
+        self.assertEqual(shifted["features"][0]["feature"], "a")
+        self.assertLess(shifted["features"][0]["p_value"], 0.001)
+        self.assertEqual(shifted["status"], "drift")
+
+    def test_benjamini_hochberg(self):
+        """Verify discoveries follow the step-up rule rather than a fixed cutoff."""
+        from clinical_risk_agent.drift import benjamini_hochberg
+
+        flags = benjamini_hochberg([0.001, 0.02, 0.03, 0.9], rate=0.05)
+        self.assertEqual(flags.tolist(), [True, True, True, False])
+        self.assertEqual(benjamini_hochberg([0.2, 0.5], rate=0.05).tolist(), [False, False])
 
     def test_questionnaire_feature_codes(self):
         """Verify complete answers map to 85 feature codes and incomplete ones are rejected."""
@@ -57,21 +75,24 @@ class DriftMetricTests(unittest.TestCase):
             questionnaire_feature_codes({"q001": "o01"})
 
     def test_monitor_exposes_only_scores(self):
-        """Verify live drift uses aggregates and never exposes raw per-category counts."""
+        """Verify live drift updates from the first submission and hides per-question data."""
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             self.assertEqual(Monitor(root).input_drift(), {"status": "no_reference", "n": 0})
             path = root / DRIFT_REFERENCE_PATH
             path.parent.mkdir(parents=True)
-            path.write_text(json.dumps({"dataset": "fixture.csv", "n": 100,
-                                        "counts": {"SEX": {"1": 50, "2": 50}}}))
+            rows = [{"SEX": "1"}] * 60 + [{"SEX": "2"}] * 40
+            counts, _ = count_codes(rows, ["SEX"])
+            path.write_text(json.dumps({"dataset": "fixture.csv", "n": 100, "counts": counts,
+                                        "ood": build_ood_reference(rows, ["SEX"], counts)}))
             monitor = Monitor(root)
-            for _ in range(29):
-                monitor.record_inputs({"SEX": 2})
-            self.assertEqual(monitor.snapshot()["input_drift"]["status"], "insufficient_data")
             monitor.record_inputs({"SEX": 2})
+            first = monitor.snapshot()["input_drift"]
+            self.assertIsNotNone(first["running"]["z"])
+            self.assertNotIn("features", first)
+            for _ in range(9):
+                monitor.record_inputs({"SEX": 2})
             drift = monitor.snapshot()["input_drift"]
-            self.assertEqual(drift["status"], "drift")
             self.assertEqual(drift["features"][0]["feature"], "SEX")
             self.assertNotIn("counts", drift)
             self.assertEqual(drift["reference"]["dataset"], "fixture.csv")

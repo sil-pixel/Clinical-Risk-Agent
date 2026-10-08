@@ -10,8 +10,8 @@ import time
 import numpy as np
 
 from clinical_risk_agent.ai.routing import ROUTING_CONFIDENCE_THRESHOLD, SafetyCategory, suggestion
-from clinical_risk_agent.drift import MIN_CURRENT_N, drift_report
-from clinical_risk_agent.ood import score_submission
+from clinical_risk_agent.drift import drift_report
+from clinical_risk_agent.ood import OOD_MIN_N, score_submission
 
 DRIFT_REFERENCE_PATH = Path("data/monitoring/drift_reference.json")
 
@@ -32,6 +32,7 @@ class Monitor:
         # Cumulative per-category counts only; individual submissions are never retained.
         self._input_counts: dict[str, dict[str, int]] = {}
         self._input_n = 0
+        self._surprise_sum = 0.0  # running total for the live drift z-score
         self._ood_flags = {"surprise": 0, "mahalanobis": 0, "either": 0}
         try:
             self._drift_reference = json.loads((root / DRIFT_REFERENCE_PATH).read_text())
@@ -69,6 +70,7 @@ class Monitor:
         ood = score_submission(codes, self._ood_reference) if self._ood_reference else None
         with self._lock:
             if ood:
+                self._surprise_sum += ood["surprise"]
                 self._ood_flags["surprise"] += ood["surprise_ood"]
                 self._ood_flags["mahalanobis"] += ood["mahalanobis_ood"]
                 self._ood_flags["either"] += ood["surprise_ood"] or ood["mahalanobis_ood"]
@@ -84,8 +86,12 @@ class Monitor:
             return {"status": "no_reference", "n": self._input_n}
         with self._lock:
             counts = {name: dict(values) for name, values in self._input_counts.items()}
-            n = self._input_n
-        report = drift_report(reference["counts"], counts, n)
+            n, surprise_sum = self._input_n, self._surprise_sum
+        ood = self._ood_reference or {}
+        report = drift_report(reference["counts"], counts, n,
+                              surprise_sum=surprise_sum if ood else None,
+                              surprise_mean=ood.get("surprise_mean"),
+                              surprise_std=ood.get("surprise_std"))
         report["reference"] = {key: reference.get(key) for key in
                                ("dataset", "dataset_sha256", "n", "created_at")}
         return report
@@ -148,9 +154,9 @@ class Monitor:
             n, flags = self._input_n, dict(self._ood_flags)
         if reference is None:
             return {"status": "no_reference", "n": n}
-        if n < MIN_CURRENT_N:
-            return {"status": "insufficient_data", "n": n, "min_n": MIN_CURRENT_N}
-        return {"status": "scored", "n": n, "min_n": MIN_CURRENT_N,
+        if n < OOD_MIN_N:
+            return {"status": "insufficient_data", "n": n, "min_n": OOD_MIN_N}
+        return {"status": "scored", "n": n, "min_n": OOD_MIN_N,
                 "expected_rate": round(1 - reference["quantile"], 6),
                 "surprise_rate": flags["surprise"] / n,
                 "mahalanobis_rate": flags["mahalanobis"] / n,

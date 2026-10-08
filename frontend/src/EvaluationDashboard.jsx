@@ -13,7 +13,7 @@ function Metric({ label, value, detail }) {
 function driftSummary(drift) {
   if (!drift) return "—";
   if (drift.status === "no_reference") return "No reference profile";
-  if (drift.status === "insufficient_data") return `Collecting (${drift.n}/${drift.min_n})`;
+  if (drift.status === "no_data") return "Waiting for first assessment";
   return drift.status === "drift" ? "Drift detected" : "Stable";
 }
 
@@ -106,11 +106,11 @@ export default function EvaluationDashboard() {
       <div className="evaluation-section-title"><h2>Live ML input drift</h2><span className="eval-badge">Questionnaire inputs vs reference</span></div>
       <div className="eval-grid">
         <Metric label="Status" value={driftSummary(drift)} detail={drift?.reference?.dataset ? `Reference: ${drift.reference.dataset} · ${drift.reference.n} rows` : "Run evaluate_bodhica.py drift-reference"} />
-        <Metric label="Assessments" value={drift?.n ?? 0} detail={`Scores shown from ${drift?.min_n ?? 30} submissions`} />
-        <Metric label="Drifted features" value={drift?.features ? `${drift.drifted_features}/${drift.evaluated_features}` : "—"} detail={`Jensen–Shannon distance ≥ ${drift?.threshold ?? 0.1}`} />
-        <Metric label="Drift share" value={format(drift?.drift_share, 2)} detail={`Dataset drift at ≥ ${drift?.dataset_drift_share ?? 0.5}`} />
+        <Metric label="Drift score" value={format(drift?.running?.z, 2)} detail={`z of live mean answer surprise vs reference · drift at |z| ≥ ${drift?.running?.threshold ?? 3}`} />
+        <Metric label="Assessments" value={drift?.n ?? 0} detail="Drift score updates on every submission" />
+        <Metric label="Questions flagged" value={drift?.features ? `${drift.drifted_features}/${drift.evaluated_features}` : "—"} detail={drift?.features ? `Per-question tests · ${(drift.fdr * 100).toFixed(0)}% false-discovery rate` : `Per-question results shown from ${drift?.feature_min_n ?? 10} assessments`} />
       </div>
-      <p className="eval-provenance">Compares the 85 answered questionnaire features with the synthetic reference profile. Polygenic and batch inputs are fixed medians and are excluded. Only cumulative per-answer counts since server start are kept; individual submissions are not retained, and scores stay hidden below the minimum sample size. Drift signals a population change, not reduced accuracy.</p>
+      <p className="eval-provenance">Compares the 85 answered questionnaire features with the synthetic reference profile. Polygenic and batch inputs are fixed medians and are excluded. The drift score compares the running mean of each submission's answer surprise with the reference, scaled by sample size, so it is meaningful from the first assessment and only crosses the threshold when evidence accumulates. Per-question tests compare each question's answers with what chance would produce at the current sample size, controlling false discoveries across all 85. Only running totals and per-answer counts since server start are kept; per-question results stay hidden below 10 assessments so they cannot reveal one person's answers. Drift signals a population change, not reduced accuracy.</p>
       <div className="eval-grid">
         <Metric label="Out-of-distribution rate" value={oodRate(ood?.either_rate)} detail={`Either score above reference ${format((1 - (ood?.expected_rate ?? 0.01)) * 100, 0)}th percentile · ~${format((ood?.expected_rate ?? 0.01) * 100, 0)}% expected per score`} />
         <Metric label="Answer surprise" value={oodRate(ood?.surprise_rate)} detail="Rare answers under reference frequencies" />
@@ -118,8 +118,8 @@ export default function EvaluationDashboard() {
         <Metric label="OOD status" value={ood?.status === "insufficient_data" ? `Collecting (${ood.n}/${ood.min_n})` : ood?.status === "no_reference" ? "No reference" : ood ? "Scored" : "—"} detail="Each submission scored, then discarded" />
       </div>
       <p className="eval-provenance">Each completed assessment is scored against reference statistics and only the flag counts are kept. A rate well above ~1% means many users answer unlike the reference population; random answer patterns are always flagged. The reference is synthetic, so higher rates with real users are expected.</p>
-      {drift?.features && <div className="eval-table-scroll"><table className="eval-table"><thead><tr><th>Feature</th><th>JS distance</th><th>PSI</th><th>PSI band</th><th>Drifted</th></tr></thead>
-        <tbody>{drift.features.slice(0, 10).map((f) => <tr key={f.feature}><td>{f.feature}</td><td>{format(f.js_distance, 3)}</td><td>{format(f.psi, 3)}</td><td>{f.psi_band}</td><td>{f.drifted ? "Yes" : "No"}</td></tr>)}</tbody></table></div>}
+      {drift?.features && <div className="eval-table-scroll"><table className="eval-table"><thead><tr><th>Feature</th><th>JS distance</th><th>PSI band</th><th>p-value</th><th>Drifted</th></tr></thead>
+        <tbody>{drift.features.slice(0, 10).map((f) => <tr key={f.feature}><td>{f.feature}</td><td>{format(f.js_distance, 3)}</td><td>{f.psi_band}</td><td>{format(f.p_value, 4)}</td><td>{f.drifted ? "Yes" : "No"}</td></tr>)}</tbody></table></div>}
     </section>
     <section className="evaluation-section"><h2>Live operations</h2>
       <p className="eval-provenance">{data?.window}. Aggregate timings only; no chat text or questionnaire answers are logged.</p>

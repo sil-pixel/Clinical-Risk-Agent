@@ -62,21 +62,45 @@ rules first, then by the pinned embedding-similarity router (ADR-027).
 ### Live ML input drift
 
 Each completed assessment adds its 85 answered feature codes to cumulative per-answer counts
-(reset at server restart). Individual submissions are not retained, and the dashboard exposes
-only drift scores, never the counts. Below 30 assessments it shows only the sample size, so a few
-submissions cannot be reverse-read. The 20 polygenic and batch inputs are always training
-medians in live use, so they are excluded.
+and its answer surprise to a running total (both reset at server restart). Individual
+submissions are not retained, and the dashboard never exposes the counts. The 20 polygenic and
+batch inputs are always training medians in live use, so they are excluded.
 
-- **Reference**: `data/monitoring/drift_reference.json`, aggregate counts from the fully
-  synthetic `synthetic_dcmfnet.csv` (missing reference values excluded because live
-  submissions are complete). Rebuild with
+- **Reference**: `data/monitoring/drift_reference.json`, built from the fully synthetic
+  `synthetic_dcmfnet.csv`. No reference row answers all 85 questions (median 72), but live
+  submissions are complete. Per-question counts therefore exclude missing values, and the
+  surprise statistics fill gaps by drawing from each question's observed answers. Filling
+  with the most common answer would make the reference look more typical than real users.
+  Rebuild with
   `.venv/bin/python scripts/evaluate_bodhica.py drift-reference data/synthetic_data/synthetic_dcmfnet.csv`.
-- **Per feature**: Jensen–Shannon distance (base 2, 0–1; drifted at ≥ 0.1, Evidently's
-  categorical default) and PSI (stable < 0.1 ≤ moderate < 0.25 ≤ major).
-- **Dataset**: drift when ≥ 50% of features drift.
+- **Drift score (from the first assessment)**: z = (live mean answer surprise − reference
+  mean) / (reference SD / √n). Drift is flagged at |z| ≥ 3, in either direction. Unusually
+  typical answers, such as everyone choosing the first option, are also a population change.
+- **Per-question tests (shown from 10 assessments)**: each question's Jensen–Shannon distance
+  is compared with 4,000 simulated samples of the same size drawn from the reference. That
+  gives a p-value, and Benjamini–Hochberg controls the false-discovery rate at 5% across the
+  85 questions. JS distance and the PSI band are shown as effect sizes, not decision rules. The
+  10-assessment gate is only for privacy: with one or two submissions the table would reveal
+  how those people answered.
+- **Status** is drift when either the drift score or at least one question is flagged.
+- **Validation** (reference from one half of the data, simulated live submissions from the
+  other half, 40–100 repetitions per cell):
+
+  | Assessments | False alarms, no drift | Moderate shift detected | Strong shift detected |
+  |---|---|---|---|
+  | 1 | 0% | 0% | 4% |
+  | 10 | 2% | 13% | 67% |
+  | 30 | 2% | 27% | 99% |
+  | 100 | 0% | 83% | 100% |
+  | 300 | 5% | 100% | 100% |
+
+  The earlier fixed rule (drift at JS ≥ 0.1, shown from 30 assessments) wrongly flagged 70% of
+  questions at 30 assessments with no drift at all. It was replaced on 2026-10-08.
+- Each dashboard refresh is a new look at accumulating data. Repeated looks raise the
+  cumulative false-alarm chance above the per-look rates in the table.
 - Drift shows that the input population changed. It does not measure accuracy. Because the
-  reference is synthetic, drift against real users is expected and is not by itself a
-  model fault.
+  reference is synthetic, drift against real users is expected and is not by itself a model
+  fault.
 
 **Out-of-distribution rate.** Each completed assessment is scored twice against reference
 statistics saved in the same profile, then discarded. Only the flag counts are kept:
@@ -86,8 +110,10 @@ statistics saved in the same profile, then discarded. Only the flag counts are k
 - **Mahalanobis distance** from the reference mean, using the reference covariance. Flags
   unusual combinations of individually common answers.
 - Thresholds are the 99th percentile of the reference rows (in-sample; missing reference
-  values filled with each question's modal code), so about 1% of in-distribution submissions
-  are flagged per score. The dashboard shows each rate and the share flagged by either score,
+  values drawn from each question's observed answers). On held-out complete submissions they
+  flag 0.8% (surprise) and 1.0% (Mahalanobis), against a 1% target. Before 2026-10-08, gaps
+  were filled with the modal answer, which set the surprise threshold too low (1.146 instead
+  of 1.210). The dashboard shows each rate and the share flagged by either score,
   hidden below 30 assessments. On the synthetic data, uniformly random answer sets were
   always flagged.
 
