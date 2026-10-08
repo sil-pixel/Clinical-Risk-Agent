@@ -25,6 +25,7 @@ from clinical_risk_agent.ai import (
     HybridIntentPort,
     MLAssessmentAdapter,
     PreflightRequest,
+    PromptGuardIntentPort,
     ProtectedConversationOrchestrator,
     ProtectedAssessmentGraph,
     PrototypeIntentPort,
@@ -327,9 +328,11 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
             )
         intent_port = (HybridIntentPort.from_root(settings.root)
                        if settings.intent_router == "semantic" else PrototypeIntentPort())
+        if settings.prompt_guard:
+            intent_port = PromptGuardIntentPort.from_root(intent_port, settings.root)
         conversation = ProtectedConversationOrchestrator(
-            RoutingGraph(PrototypeSafetyPort(), PrototypeLanguagePort(), intent_port,
-                         observer=monitor.record_intent),
+            RoutingGraph(PrototypeSafetyPort(), PrototypeLanguagePort(),
+                         intent_port, observer=monitor.record_intent),
             research,
             generator,
             judge=judge,
@@ -623,6 +626,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                     timeout=settings.request_timeout_seconds,
                 )
                 monitor.record("chat", result["response_kind"], time.monotonic() - started)
+                monitor.record_guardrails(result)
             except TimeoutError:
                 monitor.record("chat", "timeout", time.monotonic() - started)
                 return _error("REQUEST_DEADLINE_EXPIRED", "The request timed out safely.",
@@ -675,6 +679,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                             timeout=settings.request_timeout_seconds,
                         )
                         monitor.record("chat", result["response_kind"], time.monotonic() - started)
+                        monitor.record_guardrails(result)
                     except TimeoutError:
                         monitor.record("chat", "timeout", time.monotonic() - started)
                         yield _sse("error", {
@@ -827,19 +832,6 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
             return _error("LOCAL_ACCESS_REQUIRED", "The evaluation dashboard is local-only.",
                           "authorization", 403)
         return await asyncio.to_thread(monitor.snapshot)
-
-    @app.get("/v1/evaluations/judge-review")
-    async def judge_review_packet(request: Request):
-        """Serve synthetic judge review fixtures only to loopback clients."""
-        if (not request.client or request.client.host not in {"127.0.0.1", "::1", "testclient"}
-                or request.headers.get("x-forwarded-for")):
-            return _error("LOCAL_ACCESS_REQUIRED", "Judge review is local-only.",
-                          "authorization", 403)
-        path = settings.root / "agent_docs/LLM_JUDGE_REVIEW_100.json"
-        if not path.is_file():
-            return _error("REVIEW_UNAVAILABLE", "Review fixtures have not been prepared.",
-                          "evaluation", 404)
-        return json.loads(await asyncio.to_thread(path.read_text))
 
     @app.post("/v1/assessments/explanation")
     async def retry_explanation(token: str = Depends(bearer)):

@@ -11,6 +11,7 @@ RUNTIME_PATHS = (
     "agent_docs/RAG_MEDCPT_ENCODER_PIN.json",
     "agent_docs/INTENT_ROUTER_UTTERANCES.json",
     "agent_docs/INTENT_ROUTER_CALIBRATION.json",
+    "agent_docs/PROMPT_GUARD_PIN.json",
 )
 
 

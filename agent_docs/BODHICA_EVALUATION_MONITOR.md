@@ -16,7 +16,7 @@ is an automated estimate from the separately configured judge, not human verific
 for replies without source passages. Nulls and failed evaluations do not enter means.
 Scores, individual score counts, pending jobs, skipped jobs and errors are displayed.
 
-The live judge uses `LLM_JUDGE_MODEL` with the configured provider/key and makes an additional paid provider call; if unset it falls back to the chat model. Locally it is set to `gemini-3.5-flash`, while chat is unchanged. Human calibration remains pending; see [the review workflow](LLM_JUDGE_CALIBRATION.md). The dashboard includes a 100-response synthetic review panel with explicit human confirmation and unweighted/weighted Cohen's κ.
+The live judge uses `LLM_JUDGE_MODEL` with the configured provider/key and makes an additional paid provider call; if unset it falls back to the chat model. Locally it is set to `gemini-3.5-flash`, while chat is unchanged. Human review of the 100-response calibration packet is complete, but the judge has not yet been scored against it, so calibration remains pending; see [the calibration workflow](LLM_JUDGE_CALIBRATION.md). Agreement is reported from the command line, not on the dashboard.
 Only one live evaluation runs at a time; replies arriving while it is busy are explicitly
 counted as skipped. No evaluation queue accumulates private chat content. Prompts, answers
 and passages are sent to the configured provider transiently for judging but are never
@@ -27,7 +27,8 @@ The latest 20 score records are shown without chat text. Safety refusals, absten
 generation failures are not scored as generated answers; request failures appear in operations.
 
 Live ML accuracy cannot be inferred from questionnaire predictions without observed
-reference outcomes. Its cards remain unscored rather than substituting benchmark scores.
+reference outcomes, so the dashboard has no ML accuracy section; ML monitoring shows input
+drift and the out-of-distribution rate instead.
 Existing offline reports remain on disk and available through the read-only local API.
 They are not displayed in the live dashboard, except the latest held-out routing benchmark,
 which is labeled as such.
@@ -53,8 +54,8 @@ rules first, then by the pinned embedding-similarity router (ADR-027).
   correct when clarified, and the `clarify` row scores them. Macro averages cover the six intents
   only. An intent that is never predicted counts as precision 0. Route metrics also merge
   `scientific_question` and `mental_health_education`, which share retrieval.
-- Current test split (43 cases): hybrid accuracy 83.7%, macro precision 0.972, macro recall
-  0.850, macro F1 0.906. Rules only: 23.3%, 0.111, 0.185, 0.102. The product owner approved the
+- Current test split (43 cases), deployed router behind Prompt Guard 2
+  (ADR-028): accuracy 86.0%, macro precision 0.972, macro recall 0.877, macro F1 0.921. Rules only: 23.3%, 0.111, 0.185, 0.102. The product owner approved the
   cases on 2026-10-07. The router's reference utterances are still pending review and share an
   author with the cases, so these scores are optimistic.
 

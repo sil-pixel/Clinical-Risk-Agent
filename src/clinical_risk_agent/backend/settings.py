@@ -31,6 +31,8 @@ class BackendSettings:
     session_creations_per_network_hour: int = 5
     # "semantic": certain rules, then the pinned embedding router; "rules": rules only.
     intent_router: str = "semantic"
+    # Local Llama Prompt Guard 2 in front of intent routing; disable only for tests.
+    prompt_guard: bool = True
 
     def __post_init__(self) -> None:
         """Reject invalid deployment, authorization and provider configuration."""
@@ -90,4 +92,5 @@ class BackendSettings:
             llm_judge_model=os.getenv("LLM_JUDGE_MODEL") or None,
             session_creations_per_network_hour=session_creation_limit,
             intent_router=os.getenv("INTENT_ROUTER", "semantic").strip().lower(),
+            prompt_guard=os.getenv("PROMPT_GUARD", "on").strip().lower() not in {"0", "off", "false"},
         )

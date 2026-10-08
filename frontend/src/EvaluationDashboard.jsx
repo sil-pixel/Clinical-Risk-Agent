@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { API_BASE } from "./api.js";
-import JudgeReview from "./JudgeReview.jsx";
 
 /** Format a finite metric or display a dash when it is unavailable. */
 const format = (value, digits = 4) => Number.isFinite(value) ? value.toFixed(digits) : "—";
@@ -43,6 +42,7 @@ export default function EvaluationDashboard() {
   const hybrid = routingReport?.results?.hybrid;
   const baseline = routingReport?.results?.rules_only;
   const pct = (value) => Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "—";
+  const guard = data?.live_guardrails;
   const drift = data?.input_drift;
   const ood = data?.input_ood;
   const oodRate = (rate) => ood?.status === "scored" ? `${format(rate * 100, 1)}%` : "—";
@@ -66,7 +66,6 @@ export default function EvaluationDashboard() {
         <tbody>{quality?.recent.map((r, i) => <tr key={`${r.created_at}-${i}`}><td>{new Date(r.created_at).toLocaleTimeString()}</td><td>{r.response_kind}</td><td>{format(r.groundedness, 3)}</td><td>{format(r.correctness, 3)}</td><td>{r.status}{r.judge_model ? ` · ${r.judge_model}` : ''}</td></tr>)}</tbody></table></div>
       {!quality?.recent.length && <p className="eval-provenance">Send a chat message to start live evaluation.</p>}
     </section>
-    <JudgeReview />
     <section className="evaluation-section">
       <div className="evaluation-section-title"><h2>Intent routing</h2><span className="eval-badge">Rules first, then embedding similarity</span></div>
       <div className="eval-grid">
@@ -82,6 +81,14 @@ export default function EvaluationDashboard() {
           return <tr key={intent}><td>{intent.replaceAll("_", " ")}</td><td>{count}</td><td>{pct(count / routed)}</td></tr>;
         })}</tbody></table></div>}
       <p className="eval-provenance">Live messages have no correct labels, so live routing shows only volumes, clarifications and confidence. Most recent 2,000 messages since server start; no message text is kept.</p>
+      <h3>Guardrails</h3>
+      <div className="eval-grid">
+        <Metric label="Refused or redirected" value={Object.values(guard?.outcomes ?? {}).reduce((a, n) => a + n, 0)} detail={`of ${guard?.messages ?? 0} chat replies · safety, medication, diagnosis, third-party, unsupported`} />
+        <Metric label="Injection attempts blocked" value={routing?.prompt_guard_blocked ?? 0} detail="Prompt Guard 2, before routing or any external model" />
+      </div>
+      {Object.keys(guard?.outcomes ?? {}).length > 0 && <div className="eval-table-scroll"><table className="eval-table"><thead><tr><th>Guardrail outcome</th><th>Replies</th></tr></thead>
+        <tbody>{Object.entries(guard.outcomes).map(([k, n]) => <tr key={k}><td>{k.replaceAll("_", " ").toLowerCase()}</td><td>{n}</td></tr>)}</tbody></table></div>}
+      <p className="eval-provenance">Counts of guardrail outcomes since server start; no message text is kept.</p>
       <h3>Held-out routing benchmark</h3>
       {hybrid ? <>
         <div className="eval-grid">
@@ -113,16 +120,6 @@ export default function EvaluationDashboard() {
       <p className="eval-provenance">Each completed assessment is scored against reference statistics and only the flag counts are kept. A rate well above ~1% means many users answer unlike the reference population; random answer patterns are always flagged. The reference is synthetic, so higher rates with real users are expected.</p>
       {drift?.features && <div className="eval-table-scroll"><table className="eval-table"><thead><tr><th>Feature</th><th>JS distance</th><th>PSI</th><th>PSI band</th><th>Drifted</th></tr></thead>
         <tbody>{drift.features.slice(0, 10).map((f) => <tr key={f.feature}><td>{f.feature}</td><td>{format(f.js_distance, 3)}</td><td>{format(f.psi, 3)}</td><td>{f.psi_band}</td><td>{f.drifted ? "Yes" : "No"}</td></tr>)}</tbody></table></div>}
-    </section>
-    <section className="evaluation-section">
-      <h2>Live ML accuracy</h2>
-      <div className="eval-grid">
-        <Metric label="RMSE" value="—" detail="Needs matched observed outcome labels" />
-        <Metric label="MSE" value="—" detail="Needs matched observed outcome labels" />
-        <Metric label="R²" value="—" detail="Needs matched observed outcome labels" />
-        <Metric label="Spearman ρ" value="—" detail="Needs matched observed outcome labels" />
-      </div>
-      <p className="eval-provenance">Questionnaire predictions alone cannot measure live accuracy. These metrics remain unscored until matched outcome labels are available; archived benchmark values are not substituted.</p>
     </section>
     <section className="evaluation-section"><h2>Live operations</h2>
       <p className="eval-provenance">{data?.window}. Aggregate timings only; no chat text or questionnaire answers are logged.</p>

@@ -230,6 +230,19 @@ This does not authorize durable health records.
 
 On the same date, unused local weights were removed: the MedCPT cross-encoder, the MiniLM-L6 cross-encoder and the BERTScore DistilBERT. Their revisions and checksums remain in `RAG_HIERARCHICAL_RERANKER_EXPERIMENT.json` and the RAG benchmark reports. Re-download them before rerunning `rag_hierarchical_reranker_benchmark.py` or BERTScore in `rag_general_benchmark.py`.
 
+## ADR-028 — Llama Prompt Guard 2 for prompt injection; no regex or Llama Guard layer
+
+**Decision:** On 2026-10-08 the product owner chose a model-based guard over regex rules. `meta-llama/Llama-Prompt-Guard-2-86M` (revision `a8ded8e697ce7c355e395a0df51f94adb4a2fd27`, Llama 4 Community License, gated, checksum-pinned in `PROMPT_GUARD_PIN.json`) runs locally in front of intent routing. A message scoring P(attack) ≥ 0.5 is routed to `unsupported_or_unsafe` before the router or any external model sees it. The prototype safety port, with its crisis and refusal phrase rules, still runs first. Medical-advice requests are handled by those rules and the router's `unsupported_or_unsafe` examples. `PROMPT_GUARD=off` disables the guard (tests only). Interim regex input/output guardrails and PII masking, both added the same day, were removed.
+
+**Why (measured 2026-10-08, CPU, 4 threads):**
+- **Prompt Guard 2:** 6/8 injections flagged, 0/90 benign messages flagged (routing, research, medical and crisis cases), 66 ms per message. It missed a fake "SYSTEM: new policy" line and "repeat the text above". In the full app it adds about 70–130 ms per message and starts in about 4 s.
+- **Llama Guard 3-1B was evaluated and rejected.**
+  - *Input checks:* it flagged 12 of 72 legitimate messages, nearly all questionnaire or result-explanation requests ("please assess me"), as specialized advice or violent crimes. A domain-specific rewrite of category S6 did not help. It missed "am i schizophrenic", "does my son have adhd" and "everyone would be better off without me".
+  - *Output checks:* 5/6 unsafe replies caught, 0/7 false alarms.
+  - *Cost:* about 0.9 s per check in fp32 (8 s in bf16), and about 5 GB more memory.
+
+**Consequences:** Generated replies are no longer checked by a local guard; the generation prompts and Gemini's own safety filtering remain the output controls. Two injection styles in the benchmark pass the guard. With Prompt Guard in front, the deployed router scores 86.0% accuracy and macro-F1 0.921 on the routing test split. Llama Guard weights were deleted; the evaluated revision was `acf7aafa60f0410f8f42b1fa35e077d705892029`.
+
 ## Deferred implementation decisions
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Modal SDK, Framer integration, and benchmark-winning model revisions/checksums.

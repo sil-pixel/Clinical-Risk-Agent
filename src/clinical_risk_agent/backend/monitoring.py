@@ -9,7 +9,7 @@ import time
 
 import numpy as np
 
-from clinical_risk_agent.ai.routing import ROUTING_CONFIDENCE_THRESHOLD, suggestion
+from clinical_risk_agent.ai.routing import ROUTING_CONFIDENCE_THRESHOLD, SafetyCategory, suggestion
 from clinical_risk_agent.drift import MIN_CURRENT_N, drift_report
 from clinical_risk_agent.ood import score_submission
 
@@ -25,6 +25,8 @@ class Monitor:
         self._samples = deque(maxlen=2000)
         self._quality = deque(maxlen=2000)
         self._routing = deque(maxlen=2000)
+        # Counts only: guardrail outcomes since process start.
+        self._guardrails = {"messages": 0, "outcomes": {}}
         self._pending = 0
         self._lock = threading.Lock()
         # Cumulative per-category counts only; individual submissions are never retained.
@@ -93,12 +95,30 @@ class Monitor:
         routed = (not decision.requires_clarification
                   and decision.calibrated_confidence >= ROUTING_CONFIDENCE_THRESHOLD)
         source = ("confirmed" if decision.rationale_code == "user_confirmed_suggestion" else
-                  "rule" if decision.model_id == "deterministic-prototype-rules" else "semantic")
+                  "prompt_guard" if decision.rationale_code == "prompt_injection" else
+                  "rule" if decision.model_id.startswith("deterministic-") else "semantic")
         row = (decision.intent.value, routed, float(decision.calibrated_confidence), source,
                decision.rationale_code == "semantic_unfamiliar",
                not routed and suggestion(decision) is not None)
         with self._lock:
             self._routing.append(row)
+
+    def record_guardrails(self, result):
+        """Count the guardrail outcome of one chat reply; no text."""
+        guarded = {category.value for category in SafetyCategory} - {"ALLOW_NORMAL_PROCESSING"}
+        kind = result.get("response_kind")
+        outcome = kind if kind in guarded or kind == "UNSUPPORTED" else None
+        with self._lock:
+            stats = self._guardrails
+            stats["messages"] += 1
+            if outcome:
+                stats["outcomes"][outcome] = stats["outcomes"].get(outcome, 0) + 1
+
+    def live_guardrails(self):
+        """Return guardrail counts since process start."""
+        with self._lock:
+            stats = self._guardrails
+            return {"messages": stats["messages"], "outcomes": dict(stats["outcomes"])}
 
     def live_routing(self):
         """Summarize live routing: clarification rate, decision source and routed intents."""
@@ -114,6 +134,7 @@ class Monitor:
                 # Share of clarifications that named a best guess instead of the generic menu.
                 "suggestion_share": suggested / clarified if clarified else None,
                 "confirmed_suggestions": sum(row[3] == "confirmed" for row in rows),
+                "prompt_guard_blocked": sum(row[3] == "prompt_guard" for row in rows),
                 "unfamiliar_rate": sum(row[4] for row in rows) / len(rows),
                 "rule_share": sum(row[3] == "rule" for row in rows) / len(rows),
                 "mean_confidence": sum(row[2] for row in rows) / len(rows),
@@ -171,7 +192,7 @@ class Monitor:
                 "window": "Most recent 2,000 operations since process start",
                 "operations": operations, "reports": reports[:50],
                 "input_drift": self.input_drift(), "input_ood": self.input_ood(),
-                "live_routing": self.live_routing(),
+                "live_routing": self.live_routing(), "live_guardrails": self.live_guardrails(),
                 "live_quality": {"groundedness": quality_mean("groundedness"),
                                  "correctness": quality_mean("correctness"),
                                  "evaluated": sum(row["status"] == "scored" for row in quality),

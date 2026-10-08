@@ -142,7 +142,7 @@ class BackendAPITests(unittest.TestCase):
             root=Path("."), session_signing_key=b"x" * 32,
             allowed_origins=("https://portfolio.example",),
             model_turns_per_hour=2, model_turns_per_day=3,
-            global_model_operations_per_day=20, intent_router="rules",
+            global_model_operations_per_day=20, intent_router="rules", prompt_guard=False,
         )
         self.client_context = TestClient(create_app(
             self.settings, service=self.service, clock=self.clock,

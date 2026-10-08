@@ -49,6 +49,10 @@ image = (
         f"{REMOTE_ROOT}/agent_docs/RAG_MEDCPT_ENCODER_PIN.json", copy=True,
     )
     .add_local_file(
+        str(LOCAL_ROOT / "agent_docs/PROMPT_GUARD_PIN.json"),
+        f"{REMOTE_ROOT}/agent_docs/PROMPT_GUARD_PIN.json", copy=True,
+    )
+    .add_local_file(
         str(LOCAL_ROOT / "agent_docs/INTENT_ROUTER_UTTERANCES.json"),
         f"{REMOTE_ROOT}/agent_docs/INTENT_ROUTER_UTTERANCES.json", copy=True,
     )

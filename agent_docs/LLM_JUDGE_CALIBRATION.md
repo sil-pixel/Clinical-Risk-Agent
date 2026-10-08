@@ -1,12 +1,12 @@
 # Bodhica judge calibration preparation
 
-Status: **prepared, not yet human-calibrated**. Human review progress on 2026-10-07: 10 of 100 responses confirmed (JUDGE-001 to JUDGE-010; 5 calibration, 5 validation, 0 holdout). The judge model has not scored any reviewed case yet, so no human–judge κ exists. The live judge is configured separately using `LLM_JUDGE_MODEL=gemini-3.5-flash`, sharing the Gemini provider/key with chat. Chat's model is unchanged. A different model reduces self-evaluation coupling but is not independent human verification.
+Status: **human review complete, judge not yet scored**. On 2026-10-08 Silpa confirmed all 100 responses (50 calibration, 25 validation, 25 holdout), exported to `agent_docs/BODHICA_JUDGE_HUMAN_REVIEW.json`. Human labels: 29 good, 13 acceptable, 58 bad. The judge model has not scored any case yet, so no human–judge κ exists. Against my provisional labels, unweighted κ is 0.55 (calibration), 0.57 (validation) and 0.63 (holdout); most disagreements are responses I labeled acceptable that were judged bad. The live judge is configured separately using `LLM_JUDGE_MODEL=gemini-3.5-flash`, sharing the Gemini provider/key with chat. Chat's model is unchanged. A different model reduces self-evaluation coupling but is not independent human verification.
 
 Integration check on 2026-09-29: one synthetic fixture was successfully scored by `gemini-3.5-flash`, producing correctness, groundedness and `good`. This verifies adapter/model availability for that request, not agreement or reliability across all 100 cases. The remaining fixtures have not been model-scored yet; no κ can be claimed before paired reviews and judgments exist.
 
 ## Review
 
-Open Bodhica → Evaluations → Judge calibration review. Each response has a question, a provisional reference summary, PubMed links where direct evidence exists, and Good / Acceptable / Bad controls. Select a label and click **Confirm my annotation**. Optional notes help resolve borderline cases. Progress is saved locally in the browser; export for a backup and reproducible scoring. AI suggestions are initially hidden to reduce anchoring, and can be revealed explicitly.
+Review was done in a dashboard panel that has since been removed (2026-10-08) because all 100 responses are annotated. The export above is the record of human labels; the fixture-hash check in `scripts/llm_judge_review.py` rejects any edit to questions, responses or splits.
 
 The frozen [100-response packet](LLM_JUDGE_REVIEW_100.json) contains 20 existing research questions with five controlled answer variants each. These are assistant-authored synthetic fixtures, **not Gemini-generated production responses**. They deliberately include flawed answers, which must never be served as health information. Each has my provisional annotation, rationale and prediction of Silpa's annotation. Predicted labels are guesses and never replace confirmed human review. No human labels or model judgments have been fabricated.
 
@@ -26,13 +26,13 @@ Export the review from the app, then run (from the project root):
 
 ```sh
 PYTHONPATH=src .venv/bin/python scripts/llm_judge_review.py score \
-  --input /absolute/path/BODHICA_JUDGE_HUMAN_REVIEW.json \
-  --output /absolute/path/BODHICA_JUDGE_SCORED_REVIEW.json --limit 100
+  --input agent_docs/BODHICA_JUDGE_HUMAN_REVIEW.json \
+  --output agent_docs/BODHICA_JUDGE_SCORED_REVIEW.json --limit 100
 PYTHONPATH=src .venv/bin/python scripts/llm_judge_review.py report \
-  --input /absolute/path/BODHICA_JUDGE_SCORED_REVIEW.json
+  --input agent_docs/BODHICA_JUDGE_SCORED_REVIEW.json
 ```
 
-Each scored response is checkpointed; resume with the scored export as input to skip successful judgments. A run makes up to 100 billable provider calls, each with the existing 100-second Gemini deadline. Start with `--limit 1` to check availability. The scoring output is not the frozen packet. Import that scored review into the panel to show actual human–judge κ. Export before importing if newer local annotations would otherwise be overwritten.
+Each scored response is checkpointed; resume with the scored export as input to skip successful judgments. A run makes up to 100 billable provider calls, each with the existing 100-second Gemini deadline. Start with `--limit 1` to check availability. The scoring output is not the frozen packet. Run `report` on the scored file to get human–judge κ by split.
 
 ## Calibration completion gate
 

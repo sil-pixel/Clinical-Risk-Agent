@@ -126,7 +126,12 @@ def drift(args):
 
 def routing(args):
     """Score the deployed hybrid intent router and the rules-only baseline on labeled cases."""
-    from clinical_risk_agent.ai import HybridIntentPort, Intent, PrototypeIntentPort
+    from clinical_risk_agent.ai import (
+        HybridIntentPort,
+        Intent,
+        PromptGuardIntentPort,
+        PrototypeIntentPort,
+    )
     from clinical_risk_agent.ai.routing import ROUTING_CONFIDENCE_THRESHOLD as threshold
     from clinical_risk_agent.ai.semantic_router import CALIBRATION_PATH, UTTERANCES_PATH
 
@@ -143,7 +148,9 @@ def routing(args):
     route_labels = list(dict.fromkeys(to_route(label) for label in labels))
     expected = [case["intent"] or CLARIFY for case in cases]
     results = {}
-    for name, port in (("hybrid", HybridIntentPort.from_root(ROOT)),
+    # "hybrid" is the deployed port: Prompt Guard, certain rules, then the semantic router.
+    deployed = PromptGuardIntentPort.from_root(HybridIntentPort.from_root(ROOT), ROOT)
+    for name, port in (("hybrid", deployed),
                        ("rules_only", PrototypeIntentPort())):
         decisions = [port.classify(case["text"]) for case in cases]
         predicted = [CLARIFY if d.requires_clarification or d.calibrated_confidence < threshold
@@ -153,7 +160,7 @@ def routing(args):
             "route": classification_metrics([to_route(label) for label in expected],
                                             [to_route(label) for label in predicted],
                                             route_labels),
-            "rule_decided": sum(d.model_id == "deterministic-prototype-rules"
+            "rule_decided": sum(d.model_id.startswith("deterministic-")
                                 for d in decisions) / len(decisions),
         }
         print(f"{name}: accuracy={results[name]['intent']['accuracy']:.3f} "
