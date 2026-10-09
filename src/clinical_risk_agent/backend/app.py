@@ -82,6 +82,10 @@ class ConversationService(Protocol):
                prior_result: dict[str, Any] | None = None) -> dict[str, Any]:
         """Run protected routing and return the appropriate public conversational outcome."""
         ...
+
+    def safety_response(self, text: str, *, deployment_mode: str) -> dict[str, Any] | None:
+        """Return the fixed safety reply if the safety rules intercept text, else None."""
+        ...
     def explain_assessment(self, result: dict[str, Any]) -> dict[str, Any]:
         """Generate a plain-language explanation of validated research-model display values."""
         ...
@@ -397,6 +401,25 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
         quality_tasks.add(task)
         task.add_done_callback(quality_tasks.discard)
 
+    def safety_fast_path(token: str, text: str):
+        """Answer safety-rule messages without waiting on model capacity or usage quotas.
+
+        A person in crisis must never be told the service is busy or out of quota. Only the
+        deterministic safety rules run here; everything else takes the normal path.
+        """
+        check = getattr(conversation, "safety_response", None)
+        if check is None:
+            return None
+        state = sessions.authorize(token, now=now() if now else None)
+        started = time.monotonic()
+        result = check(text, deployment_mode=settings.deployment_mode)
+        if result is None:
+            return None
+        monitor.record("chat_safety_fast_path", result["response_kind"],
+                       time.monotonic() - started)
+        monitor.record_guardrails(result)
+        return state, result
+
     def prior_result(token: str) -> dict[str, Any]:
         """Pass this session's validated assessment result to the conversation, if any."""
         prune_assessments()
@@ -630,6 +653,13 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     async def submit_message(payload: MessageRequest, token: str = Depends(bearer)):
         """Generate one protected conversational response within the request deadline."""
         started = time.monotonic()
+        if fast := safety_fast_path(token, payload.text):
+            state, result = fast
+            return JSONResponse(status_code=200, content={
+                "api_version": API_VERSION, "deployment_mode": settings.deployment_mode,
+                "state_version": state.state_version,
+                "inactivity_expires_in_seconds": settings.session_ttl_seconds, **result,
+            })
         if not model_capacity.acquire():
             return _error("MODEL_CAPACITY_EXHAUSTED", "The research service is busy. Try again.",
                           "capacity", 503, retryable=True)
@@ -647,7 +677,8 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                     ),
                     timeout=settings.request_timeout_seconds,
                 )
-                monitor.record("chat", result["response_kind"], time.monotonic() - started)
+                monitor.record("chat_cache_hit" if result.get("cached") else "chat",
+                               result["response_kind"], time.monotonic() - started)
                 monitor.record_guardrails(result)
             except TimeoutError:
                 monitor.record("chat", "timeout", time.monotonic() - started)
@@ -675,6 +706,23 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
     @app.post("/v1/messages:stream")
     async def stream_message(payload: MessageRequest, token: str = Depends(bearer)):
         """Stream typed validated chat events after protected session authorization."""
+        if fast := safety_fast_path(token, payload.text):
+            state, result = fast
+
+            async def safety_events():
+                """Emit the fixed safety reply as validated content without model work."""
+                yield _sse("validated_content", {key: result.get(key) for key in (
+                    "response_kind", "message", "limitation", "actions", "route")}, 1)
+                yield _sse("done", {
+                    "response_kind": result["response_kind"], "provider": None, "model": None,
+                    "corpus_version": None, "state_version": state.state_version,
+                    "inactivity_expires_in_seconds": settings.session_ttl_seconds,
+                }, 2)
+
+            return StreamingResponse(
+                safety_events(), media_type="text/event-stream",
+                headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+            )
         if not model_capacity.acquire():
             return _error("MODEL_CAPACITY_EXHAUSTED", "The research service is busy. Try again.",
                           "capacity", 503, retryable=True)
@@ -700,7 +748,8 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                             ),
                             timeout=settings.request_timeout_seconds,
                         )
-                        monitor.record("chat", result["response_kind"], time.monotonic() - started)
+                        monitor.record("chat_cache_hit" if result.get("cached") else "chat",
+                                       result["response_kind"], time.monotonic() - started)
                         monitor.record_guardrails(result)
                     except TimeoutError:
                         monitor.record("chat", "timeout", time.monotonic() - started)

@@ -59,6 +59,18 @@ rules first, then by the pinned embedding-similarity router (ADR-027).
   cases on 2026-10-07. The router's reference utterances are still pending review and share an
   author with the cases, so these scores are optimistic.
 
+### Load testing and latency paths
+
+`scripts/load_test.py serve` starts a separate local server with relaxed usage quotas and no
+LLM key; capacity limits stay at production values. Embedded Qdrant allows one process per
+index folder, so pass `--root` pointing at a copy when another local server is running.
+`scripts/load_test.py run --users 1 8 25` sends a fixed message mix and questionnaires per
+virtual user and reports p50/p95 for completed requests and rejections by error code. Add
+`--unique` to make every message distinct, so no reply comes from the cache. Results are
+recorded in ADR-029. Safety-rule replies bypass capacity and quota and appear as
+`chat_safety_fast_path`; cached fixed replies appear as `chat_cache_hit`, and the live
+routing panel counts only uncached decisions.
+
 ### Live ML input drift
 
 Each completed assessment adds its 85 answered feature codes to cumulative per-answer counts

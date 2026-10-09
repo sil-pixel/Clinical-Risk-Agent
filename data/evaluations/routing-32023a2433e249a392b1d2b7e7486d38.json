@@ -1,0 +1,480 @@
+{
+  "kind": "routing",
+  "dataset": "INTENT_ROUTER_EVAL.json",
+  "dataset_sha256": "7556647595e03e7fde8b2046600a8690441bfd9aa49b4919a3313f8b61249fd1",
+  "split": "test",
+  "evaluation_type": "offline_intent_routing",
+  "utterances_sha256": "92158bf6c83527e1b08aa479801a04d26f6aae0061e99814dda6af1b3301656c",
+  "calibration_sha256": "56f8f86fbfd5234976550300b0f18b3efdc355bc4393a3b5080be4c28f868264",
+  "model": "BAAI/bge-small-en-v1.5",
+  "routing_threshold": 0.85,
+  "results": {
+    "hybrid": {
+      "intent": {
+        "n": 43,
+        "accuracy": 0.8604651162790697,
+        "macro_precision": 0.9722222222222222,
+        "macro_recall": 0.8773809523809524,
+        "macro_f1": 0.9207977207977208,
+        "coverage": 0.8372093023255814,
+        "clarified_labeled_cases": 5,
+        "per_label": {
+          "risk_assessment": {
+            "precision": 1.0,
+            "recall": 0.875,
+            "f1": 0.9333333333333333,
+            "support": 8,
+            "predicted": 7
+          },
+          "explain_my_risk": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6,
+            "predicted": 6
+          },
+          "scientific_question": {
+            "precision": 1.0,
+            "recall": 0.875,
+            "f1": 0.9333333333333333,
+            "support": 8,
+            "predicted": 7
+          },
+          "mental_health_education": {
+            "precision": 1.0,
+            "recall": 0.8,
+            "f1": 0.888888888888889,
+            "support": 5,
+            "predicted": 4
+          },
+          "general_conversation": {
+            "precision": 0.8333333333333334,
+            "recall": 0.7142857142857143,
+            "f1": 0.7692307692307692,
+            "support": 7,
+            "predicted": 6
+          },
+          "unsupported_or_unsafe": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6,
+            "predicted": 6
+          },
+          "clarify": {
+            "precision": 0.2857142857142857,
+            "recall": 0.6666666666666666,
+            "f1": 0.4,
+            "support": 3,
+            "predicted": 7
+          }
+        },
+        "confusion": {
+          "risk_assessment": {
+            "risk_assessment": 7,
+            "explain_my_risk": 0,
+            "scientific_question": 0,
+            "mental_health_education": 0,
+            "general_conversation": 0,
+            "unsupported_or_unsafe": 0,
+            "clarify": 1
+          },
+          "explain_my_risk": {
+            "risk_assessment": 0,
+            "explain_my_risk": 6,
+            "scientific_question": 0,
+            "mental_health_education": 0,
+            "general_conversation": 0,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "scientific_question": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 7,
+            "mental_health_education": 0,
+            "general_conversation": 0,
+            "unsupported_or_unsafe": 0,
+            "clarify": 1
+          },
+          "mental_health_education": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 0,
+            "mental_health_education": 4,
+            "general_conversation": 0,
+            "unsupported_or_unsafe": 0,
+            "clarify": 1
+          },
+          "general_conversation": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 0,
+            "mental_health_education": 0,
+            "general_conversation": 5,
+            "unsupported_or_unsafe": 0,
+            "clarify": 2
+          },
+          "unsupported_or_unsafe": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 0,
+            "mental_health_education": 0,
+            "general_conversation": 0,
+            "unsupported_or_unsafe": 6,
+            "clarify": 0
+          },
+          "clarify": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 0,
+            "mental_health_education": 0,
+            "general_conversation": 1,
+            "unsupported_or_unsafe": 0,
+            "clarify": 2
+          }
+        }
+      },
+      "route": {
+        "n": 43,
+        "accuracy": 0.8604651162790697,
+        "macro_precision": 0.9666666666666666,
+        "macro_recall": 0.887087912087912,
+        "macro_f1": 0.9238461538461538,
+        "coverage": 0.8372093023255814,
+        "clarified_labeled_cases": 5,
+        "per_label": {
+          "risk_assessment": {
+            "precision": 1.0,
+            "recall": 0.875,
+            "f1": 0.9333333333333333,
+            "support": 8,
+            "predicted": 7
+          },
+          "explain_my_risk": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6,
+            "predicted": 6
+          },
+          "retrieval": {
+            "precision": 1.0,
+            "recall": 0.8461538461538461,
+            "f1": 0.9166666666666666,
+            "support": 13,
+            "predicted": 11
+          },
+          "general_conversation": {
+            "precision": 0.8333333333333334,
+            "recall": 0.7142857142857143,
+            "f1": 0.7692307692307692,
+            "support": 7,
+            "predicted": 6
+          },
+          "unsupported_or_unsafe": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6,
+            "predicted": 6
+          },
+          "clarify": {
+            "precision": 0.2857142857142857,
+            "recall": 0.6666666666666666,
+            "f1": 0.4,
+            "support": 3,
+            "predicted": 7
+          }
+        },
+        "confusion": {
+          "risk_assessment": {
+            "risk_assessment": 7,
+            "explain_my_risk": 0,
+            "retrieval": 0,
+            "general_conversation": 0,
+            "unsupported_or_unsafe": 0,
+            "clarify": 1
+          },
+          "explain_my_risk": {
+            "risk_assessment": 0,
+            "explain_my_risk": 6,
+            "retrieval": 0,
+            "general_conversation": 0,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "retrieval": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "retrieval": 11,
+            "general_conversation": 0,
+            "unsupported_or_unsafe": 0,
+            "clarify": 2
+          },
+          "general_conversation": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "retrieval": 0,
+            "general_conversation": 5,
+            "unsupported_or_unsafe": 0,
+            "clarify": 2
+          },
+          "unsupported_or_unsafe": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "retrieval": 0,
+            "general_conversation": 0,
+            "unsupported_or_unsafe": 6,
+            "clarify": 0
+          },
+          "clarify": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "retrieval": 0,
+            "general_conversation": 1,
+            "unsupported_or_unsafe": 0,
+            "clarify": 2
+          }
+        }
+      },
+      "rule_decided": 0.0
+    },
+    "rules_only": {
+      "intent": {
+        "n": 43,
+        "accuracy": 0.23255813953488372,
+        "macro_precision": 0.1111111111111111,
+        "macro_recall": 0.18452380952380953,
+        "macro_f1": 0.1020671834625323,
+        "coverage": 0.9302325581395349,
+        "clarified_labeled_cases": 1,
+        "per_label": {
+          "risk_assessment": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 8,
+            "predicted": 0
+          },
+          "explain_my_risk": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 6,
+            "predicted": 0
+          },
+          "scientific_question": {
+            "precision": 0.5,
+            "recall": 0.25,
+            "f1": 0.3333333333333333,
+            "support": 8,
+            "predicted": 4
+          },
+          "mental_health_education": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 5,
+            "predicted": 0
+          },
+          "general_conversation": {
+            "precision": 0.16666666666666666,
+            "recall": 0.8571428571428571,
+            "f1": 0.27906976744186046,
+            "support": 7,
+            "predicted": 36
+          },
+          "unsupported_or_unsafe": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 6,
+            "predicted": 0
+          },
+          "clarify": {
+            "precision": 0.6666666666666666,
+            "recall": 0.6666666666666666,
+            "f1": 0.6666666666666666,
+            "support": 3,
+            "predicted": 3
+          }
+        },
+        "confusion": {
+          "risk_assessment": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 1,
+            "mental_health_education": 0,
+            "general_conversation": 7,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "explain_my_risk": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 0,
+            "mental_health_education": 0,
+            "general_conversation": 6,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "scientific_question": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 2,
+            "mental_health_education": 0,
+            "general_conversation": 6,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "mental_health_education": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 1,
+            "mental_health_education": 0,
+            "general_conversation": 4,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "general_conversation": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 0,
+            "mental_health_education": 0,
+            "general_conversation": 6,
+            "unsupported_or_unsafe": 0,
+            "clarify": 1
+          },
+          "unsupported_or_unsafe": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 0,
+            "mental_health_education": 0,
+            "general_conversation": 6,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "clarify": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "scientific_question": 0,
+            "mental_health_education": 0,
+            "general_conversation": 1,
+            "unsupported_or_unsafe": 0,
+            "clarify": 2
+          }
+        }
+      },
+      "route": {
+        "n": 43,
+        "accuracy": 0.2558139534883721,
+        "macro_precision": 0.18333333333333332,
+        "macro_recall": 0.21758241758241756,
+        "macro_f1": 0.1264021887824897,
+        "coverage": 0.9302325581395349,
+        "clarified_labeled_cases": 1,
+        "per_label": {
+          "risk_assessment": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 8,
+            "predicted": 0
+          },
+          "explain_my_risk": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 6,
+            "predicted": 0
+          },
+          "retrieval": {
+            "precision": 0.75,
+            "recall": 0.23076923076923078,
+            "f1": 0.3529411764705882,
+            "support": 13,
+            "predicted": 4
+          },
+          "general_conversation": {
+            "precision": 0.16666666666666666,
+            "recall": 0.8571428571428571,
+            "f1": 0.27906976744186046,
+            "support": 7,
+            "predicted": 36
+          },
+          "unsupported_or_unsafe": {
+            "precision": null,
+            "recall": 0.0,
+            "f1": 0.0,
+            "support": 6,
+            "predicted": 0
+          },
+          "clarify": {
+            "precision": 0.6666666666666666,
+            "recall": 0.6666666666666666,
+            "f1": 0.6666666666666666,
+            "support": 3,
+            "predicted": 3
+          }
+        },
+        "confusion": {
+          "risk_assessment": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "retrieval": 1,
+            "general_conversation": 7,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "explain_my_risk": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "retrieval": 0,
+            "general_conversation": 6,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "retrieval": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "retrieval": 3,
+            "general_conversation": 10,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "general_conversation": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "retrieval": 0,
+            "general_conversation": 6,
+            "unsupported_or_unsafe": 0,
+            "clarify": 1
+          },
+          "unsupported_or_unsafe": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "retrieval": 0,
+            "general_conversation": 6,
+            "unsupported_or_unsafe": 0,
+            "clarify": 0
+          },
+          "clarify": {
+            "risk_assessment": 0,
+            "explain_my_risk": 0,
+            "retrieval": 0,
+            "general_conversation": 1,
+            "unsupported_or_unsafe": 0,
+            "clarify": 2
+          }
+        }
+      },
+      "rule_decided": 1.0
+    }
+  },
+  "eval_status": "human_approved",
+  "note": "Cases are assistant-authored; see eval_status for human approval. The router's utterances share that author, so scores are optimistic. Clarification counts as a prediction: it lowers recall but never precision. Route metrics merge scientific_question and mental_health_education, which share retrieval.",
+  "schema_version": 1,
+  "created_at": "2026-10-09T10:45:47.963263+00:00",
+  "run_id": "32023a2433e249a392b1d2b7e7486d38"
+}

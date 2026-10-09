@@ -327,6 +327,12 @@ class RoutingGraph:
             Intent.UNSUPPORTED_OR_UNSAFE: Route.UNSUPPORTED,
         }[decision.intent]}
 
+    def safety_decision(self, request: PreflightRequest) -> SafetyDecision:
+        """Run only the validated safety port, for paths that must not wait on capacity."""
+        if external_tracing_enabled():
+            raise RuntimeError("External tracing is forbidden for runtime requests")
+        return self._intercept_safety({"request": request})["safety"]
+
     def advance(self, request: PreflightRequest) -> RouteDecision:
         # No runtime user content may be sent to an external trace service.
         """Execute protected preflight and return the next-stage routing decision."""

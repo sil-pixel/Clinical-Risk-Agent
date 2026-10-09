@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import json
+import threading
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -61,6 +64,12 @@ ASSESSMENT_RESPONSE = (
     "patterns based on generic genetic baselines, please click the link below to launch the "
     "assessment questionnaire."
 )
+# Replies built only from fixed text: identical input always yields the same reply.
+FIXED_RESPONSE_KINDS = frozenset(
+    {category.value for category in SafetyCategory} - {"ALLOW_NORMAL_PROCESSING"}
+) | {"LANGUAGE_UNSUPPORTED", "INTENT_CLARIFICATION_REQUIRED", "ASSESSMENT_REDIRECTION",
+     "UNSUPPORTED"}
+RESPONSE_CACHE_SIZE = 2048
 CLARIFICATION_RESPONSE = "I didn't quite catch that. Please select what you would like to do:"
 # Asked when the router has a plausible guess below the routing threshold.
 SUGGESTION_QUESTIONS = {
@@ -164,6 +173,11 @@ class ProtectedConversationOrchestrator:
         self._research = research
         self._generator = generator
         self._judge = judge if judge is not None else generator
+        # Keys are SHA-256 digests of the message, never the text; values are fixed replies.
+        self._response_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
+        # Verified curated wording, keyed by approved answer and citation IDs.
+        self._curated_cache: dict[tuple[str, tuple[str, ...]], str] = {}
+        self._cache_lock = threading.Lock()
 
     def close(self) -> None:
         """Release the owned runtime or provider resources."""
@@ -220,14 +234,50 @@ class ProtectedConversationOrchestrator:
                 "judge_model": self._judge.model,
                 "judge_provider": self._judge.provider.value}
 
+    def safety_response(self, text: str, *, deployment_mode: str) -> dict[str, Any] | None:
+        """Return the fixed safety reply if the safety rules intercept text, else None."""
+        decision = self._router.safety_decision(PreflightRequest(
+            kind=RequestKind.FREE_TEXT, deployment_mode=deployment_mode,
+            session_valid=True, text=text,
+        ))
+        if decision.category is SafetyCategory.ALLOW_NORMAL_PROCESSING:
+            return None
+        return self._safety(decision.category).public_dict()
+
     def handle(self, text: str, *, deployment_mode: str, session_valid: bool,
                confirmed_intent: str | None = None,
                prior_result: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Run protected routing and return the appropriate public conversational outcome.
+        """Return a cached fixed reply for repeated text, else route and answer.
 
         ``prior_result`` is this session's validated assessment result, if any; it lets
-        result-explanation questions answer from the person's own scores.
+        result-explanation questions answer from the person's own scores. Replies that
+        depend on it are never cached.
         """
+        key = None
+        if prior_result is None and session_valid:
+            key = hashlib.sha256(
+                f"{deployment_mode}|{confirmed_intent or ''}|{text.strip()}".encode()
+            ).hexdigest()
+            with self._cache_lock:
+                cached = self._response_cache.get(key)
+                if cached is not None:
+                    self._response_cache.move_to_end(key)
+                    return {**cached, "cached": True}
+        result = self._respond(text, deployment_mode=deployment_mode,
+                               session_valid=session_valid, confirmed_intent=confirmed_intent,
+                               prior_result=prior_result)
+        if (key is not None and result.get("provider") is None
+                and result["response_kind"] in FIXED_RESPONSE_KINDS):
+            with self._cache_lock:
+                self._response_cache[key] = result
+                if len(self._response_cache) > RESPONSE_CACHE_SIZE:
+                    self._response_cache.popitem(last=False)
+        return result
+
+    def _respond(self, text: str, *, deployment_mode: str, session_valid: bool,
+                 confirmed_intent: str | None, prior_result: dict[str, Any] | None,
+                 ) -> dict[str, Any]:
+        """Run protected routing and return the appropriate public conversational outcome."""
         decision = self._router.advance(PreflightRequest(
             kind=RequestKind.FREE_TEXT, deployment_mode=deployment_mode,
             session_valid=session_valid, text=text,
@@ -584,6 +634,10 @@ class ProtectedConversationOrchestrator:
         answer = result["answer"]
         citations = result["citations"]
         allowed_ids = [item["citation_id"] for item in citations]
+        cache_key = (answer, tuple(allowed_ids))
+        with self._cache_lock:
+            if cache_key in self._curated_cache:
+                return self._curated_cache[cache_key]
         evidence = "\n\n".join(
             f"{item['citation_id']} | PMID {item.get('pmid') or 'unavailable'} | "
             f"{item.get('exact_matched_text', '')}" for item in citations
@@ -605,6 +659,9 @@ class ProtectedConversationOrchestrator:
             try:
                 self._validate_draft(draft.response_kind, draft.text, draft.citation_ids,
                                      answer, allowed_ids, citations)
+                # Validation guarantees the text equals the approved answer, so reuse is exact.
+                with self._cache_lock:
+                    self._curated_cache[cache_key] = draft.text
                 return draft.text
             except ResponseIntegrityError as error:
                 last_error = error

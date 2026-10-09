@@ -243,6 +243,19 @@ On the same date, unused local weights were removed: the MedCPT cross-encoder, t
 
 **Consequences:** Generated replies are no longer checked by a local guard; the generation prompts and Gemini's own safety filtering remain the output controls. Two injection styles in the benchmark pass the guard. With Prompt Guard in front, the deployed router scores 86.0% accuracy and macro-F1 0.921 on the routing test split. Llama Guard weights were deleted; the evaluated revision was `acf7aafa60f0410f8f42b1fa35e077d705892029`.
 
+## ADR-029 — Latency: scoped injection screening, crisis fast path and fixed-reply caching
+
+**Decision (2026-10-09):**
+1. **Scoped screening.** Prompt Guard runs after the intent router and only when the decision can reach the LLM: a routed research, education, general or result-explanation message, a clarification whose suggestion could be confirmed into one, or text unlike any reference example. Questionnaire redirects, unsupported replies and generic clarifications skip it.
+2. **Crisis fast path.** Both chat endpoints first authorize the session and run only the deterministic safety rules. A message they intercept is answered at once, without the model-capacity gate or the usage quota.
+3. **Caching.** Replies built only from fixed text (safety, language, clarification, assessment redirection, unsupported) are cached per process in a 2,048-entry LRU. The key is a SHA-256 digest of deployment mode, any confirmed intent and the message; the text itself is never stored. Curated research answers cache their verified wording, keyed by approved answer and citation IDs, so a repeated question makes no formatting call to Gemini. Anything using the session's result, free LLM generation and temporary errors are never cached.
+
+**Why:** A local load test (`scripts/load_test.py`, 8 cores, no LLM) showed every chat message spending about 57 ms in Prompt Guard. Requests were processed one at a time, so throughput stayed near 17 requests/s and latency grew with each user. Beyond 8 concurrent requests the capacity gate rejected even crisis messages with "service busy".
+
+**Measured after (8 concurrent users, p50):** router replies went from 696–739 ms to 65–127 ms with unique messages, or 32–35 ms with repeats. Research retrieval went from 956 ms to 801 ms. Throughput rose from 17 to 44 requests/s with unique messages and 58 with repeats. Crisis replies succeeded 50/50 at 25 users, against 18/50 before. The routing benchmark is unchanged (86.0% accuracy).
+
+**Consequences:** Cache hits skip the routing graph, so live routing counts include only uncached decisions; hits are counted as `chat_cache_hit` operations. Prompt Guard no longer screens fixed-reply routes, which is safe because they never reach the LLM. Modal has half the CPU cores and was not load-tested. Gemini latency, which holds a capacity slot for its full duration, is expected to dominate real chat throughput.
+
 ## Deferred implementation decisions
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Modal SDK, Framer integration, and benchmark-winning model revisions/checksums.

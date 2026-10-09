@@ -14,7 +14,24 @@ from pathlib import Path
 
 from clinical_risk_agent.rag.medcpt import _verified_artifact
 
-from .routing import Intent, IntentDecision
+from .routing import ROUTING_CONFIDENCE_THRESHOLD, Intent, IntentDecision, suggestion
+
+# Intents whose routes call the external LLM; only these need injection screening.
+LLM_INTENTS = frozenset({Intent.SCIENTIFIC_QUESTION, Intent.MENTAL_HEALTH_EDUCATION,
+                         Intent.GENERAL_CONVERSATION, Intent.EXPLAIN_MY_RISK})
+
+
+def needs_screening(decision: IntentDecision) -> bool:
+    """Screen decisions that can reach the LLM, plus text unlike any reference example.
+
+    LLM-bound means routed to an LLM intent or offered as a confirmable suggestion. Unfamiliar
+    text never reaches the LLM, but it is where unusual adversarial messages land, and
+    flagging it gives a clear refusal instead of a generic menu at little cost.
+    """
+    routed = (not decision.requires_clarification
+              and decision.calibrated_confidence >= ROUTING_CONFIDENCE_THRESHOLD)
+    llm_bound = decision.intent in LLM_INTENTS and (routed or suggestion(decision) is not None)
+    return llm_bound or decision.rationale_code == "semantic_unfamiliar"
 
 PROMPT_GUARD_PIN_PATH = Path("agent_docs/PROMPT_GUARD_PIN.json")
 
@@ -89,11 +106,15 @@ class PromptGuardIntentPort:
             warmup()
 
     def classify(self, text: str) -> IntentDecision:
-        """Return a certain unsupported decision for attacks, else the wrapped decision."""
-        score = self._guard().score(text)
-        if score >= self.threshold:
+        """Screen messages that can reach the LLM; others keep the wrapped decision."""
+        decision = self._base.classify(text)
+        # Fixed replies (questionnaire redirect, unsupported, generic clarification) never
+        # reach the LLM, so screening them for injection would only add latency.
+        if not needs_screening(decision):
+            return decision
+        if self._guard().score(text) >= self.threshold:
             model_id, sha = self._provenance
             return IntentDecision(Intent.UNSUPPORTED_OR_UNSAFE, 1.0, False, model_id, sha,
                                   f"prompt-guard-threshold-{self.threshold}",
                                   "prompt-guard-v1", "prompt_injection")
-        return self._base.classify(text)
+        return decision

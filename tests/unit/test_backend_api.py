@@ -376,6 +376,34 @@ class BackendAPITests(unittest.TestCase):
             self.assertEqual(response.json()["error"]["code"], "QUESTIONNAIRE_VERSION_UNSUPPORTED")
             self.assertEqual(assessment.calls, [])
 
+    def test_crisis_reply_ignores_quota_and_capacity(self) -> None:
+        """Verify crisis messages are answered after the session's chat quota is used up."""
+        from clinical_risk_agent.ai import (
+            PrototypeIntentPort, PrototypeLanguagePort, PrototypeSafetyPort,
+            ProtectedConversationOrchestrator, RoutingGraph,
+        )
+
+        conversation = ProtectedConversationOrchestrator(
+            RoutingGraph(PrototypeSafetyPort(), PrototypeLanguagePort(), PrototypeIntentPort()),
+            self.service, None)
+        with TestClient(create_app(self.settings, service=self.service,
+                                   conversation=conversation)) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            for _ in range(self.settings.model_turns_per_hour):
+                client.post("/v1/messages", headers=self.auth(token),
+                            json={"kind": "free_text", "text": "please assess me"})
+            limited = client.post("/v1/messages", headers=self.auth(token),
+                                  json={"kind": "free_text", "text": "please assess me"})
+            self.assertEqual(limited.status_code, 429)
+            for endpoint in ("/v1/messages", "/v1/messages:stream"):
+                with self.subTest(endpoint=endpoint):
+                    crisis = client.post(endpoint, headers=self.auth(token),
+                                         json={"kind": "free_text", "text": "I want to kill myself"})
+                    self.assertEqual(crisis.status_code, 200)
+                    self.assertIn("CRITICAL_SAFETY_REDIRECTION", crisis.text)
+            operations = client.get("/v1/evaluations/dashboard").json()["operations"]
+            self.assertIn("chat_safety_fast_path", [row["operation"] for row in operations])
+
     def test_chat_receives_session_result_after_assessment(self) -> None:
         """Verify chat calls get prior_result only once this session has a ready result."""
         conversation = FakeConversation()
