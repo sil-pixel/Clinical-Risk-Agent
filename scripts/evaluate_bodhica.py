@@ -108,6 +108,54 @@ def drift_reference(args):
     print(f"Saved {path.relative_to(ROOT)}", flush=True)
 
 
+def score_reference(args):
+    """Record the deployed models' output quantiles on live-like synthetic profiles."""
+    import numpy as np
+
+    from clinical_risk_agent.inference import DCMFNetPredictor
+    from clinical_risk_agent.interpretation import SCORE_REFERENCE_PATH
+
+    rows = list(csv.DictReader(args.csv.open()))
+    features = drift_features()
+    counts, _ = count_codes(rows, features)
+    rng = np.random.default_rng(0)
+    marginals = {name: ([float(code) for code in counts[name]],
+                        np.array(list(counts[name].values()), dtype=float)) for name in features}
+    completed = []
+    for row in rows:
+        record = {}
+        for name in features:
+            value = row.get(name)
+            if value in (None, ""):
+                codes, weights = marginals[name]
+                value = rng.choice(codes, p=weights / weights.sum())
+            record[name] = float(value)
+        completed.append(record)
+    targets = {}
+    for name, stem in (("positive", "dcmfnet_pos"), ("negative", "dcmfnet_neg")):
+        predictor = DCMFNetPredictor(ROOT / f"model_artifacts/{stem}.pt",
+                                    ROOT / f"model_artifacts/{stem}.metadata.json")
+        # Live submissions never include genetic or batch inputs; NaN uses training medians.
+        records = [{feature: record.get(feature, float("nan"))
+                    for feature in predictor.schema.flat_feature_names} for record in completed]
+        scores = []
+        for start in range(0, len(records), 512):
+            scores.extend(p.normalized_symptom_severity
+                          for p in predictor.predict(records[start:start + 512]).predictions)
+        targets[name] = {"checkpoint_sha256": predictor.inspection.checkpoint_sha256,
+                         "quantiles": [float(q) for q in np.quantile(scores, np.linspace(0, 1, 101))]}
+    path = ROOT / SCORE_REFERENCE_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "dataset": args.csv.name, "dataset_sha256": digest(args.csv), "n": len(rows),
+        "created_at": datetime.now(timezone.utc).isoformat(), "targets": targets,
+        "note": "Quantiles (0-100) of deployed-checkpoint predictions on the fully synthetic "
+                "dataset in live form: complete answers (gaps drawn from observed answers) and "
+                "genetic/batch inputs at training medians. Descriptive reference only."},
+        indent=2) + "\n")
+    print(f"Saved {path.relative_to(ROOT)}", flush=True)
+
+
 def drift(args):
     """Compare a current non-user CSV batch with a reference CSV and save a drift report."""
     features = drift_features()
@@ -296,6 +344,9 @@ def main():
     reference = commands.add_parser("drift-reference")
     reference.add_argument("csv", type=Path)
     reference.set_defaults(run=drift_reference)
+    scores = commands.add_parser("score-reference")
+    scores.add_argument("csv", type=Path)
+    scores.set_defaults(run=score_reference)
     shift = commands.add_parser("drift")
     shift.add_argument("reference", type=Path)
     shift.add_argument("current", type=Path)

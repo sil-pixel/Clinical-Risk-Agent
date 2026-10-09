@@ -28,6 +28,10 @@ image = (
         str(LOCAL_ROOT / "data/monitoring/drift_reference.json"),
         f"{REMOTE_ROOT}/data/monitoring/drift_reference.json", copy=True,
     )
+    .add_local_file(
+        str(LOCAL_ROOT / "data/monitoring/score_reference.json"),
+        f"{REMOTE_ROOT}/data/monitoring/score_reference.json", copy=True,
+    )
     .add_local_dir(
         str(LOCAL_ROOT / "data/indexes/models"), f"{REMOTE_ROOT}/data/indexes/models",
         copy=True,

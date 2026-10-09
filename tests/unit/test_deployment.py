@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_PATHS = (
     "src", "model_artifacts", "data/indexes/models", "data/indexes/qdrant",
     "data/indexes/rag_corpus_manifest.json", "data/monitoring/drift_reference.json",
+    "data/monitoring/score_reference.json",
     "agent_docs/RAG_21_SOURCE_CLAIM_SUPPORT_CATALOG.json",
     "agent_docs/RAG_MEDCPT_ENCODER_PIN.json",
     "agent_docs/INTENT_ROUTER_UTTERANCES.json",

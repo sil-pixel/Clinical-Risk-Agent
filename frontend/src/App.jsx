@@ -67,6 +67,7 @@ function App() {
   const [systemMessage, setSystemMessage] = useState("");
   const [assessmentResult, setAssessmentResult] = useState(null);
   const [assessmentBusy, setAssessmentBusy] = useState(false);
+  const [assessmentSeq, setAssessmentSeq] = useState(0);
   const [attestations, setAttestations] = useState({
     age_18_or_over: false,
     self_assessment: false,
@@ -219,11 +220,20 @@ function App() {
       });
       setAssessmentResult(result);
       setSystemMessage("The protected assessment completed successfully.");
+      // Results are discussed in the chat, where follow-up questions can use them.
+      setAssessmentSeq((value) => value + 1);
+      setView("chat");
     } catch (error) {
       setValidationMessage(error.message);
     } finally {
       setAssessmentBusy(false);
     }
+  };
+
+  /** Retry only the explanation for the cached result, without recalculating scores. */
+  const retryExplanation = async () => {
+    try { setAssessmentResult(await retryAssessmentExplanation(sessionToken)); }
+    catch (error) { setSystemMessage(error.message); }
   };
 
   return (
@@ -255,11 +265,15 @@ function App() {
         </div>
       )}
 
-      {view === "evaluation" ? <EvaluationDashboard /> : view === "chat" ? (
+      {view === "evaluation" && <EvaluationDashboard />}
+      {/* Kept mounted so chat history and the result message survive switching tabs. */}
+      <div hidden={view !== "chat"}>
         <ChatWorkspace token={sessionToken}
           sessionError={sessionError} onOpenQuestionnaire={() => setView("questionnaire")}
-          onReset={resetSession} />
-      ) : (
+          onReset={resetSession} assessmentResult={assessmentResult}
+          assessmentSeq={assessmentSeq} onRetryExplanation={retryExplanation} />
+      </div>
+      {view === "questionnaire" && (
       <div className="layout">
         <aside className="sidebar" aria-label="Questionnaire progress">
           <div className="progress-card">
@@ -441,24 +455,9 @@ function App() {
 
           {assessmentResult && (
             <section className="result-card" aria-labelledby="result-title">
-              <span className="eyebrow eyebrow--dark">Simulated research output</span>
-              <h2 id="result-title">Assessment result</h2>
-              <div className="result-grid">
-                <div><span>Positive-symptom estimate</span><strong>{assessmentResult.result.positive_symptom_research_probability}</strong><small>Includes hallucinations, delusions, psychotic and manic symptom patterns.</small></div>
-                <div><span>Negative-symptom estimate</span><strong>{assessmentResult.result.negative_symptom_research_probability}</strong><small>This model’s target reflects depressive symptoms, such as low mood and loss of interest.</small></div>
-              </div>
-              {assessmentResult.explanation && (
-                <p className="result-explanation">{assessmentResult.explanation}</p>
-              )}
-              {assessmentResult.explanation_status === "pending" && (
-                <p role="status">Your scores are ready. Preparing the explanation…</p>
-              )}
-              {assessmentResult.explanation_status === "unavailable" && (
-                <button className="button button--secondary" type="button" onClick={async () => {
-                  try { setAssessmentResult(await retryAssessmentExplanation(sessionToken)); }
-                  catch (error) { setValidationMessage(error.message); }
-                }}>Retry explanation</button>
-              )}
+              <h2 id="result-title">Your result is in the chat</h2>
+              <p>Your scores, what they mean and space for follow-up questions are in the chat.</p>
+              <button className="button button--primary" type="button" onClick={() => setView("chat")}>Open chat</button>
             </section>
           )}
         </main>

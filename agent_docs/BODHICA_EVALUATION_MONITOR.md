@@ -173,6 +173,30 @@ retains the scores and enables **Retry explanation**, using the cached result ra
 the questionnaire. This state stays in memory within the authorized session lifetime and is removed
 on session reset. No assessment values are written to benchmark files.
 
+### Result levels and explanation in chat
+
+Submitting the questionnaire returns to the chat, where the result appears as an assistant
+message. Each score also gets its percentile within the deployed checkpoint's outputs on the
+20,000 synthetic profiles, built in live form (complete answers, with gaps drawn from observed
+answers, and genetic inputs at training medians), and a level:
+
+| Level | Percentile in the synthetic reference group |
+|---|---|
+| Low | below 25th |
+| Typical | 25th–74th |
+| Above typical | 75th–89th |
+| High | 90th and above |
+
+The raw percentages alone are misleading: on the positive scale the 90th percentile is 34.5%,
+and on the negative scale it is 44.0%. Levels are attached only when `score_reference.json` was
+built from the same checkpoint hashes. Rebuild it after any model change with
+`.venv/bin/python scripts/evaluate_bodhica.py score-reference data/synthetic_data/synthetic_dcmfnet.csv`.
+The explanation must keep both exact percentages and both percentiles and may add no other
+percentage; otherwise a fixed explanation built from the same values is shown. Chat questions
+routed to `explain_my_risk` ("What does my score mean?") are answered from the session's
+cached result under the same rules. Per-answer causes are not available and are never
+implied. Levels describe position within a synthetic group, not clinical cut-offs.
+
 Symptom definitions follow the project's target mapping: the positive category includes psychotic
 and manic patterns; its negative target covers depressive patterns. This differs from clinical
 schizophrenia terminology, in which negative symptoms concern reduced motivation, pleasure,

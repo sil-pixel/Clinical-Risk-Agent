@@ -40,6 +40,7 @@ from clinical_risk_agent.inference import (
     questionnaire_feature_codes,
     questionnaire_requirements,
 )
+from clinical_risk_agent.interpretation import interpret, load_score_reference
 from clinical_risk_agent.rag.answering import CURATED_QUESTIONS
 from clinical_risk_agent.rag.runtime import ResearchRuntime
 
@@ -77,7 +78,8 @@ class ResearchService(Protocol):
 class ConversationService(Protocol):
     """Define protected chat generation and assessment-explanation operations."""
     def handle(self, text: str, *, deployment_mode: str, session_valid: bool,
-               confirmed_intent: str | None = None) -> dict[str, Any]:
+               confirmed_intent: str | None = None,
+               prior_result: dict[str, Any] | None = None) -> dict[str, Any]:
         """Run protected routing and return the appropriate public conversational outcome."""
         ...
     def explain_assessment(self, result: dict[str, Any]) -> dict[str, Any]:
@@ -106,6 +108,7 @@ class LocalAssessmentService:
         """Prepare lazy, thread-safe loading of the protected assessment runtime."""
         self._root = root
         self._graph: ProtectedAssessmentGraph | None = None
+        self._score_reference: dict[str, list[float]] = {}
         self._lock = threading.Lock()
 
     def _load(self) -> ProtectedAssessmentGraph:
@@ -127,6 +130,12 @@ class LocalAssessmentService:
                 self._graph = ProtectedAssessmentGraph(
                     routing, MLAssessmentAdapter(positive, negative),
                 )
+                # Use reference quantiles only if built from these exact checkpoints.
+                reference = load_score_reference(self._root) or {}
+                for name, predictor in (("positive", positive), ("negative", negative)):
+                    target = reference.get("targets", {}).get(name, {})
+                    if target.get("checkpoint_sha256") == predictor.inspection.checkpoint_sha256:
+                        self._score_reference[name] = target["quantiles"]
             return self._graph
 
     def warmup(self) -> None:
@@ -179,6 +188,11 @@ class LocalAssessmentService:
                     "negative_symptom_research_probability": outcome.display.negative_percent,
                     "generic_profile_version": outcome.display.generic_profile_version,
                     "synthetic_training_data": outcome.display.synthetic_training_data,
+                    **{f"{name}_reference": interpret(prediction.predictions[0]
+                                                      .normalized_symptom_severity, quantiles)
+                       for name, prediction in (("positive", outcome.result.positive),
+                                                ("negative", outcome.result.negative))
+                       if (quantiles := self._score_reference.get(name))},
                 },
                 "prediction_note": (
                     "This is a prediction, not a causal explanation. The model evaluates all "
@@ -382,6 +396,14 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
         task = asyncio.create_task(evaluate())
         quality_tasks.add(task)
         task.add_done_callback(quality_tasks.discard)
+
+    def prior_result(token: str) -> dict[str, Any]:
+        """Pass this session's validated assessment result to the conversation, if any."""
+        prune_assessments()
+        cached = assessment_results.get(assessment_key(token))
+        if cached and cached[1].get("status") == "assessment_ready":
+            return {"prior_result": dict(cached[1]["result"])}
+        return {}
 
     def assessment_key(token: str) -> str:
         """Derive an opaque cache key from an authorized session credential."""
@@ -621,7 +643,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                     asyncio.to_thread(
                         conversation.handle, payload.text,
                         deployment_mode=settings.deployment_mode, session_valid=True,
-                        **confirmation(payload),
+                        **confirmation(payload), **prior_result(token),
                     ),
                     timeout=settings.request_timeout_seconds,
                 )
@@ -674,7 +696,7 @@ def create_app(settings: BackendSettings, *, service: ResearchService | None = N
                             asyncio.to_thread(
                                 conversation.handle, payload.text,
                                 deployment_mode=settings.deployment_mode, session_valid=True,
-                                **confirmation(payload),
+                                **confirmation(payload), **prior_result(token),
                             ),
                             timeout=settings.request_timeout_seconds,
                         )

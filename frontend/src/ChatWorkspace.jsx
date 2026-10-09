@@ -11,6 +11,48 @@ const suggestedQuestions = [
   "Is bullying perpetration associated with smoking or drinking at age 13?",
 ];
 
+// Each follow-up contains a phrase the router maps to "explain my result" with certainty.
+const resultFollowUps = [
+  "What does my score mean?",
+  "Explain my result: what does my positive-symptom level mean?",
+  "Explain my result: what does my negative-symptom level mean?",
+];
+
+/** Show one score with its level and percentile within the synthetic reference group. */
+function ScoreTile({ label, value, reference, meaning }) {
+  return <div>
+    <span>{label}</span><strong>{value}</strong>
+    {reference && <em className="result-level">{reference.level} · {reference.percentile_text}</em>}
+    <small>{meaning}</small>
+  </div>;
+}
+
+/** Render an assessment result inside the chat, with its explanation and follow-ups. */
+function AssessmentMessage({ result, busy, onRetry, onAsk }) {
+  const scores = result?.result;
+  if (!scores) return null;
+  return <div className="chat-result">
+    <div className="result-grid">
+      <ScoreTile label="Positive-symptom estimate" value={scores.positive_symptom_research_probability}
+        reference={scores.positive_reference} meaning="Psychotic and manic symptom patterns" />
+      <ScoreTile label="Negative-symptom estimate" value={scores.negative_symptom_research_probability}
+        reference={scores.negative_reference} meaning="Depressive symptom patterns, such as low mood" />
+    </div>
+    {(scores.positive_reference || scores.negative_reference) && <small>Levels compare your estimate with a synthetic reference group of 20,000 profiles; they are not clinical cut-offs.</small>}
+    {result.explanation_status === "pending" && <p role="status">Preparing an explanation of your results…</p>}
+    {result.explanation && <p>{result.explanation}</p>}
+    {result.explanation_status === "unavailable" && (
+      <button className="button button--secondary" type="button" disabled={busy} onClick={onRetry}>Retry explanation</button>
+    )}
+    <div className="chat-actions">
+      {resultFollowUps.map((question) => (
+        <button key={question} className="button button--secondary" type="button" disabled={busy}
+          onClick={() => onAsk(question)}>{question.replace("Explain my result: ", "")}</button>
+      ))}
+    </div>
+  </div>;
+}
+
 /** Decode one SSE block into its typed event and JSON payload. */
 function parseEvent(block) {
   let type = "message";
@@ -23,7 +65,8 @@ function parseEvent(block) {
 }
 
 /** Render protected chat, research suggestions and optional questionnaire navigation. */
-export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire, onReset }) {
+export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire, onReset,
+  assessmentResult, assessmentSeq = 0, onRetryExplanation }) {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -36,6 +79,20 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
   const [busy, setBusy] = useState(false);
   const threadRef = useRef(null);
   const inputRef = useRef(null);
+
+  // A new assessment adds one result message; later polling updates fill in its explanation.
+  useEffect(() => {
+    if (!assessmentSeq) return;
+    setMessages((current) => current.some((m) => m.kind === "assessment" && m.seq === assessmentSeq)
+      ? current
+      : [...current, { role: "assistant", kind: "assessment", seq: assessmentSeq,
+        text: "Here are your research-model results.", citations: [] }]);
+  }, [assessmentSeq]);
+  useEffect(() => {
+    if (!assessmentSeq || !assessmentResult) return;
+    setMessages((current) => current.map((m) => (
+      m.kind === "assessment" && m.seq === assessmentSeq ? { ...m, result: assessmentResult } : m)));
+  }, [assessmentResult, assessmentSeq]);
 
   useEffect(() => {
     const thread = threadRef.current;
@@ -170,6 +227,10 @@ export default function ChatWorkspace({ token, sessionError, onOpenQuestionnaire
                 <small>General knowledge · no corpus citations</small>
               )}
               <p>{message.text}</p>
+              {message.kind === "assessment" && (
+                <AssessmentMessage result={message.result} busy={busy || !token}
+                  onRetry={onRetryExplanation} onAsk={(question) => submit(null, question)} />
+              )}
               {message.actions?.length > 0 && (
                 <div className="chat-actions">
                   {message.actions.map((action) => (

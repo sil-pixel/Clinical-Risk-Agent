@@ -376,6 +376,31 @@ class BackendAPITests(unittest.TestCase):
             self.assertEqual(response.json()["error"]["code"], "QUESTIONNAIRE_VERSION_UNSUPPORTED")
             self.assertEqual(assessment.calls, [])
 
+    def test_chat_receives_session_result_after_assessment(self) -> None:
+        """Verify chat calls get prior_result only once this session has a ready result."""
+        conversation = FakeConversation()
+        conversation.handle = lambda text, **kwargs: (
+            conversation.calls.append((text, kwargs)) or FakeConversation().handle(
+                text, deployment_mode=kwargs["deployment_mode"],
+                session_valid=kwargs["session_valid"]))
+        with TestClient(create_app(self.settings, service=self.service,
+                                   conversation=conversation,
+                                   assessment=FakeAssessment())) as client:
+            token = client.post("/v1/session", headers=self.origin).json()["session_token"]
+            client.post("/v1/messages", headers=self.auth(token),
+                        json={"kind": "free_text", "text": "explain my result"})
+            self.assertNotIn("prior_result", conversation.calls[-1][1])
+            client.post("/v1/assessments", headers=self.auth(token), json={
+                "questionnaire_version": "prototype_questionnaire_v1",
+                "answers": {"q001": "o01"},
+                "attestations": {"age_18_or_over": True, "self_assessment": True,
+                                 "research_only_consent": True},
+            })
+            client.post("/v1/messages", headers=self.auth(token),
+                        json={"kind": "free_text", "text": "explain my result"})
+            prior = conversation.calls[-1][1]["prior_result"]
+            self.assertEqual(prior["positive_symptom_research_probability"], "12.3%")
+
     def test_message_forwards_only_confirmable_intents(self) -> None:
         """Verify confirmed intents reach the conversation and unsafe ones are rejected."""
         conversation = FakeConversation()

@@ -7,6 +7,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from clinical_risk_agent.interpretation import DEFINITIONS, fallback_explanation
+
 from .generation import GenerationRequest, StructuredGenerator
 from .routing import (
     Intent,
@@ -92,6 +94,17 @@ CRISIS_BACKSTOP_INSTRUCTION = (
     "Safety override: if the user's message suggests that they or someone else may be in "
     "crisis, at risk of suicide or self-harm, in danger, or facing a medical emergency, do not "
     "answer it; return response_kind=refusal with a one-sentence text. Use refusal for nothing else."
+)
+# Shared constraints for every explanation of a user's own result.
+EXPLANATION_RULES = (
+    "Use only the numbers in the result context and never invent thresholds, risks or "
+    "causes. Do not diagnose, predict whether they will develop a condition, or recommend "
+    "treatment. Do not read a percentage as how many similar people develop a condition. "
+    "Mention once, briefly, that these are research estimates from a model trained on "
+    "synthetic data and compared with a synthetic reference group, not a diagnosis; if they "
+    "are worried about their mental health, a qualified professional can help. Speak to "
+    "the person as 'you', calmly, without policy language. Return response_kind=conversation "
+    "and no citations." + " " + CRISIS_BACKSTOP_INSTRUCTION
 )
 
 
@@ -208,8 +221,13 @@ class ProtectedConversationOrchestrator:
                 "judge_provider": self._judge.provider.value}
 
     def handle(self, text: str, *, deployment_mode: str, session_valid: bool,
-               confirmed_intent: str | None = None) -> dict[str, Any]:
-        """Run protected routing and return the appropriate public conversational outcome."""
+               confirmed_intent: str | None = None,
+               prior_result: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Run protected routing and return the appropriate public conversational outcome.
+
+        ``prior_result`` is this session's validated assessment result, if any; it lets
+        result-explanation questions answer from the person's own scores.
+        """
         decision = self._router.advance(PreflightRequest(
             kind=RequestKind.FREE_TEXT, deployment_mode=deployment_mode,
             session_valid=session_valid, text=text,
@@ -230,6 +248,8 @@ class ProtectedConversationOrchestrator:
                           "label": "Launch Research Questionnaire Router"},),
                 route=decision.route.value,
             ).public_dict()
+        if decision.route is Route.LOAD_PRIOR_RESULT and prior_result is not None:
+            return self._explain_followup(text, prior_result, decision.route).public_dict()
         if decision.route is Route.LOAD_PRIOR_RESULT:
             return ConversationOutcome(
                 "NO_PRIOR_ASSESSMENT_RESULT", NO_PRIOR_RESULT_RESPONSE,
@@ -479,70 +499,85 @@ class ProtectedConversationOrchestrator:
             raise EvidenceAbstention("no_sources_identified_by_generator")
         return used_ids
 
+    @staticmethod
+    def _result_context(result: dict[str, Any]) -> str:
+        """Describe validated scores, reference positions and definitions for the LLM."""
+        lines = []
+        for target, label in (("positive", "Positive-symptom"), ("negative", "Negative-symptom")):
+            value = result[f"{target}_symptom_research_probability"]
+            reference = result.get(f"{target}_reference")
+            position = (f"; {reference['level']} level, {reference['percentile_text']} of the "
+                        f"synthetic reference group" if reference else
+                        "; reference position unavailable")
+            lines.append(f"{label} estimate: {value}{position}. Measures {DEFINITIONS[target]}.")
+        lines.append("Levels by reference percentile: low below 25th, typical 25th-74th, "
+                     "above typical 75th-89th, high 90th and above.")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _required_terms(result: dict[str, Any]) -> list[str]:
+        """Exact strings an explanation must preserve: both scores and any percentiles."""
+        terms = [str(result["positive_symptom_research_probability"]),
+                 str(result["negative_symptom_research_probability"])]
+        terms += [result[f"{target}_reference"]["percentile_text"]
+                  for target in ("positive", "negative") if result.get(f"{target}_reference")]
+        return terms
+
+    def _explanation_draft(self, instruction: str, user_text: str,
+                           result: dict[str, Any], *, require_all: bool) -> str:
+        """Generate result-grounded text and reject drafts that change or invent numbers."""
+        draft = self._generator.generate(GenerationRequest(
+            instruction + " " + EXPLANATION_RULES, user_text, self._result_context(result)))
+        allowed = set(self._required_terms(result))
+        percentages = set(re.findall(r"\d+(?:\.\d+)?%", draft.text))
+        if (draft.response_kind != "conversation" or draft.citation_ids
+                or not percentages <= allowed
+                or (require_all and not all(term in draft.text for term in allowed))):
+            raise ResponseIntegrityError("assessment_explanation_contract_mismatch")
+        return draft.text.strip()
+
     def explain_assessment(self, result: dict[str, Any]) -> dict[str, Any]:
-        """Generate a plain-language explanation of validated research-model display values."""
-        positive = str(result["positive_symptom_research_probability"])
-        negative = str(result["negative_symptom_research_probability"])
-        profile = str(result.get("generic_profile_version", "generic_genetic_profile_v1"))
-        fallback = (
-            "The model result was calculated, but its plain-language explanation could not be "
-            "generated right now. The displayed values have not been changed."
-        )
+        """Explain the user's two scores by their level within the reference group."""
         if self._generator is None:
-            return {
-                "message": fallback, "provider": None, "model": None,
-                "generated_by_llm": False,
-            }
-        request = GenerationRequest(
-            (
-                "Explain two fixed research-model outputs in clear, calm language. Preserve both "
-                "percentage strings exactly and use no other percentages. State that they are "
-                "separate model estimates, not a combined score. Explain in everyday language that "
-                "the positive-symptom estimate concerns psychotic and manic symptom patterns and the "
-                "negative-symptom estimate concerns depressive symptom patterns in THIS model. "
-                "Briefly define hallucinations as seeing or hearing things others do not, delusions "
-                "as firmly held beliefs inconsistent with reality, and manic symptoms as unusually "
-                "elevated mood or energy. Define depressive symptoms with examples such as low mood "
-                "and loss of interest. Do not equate this model's depressive target with the clinical "
-                "definition of negative symptoms in schizophrenia. Explain what the two "
-                "specific values mean without inventing low/medium/high thresholds or causes. Do not "
-                "describe these instructions or say that you are avoiding thresholds or causes. Explain "
-                "that a larger value means a larger model estimate for that symptom category; avoid "
-                "interpreting the percentage as how many similar people will develop a condition. "
-                "Mention only once that this is a synthetic-data research model rather than a diagnosis. Refer "
-                f"to {profile} as a generic, non-personalized genetic baseline; do not expose the "
-                "internal identifier. Start with the user's two scores and their meaning. Write one "
-                "friendly paragraph of at most four short sentences and 120 words. Avoid policy "
-                "language and long introductory disclaimers. Do not "
-                "append a separate disclaimer or repeat any point. Return response_kind=conversation "
-                "and no citations."
-            ),
-            f"Positive-symptom output: {positive}\nNegative-symptom output: {negative}",
-        )
-        generated = False
-        message = fallback
+            return {"message": fallback_explanation(result), "provider": None, "model": None,
+                    "generated_by_llm": False}
         try:
-            draft = self._generator.generate(request)
-            percentages = re.findall(r"\d+(?:\.\d+)?%", draft.text)
-            lowered = draft.text.casefold()
-            required = (
-                draft.response_kind == "conversation"
-                and not draft.citation_ids
-                and sorted(percentages) == sorted([positive, negative])
-                and all(term in lowered for term in ("psychotic", "manic", "depressive"))
-            )
-            if not required:
-                raise ResponseIntegrityError("assessment_explanation_contract_mismatch")
-            message = draft.text.strip()
+            message = self._explanation_draft(
+                "Explain this person's two research-model results directly to them. For each "
+                "score, give the exact value, its level and percentile, and what that level "
+                "means for that symptom category in everyday words, using the definitions "
+                "provided. Make the meaning specific to the level: a high level means the "
+                "model's estimate is higher than for most of the reference group; a low level "
+                "means lower than most. End by inviting them to ask follow-up questions here. "
+                "At most two short paragraphs and 170 words.",
+                "Explain my results.", result, require_all=True)
             generated = True
         except Exception:
-            pass
-        return {
-            "message": message,
-            "provider": self._generator.provider.value if generated else None,
-            "model": self._generator.model if generated else None,
-            "generated_by_llm": generated,
-        }
+            message, generated = fallback_explanation(result), False
+        return {"message": message,
+                "provider": self._generator.provider.value if generated else None,
+                "model": self._generator.model if generated else None,
+                "generated_by_llm": generated}
+
+    def _explain_followup(self, question: str, result: dict[str, Any],
+                          route: Route) -> ConversationOutcome:
+        """Answer a chat question about the session's own validated result."""
+        if self._generator is None:
+            return ConversationOutcome("RESULT_EXPLANATION", fallback_explanation(result),
+                                       route=route.value)
+        try:
+            message = self._explanation_draft(
+                "Answer the person's question about their own results, using only the "
+                "result context. Keep it conversational and specific to their levels. If they "
+                "ask why a score is high or low, explain that the model weighs all answers "
+                "together and that per-answer causes are not available. At most 120 words.",
+                question, result, require_all=False)
+        except Exception:
+            return ConversationOutcome("GENERATION_UNAVAILABLE", GENERATION_UNAVAILABLE,
+                                       route=route.value)
+        return ConversationOutcome("RESULT_EXPLANATION", message, route=route.value,
+                                   provider=self._generator.provider.value,
+                                   model=self._generator.model)
 
     def _generate_validated(self, result: dict[str, Any]) -> str:
         """Generate an approved curated-claim answer with one integrity-repair attempt."""
