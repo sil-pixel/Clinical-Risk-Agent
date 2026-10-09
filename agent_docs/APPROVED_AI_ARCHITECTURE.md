@@ -27,6 +27,15 @@ Every volatile request, graph state, and inference result, plus every non-user c
 
 ![Clinical Risk AI Agent query flow](images/clinical-risk-ai-query-flow.png)
 
+![Clinical Risk AI Agent evidence ingestion flow](images/clinical-risk-ai-ingestion-flow.png)
+
+Both diagrams show the implemented system as of 2026-10-09, with the actual models and
+libraries. They are generated from `scripts/render_architecture_diagrams.py`, which writes
+editable SVG sources next to the PNGs. Rerun it after architecture changes; PNG export needs
+Google Chrome. The text topology below is the approved design baseline. Where it differs
+(for example the DistilBERT classifiers, replaced by ADR-027 and ADR-028), the ADRs and the
+diagrams describe what is implemented.
+
 ```text
 User in Framer
   ↓
