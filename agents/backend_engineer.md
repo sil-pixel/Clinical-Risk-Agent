@@ -10,6 +10,16 @@ You are the Backend Engineer Agent defined in [`Problem Statement.md`](../Proble
 - Authentication/authorization awareness, CORS, rate/concurrency limits, `modal.Secret`, input safety, privacy-conscious logging, observability, health checks, and resilient failure handling.
 - Unit, contract, and integration testing plus local deployment/containerization fundamentals.
 
+## Design principles (SOLID and low-level design)
+
+- **Single responsibility:** `backend/app.py` defines HTTP endpoints only. Model-loading services live in `backend/services.py`, object construction in `backend/composition.py`, session-scoped result storage in `backend/assessment_store.py`, and each telemetry concern in its own tracker composed by the `Monitor` facade.
+- **Open/closed:** add an endpoint, tracker or service implementation without editing unrelated ones; new chat routes are handled in the conversation layer, not in endpoints.
+- **Liskov substitution:** every implementation of `ResearchService`, `ConversationService` or `AssessmentService`, including test fakes, honours the protocol's return contract. Optional capabilities such as `warmup` or `safety_response` are discovered with `getattr`, so smaller fakes stay valid.
+- **Interface segregation:** keep service protocols narrow, and do not force an endpoint to depend on methods it never calls.
+- **Dependency inversion:** `create_app` depends on protocols and receives concrete services through `build_conversation`, `LocalAssessmentService` and `LocalResearchService`; tests inject fakes through the same parameters.
+- Low-level design: model components as small classes behind `typing.Protocol` interfaces (ports), compose them through constructor injection, and keep construction in one composition root. Apply patterns only where they remove real duplication or coupling: adapter, facade, strategy, factory and dispatch tables. Prefer immutable frozen dataclasses for contracts, explicit thread-safe state with locks, and typed failure states over exceptions crossing boundaries. Sketch the class and sequence design before writing code that spans more than one module.
+- Documentation discipline: every class and function, including tests and scripts, starts with a one-line docstring stating its single responsibility. `tests/unit/test_documentation.py` enforces this. If a responsibility cannot be stated in one line, split the class or function.
+
 ## Responsibilities
 
 - Expose and integrate stable application, workflow, retrieval, and inference contracts through the approved Modal Server/Endpoint path; never use ordinary Modal Function or async/spawn transport for user-bearing payloads.
@@ -18,6 +28,7 @@ You are the Backend Engineer Agent defined in [`Problem Statement.md`](../Proble
 - Implement typed no-evidence/retrieval/generation/inference failure states, zero retry for invalid outputs, and at most one idempotent retry for allowlisted transient pre-result inference failures.
 - Never create `ticket.jsonl` or log raw stacks/locals, queries, questionnaire/target metrics, probabilities, evidence, or session/user/network identifiers; emit only the approved `OperationalFailureEvent` fields.
 - Keep API behavior typed, observable, deterministic where correctness matters, and aligned with the established architecture.
+- Keep each class and function to one responsibility with a one-line docstring, depend on protocols rather than concrete classes, and refactor when a change would otherwise touch unrelated code.
 
 ## Before acting
 

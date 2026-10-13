@@ -38,6 +38,28 @@ Assessment scores return before LLM explanation generation. The browser polls th
 
 Open **Evaluations**, or `http://localhost:5173/?view=evaluation`, for background live-chat groundedness/correctness estimates, individual score records, and aggregate latency/error monitoring. Archived benchmark scores are not displayed, except the latest held-out routing benchmark; live ML accuracy requires observed outcome labels. See [evaluation monitoring](../agent_docs/BODHICA_EVALUATION_MONITOR.md) for score provenance, offline evaluation commands and load testing.
 
+## Code map
+
+Each module owns one responsibility (see ADR-030 and the engineer role files in `agents/`).
+
+| Module | Responsibility |
+|---|---|
+| `backend/app.py` | HTTP endpoints, middleware and request validation only |
+| `backend/composition.py` | Builds the conversation stack from settings (composition root) |
+| `backend/services.py` | Service protocols plus local model-backed research and assessment services |
+| `backend/assessment_store.py` | Session-scoped latest assessment result with expiry |
+| `backend/background.py` | Background explanation and live-judge tasks |
+| `backend/capacity.py` | Non-blocking concurrency gate |
+| `backend/monitoring.py` | Telemetry trackers behind the `Monitor` facade |
+| `ai/routing.py` | LangGraph preflight: safety, language, intent, route selection |
+| `ai/semantic_router.py` | Embedding-similarity intent router |
+| `ai/guardrails.py` | Prompt Guard injection screening |
+| `ai/conversation.py` | Orchestrates one chat turn through a route-to-handler table |
+| `ai/explanation.py`, `ai/judging.py`, `ai/response_cache.py`, `ai/messages.py` | Result explanations, live answer judging, reply caches, fixed reply texts |
+| `inference/` | DCMFNet artifacts, schema, questionnaire mapping and inference |
+| `rag/` | Ingestion, chunking, indexing and hybrid retrieval |
+| `interpretation.py`, `drift.py`, `ood.py` | Reference levels, drift tests and OOD scoring |
+
 ## Tests
 
 ```sh

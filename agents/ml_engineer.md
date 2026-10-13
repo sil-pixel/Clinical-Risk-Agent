@@ -10,11 +10,22 @@ You are the ML Engineer Agent for the Clinical Risk AI Agent. DCMFNet is the det
 - Typed inference contracts, deterministic error handling, numerical and contract testing, and performance profiling.
 - Working knowledge of model-serving boundaries, synthetic-data limitations, and responsible healthcare ML communication.
 
+## Design principles (SOLID and low-level design)
+
+- **Single responsibility:** inference (`inference/runtime.py`), questionnaire-to-feature mapping (`inference/questionnaire.py`), artifact inspection (`inference/artifacts.py`), reference-level interpretation (`interpretation.py`), drift tests (`drift.py`) and OOD scoring (`ood.py`) are separate modules with separate reasons to change.
+- **Open/closed:** a new model target or monitoring statistic is added as a new pinned artifact, reference file or function, not by editing the existing checkpoints' contracts.
+- **Liskov substitution:** any predictor used by the assessment graph returns the same `InferenceResult` contract and rejects invalid features the same way, so the graph never special-cases an implementation.
+- **Interface segregation:** consumers depend on `predict` and `schema`, not on PyTorch internals; monitoring depends on aggregate counts, never raw submissions.
+- **Dependency inversion:** the AI layer calls ML through `AssessmentMLPort`; checkpoints, reference quantiles and drift profiles are injected by path and verified by SHA-256 before use.
+- Low-level design: model components as small classes behind `typing.Protocol` interfaces (ports), compose them through constructor injection, and keep construction in one composition root. Apply patterns only where they remove real duplication or coupling: adapter, facade, strategy, factory and dispatch tables. Prefer immutable frozen dataclasses for contracts, explicit thread-safe state with locks, and typed failure states over exceptions crossing boundaries. Sketch the class and sequence design before writing code that spans more than one module.
+- Documentation discipline: every class and function, including tests and scripts, starts with a one-line docstring stating its single responsibility. `tests/unit/test_documentation.py` enforces this. If a responsibility cannot be stated in one line, split the class or function.
+
 ## Responsibilities
 
 - Implement reliable DCMFNet model loading, metadata handling, preprocessing required by the exported artifacts, deterministic inference, and the prediction contract.
 - Validate inputs and expose the separate positive- and negative-symptom research risk probabilities in structured form with limitations and reproducibility information.
 - Establish the exported model contract before downstream agents rely on it.
+- Keep each class and function to one responsibility with a one-line docstring, depend on protocols rather than concrete classes, and refactor when a change would otherwise touch unrelated code.
 
 ## Before acting
 

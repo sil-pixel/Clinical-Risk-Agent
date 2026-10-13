@@ -256,6 +256,28 @@ On the same date, unused local weights were removed: the MedCPT cross-encoder, t
 
 **Consequences:** Cache hits skip the routing graph, so live routing counts include only uncached decisions; hits are counted as `chat_cache_hit` operations. Prompt Guard no longer screens fixed-reply routes, which is safe because they never reach the LLM. Modal has half the CPU cores and was not load-tested. Gemini latency, which holds a capacity slot for its full duration, is expected to dominate real chat throughput.
 
+## ADR-030 — SOLID refactor of the backend and conversation layers
+
+**Decision (2026-10-13):** Large classes and functions were split so each module has one reason to change. Public interfaces are unchanged: `create_app`, the `Monitor` methods, and the orchestrator's `handle`, `safety_response`, `explain_assessment` and `evaluate_response`.
+
+| Concern | Before | After |
+|---|---|---|
+| Service protocols and model-backed adapters | inside `backend/app.py` | `backend/services.py` |
+| Building generators, intent ports and the routing graph | inside `create_app` | `backend/composition.py` (composition root) |
+| Session-scoped assessment results | dictionary plus three nested helpers | `backend/assessment_store.py` (`AssessmentResultStore`) |
+| Background explanation and live-judge tasks | nested closures and task sets | `backend/background.py` (`BackgroundJobs`) |
+| Concurrency gate | inside `backend/app.py` | `backend/capacity.py` |
+| Telemetry | one `Monitor` class | six trackers behind the `Monitor` facade |
+| Reply texts and prompts | top of `ai/conversation.py` | `ai/messages.py` |
+| Fixed-reply and curated caches | orchestrator fields | `ai/response_cache.py` |
+| Result explanations | orchestrator methods | `ai/explanation.py` (`ResultExplainer`) |
+| Live answer judging | orchestrator method | `ai/judging.py` (`AnswerJudge`) |
+| Route dispatch | `if` chain | route-to-handler table |
+
+**Why:** `backend/app.py` was 938 lines with most behaviour nested in one function; the orchestrator was 683 lines with seven concerns. They are now 601 and 488 lines. The engineer role files (`agents/*_engineer.md`) record the SOLID and low-level design standards this follows.
+
+**Consequences:** Each extracted class has direct unit tests (`tests/unit/test_design_components.py`), alongside the unchanged behavioural suite. The endpoint groups in `create_app` could become FastAPI `APIRouter`s later. They share session, capacity and monitoring state, so that split was left for a dedicated change. A stray unreachable `RequestKind,` statement at the end of `app.py` was removed.
+
 ## Deferred implementation decisions
 
 - Exact Python, PyTorch, LangGraph, FastAPI, Modal SDK, Framer integration, and benchmark-winning model revisions/checksums.

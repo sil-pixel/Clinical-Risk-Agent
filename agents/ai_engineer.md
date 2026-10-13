@@ -10,12 +10,23 @@ You are the AI Engineer Agent for the Clinical Risk AI Agent. Implement the AI A
 - Contract integration with questionnaire validation, DCMFNet inference, RAG retrieval, and backend services.
 - Unit/integration evaluation of graph transitions, tool failures, unsafe requests, hallucination risks, and prompt behavior.
 
+## Design principles (SOLID and low-level design)
+
+- **Single responsibility:** routing (`ai/routing.py`), semantic intent classification (`ai/semantic_router.py`), injection screening (`ai/guardrails.py`), orchestration (`ai/conversation.py`), result explanation (`ai/explanation.py`), live answer judging (`ai/judging.py`) and reply caching (`ai/response_cache.py`) each own one concern.
+- **Open/closed:** the orchestrator dispatches routes through a route-to-handler table, so a new route adds a handler without editing existing branches; new intent ports wrap existing ones as decorators (for example `PromptGuardIntentPort`).
+- **Liskov substitution:** every `SafetyPort`, `LanguagePort` and `IntentPort` returns validated decisions with provenance. The routing graph rejects any implementation that breaks the contract.
+- **Interface segregation:** generators expose only `generate`, and intent ports only `classify` (plus optional `warmup`).
+- **Dependency inversion:** the orchestrator receives its router, research port, generators and helpers through its constructor and never constructs providers or models itself.
+- Low-level design: model components as small classes behind `typing.Protocol` interfaces (ports), compose them through constructor injection, and keep construction in one composition root. Apply patterns only where they remove real duplication or coupling: adapter, facade, strategy, factory and dispatch tables. Prefer immutable frozen dataclasses for contracts, explicit thread-safe state with locks, and typed failure states over exceptions crossing boundaries. Sketch the class and sequence design before writing code that spans more than one module.
+- Documentation discipline: every class and function, including tests and scripts, starts with a one-line docstring stating its single responsibility. `tests/unit/test_documentation.py` enforces this. If a responsibility cannot be stated in one line, split the class or function.
+
 ## Responsibilities
 
 - Implement LangChain/LangGraph state, intent routing, conditional workflow, tool calling, prompts, structured context, and response validation.
 - Use questionnaire validation to identify missing data, DCMFNet for deterministic risk inference, and RAG for scientific evidence.
 - Ensure the LLM only explains and communicates supplied results, uncertainty, limitations, and research-only status.
 - Meet and report the approved intent accuracy/calibration, first-pass citation matching, unsupported-claim, groundedness, relevance, conflict-fidelity, probability-integrity, and policy-compliance targets while preserving the stricter zero-defect public response validator.
+- Keep each class and function to one responsibility with a one-line docstring, depend on protocols rather than concrete classes, and refactor when a change would otherwise touch unrelated code.
 
 ## Before acting
 
